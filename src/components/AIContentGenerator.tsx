@@ -1,14 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { generateTextContent, generateImageContent, saveOpenAIApiKey } from "@/services/api";
+import { generateTextContent, generateImageContent } from "@/services/api";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -21,34 +17,6 @@ const AIContentGenerator: React.FC = () => {
     text?: string;
     imageUrl?: string;
   }>({});
-  
-  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [hasApiKey, setHasApiKey] = useState(false);
-
-  // Check if API key exists in local storage
-  useEffect(() => {
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    setHasApiKey(!!savedApiKey);
-  }, []);
-
-  const handleSaveApiKey = () => {
-    if (apiKey.trim()) {
-      saveOpenAIApiKey(apiKey.trim());
-      setHasApiKey(true);
-      setApiKeyDialogOpen(false);
-      toast({
-        title: "API Key Saved",
-        description: "Your OpenAI API key has been saved successfully."
-      });
-    } else {
-      toast({
-        title: "Invalid API Key",
-        description: "Please enter a valid OpenAI API key.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -57,11 +25,6 @@ const AIContentGenerator: React.FC = () => {
         description: "Please enter a prompt to generate content.",
         variant: "destructive",
       });
-      return;
-    }
-
-    if (!hasApiKey) {
-      setApiKeyDialogOpen(true);
       return;
     }
 
@@ -117,10 +80,6 @@ const AIContentGenerator: React.FC = () => {
       link.click();
       document.body.removeChild(link);
     }
-  };
-
-  const handleUpdateApiKey = () => {
-    setApiKeyDialogOpen(true);
   };
 
   return (
@@ -180,17 +139,6 @@ const AIContentGenerator: React.FC = () => {
                         'Generate Content'
                       )}
                     </Button>
-                    
-                    {hasApiKey && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={handleUpdateApiKey}
-                        className="text-xs"
-                      >
-                        Update API Key
-                      </Button>
-                    )}
                   </div>
                 </div>
 
@@ -268,43 +216,6 @@ const AIContentGenerator: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* OpenAI API Key Dialog */}
-      <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enter OpenAI API Key</DialogTitle>
-            <DialogDescription>
-              You need an OpenAI API key to generate content. Your key will be stored locally on your device.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API Key</Label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="sk-..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            </div>
-            <Alert>
-              <AlertDescription>
-                Your API key is stored only in your browser and sent only to OpenAI when generating content.
-              </AlertDescription>
-            </Alert>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" onClick={handleSaveApiKey}>
-              Save API Key
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </section>
   );
 };

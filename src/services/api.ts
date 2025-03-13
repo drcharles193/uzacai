@@ -7,30 +7,17 @@
 // OpenAI API endpoint
 const OPENAI_API_URL = "https://api.openai.com/v1";
 
-// Function to get the OpenAI API key from local storage
-const getOpenAIApiKey = (): string | null => {
-  return localStorage.getItem('openai_api_key');
-};
-
-// Function to save the OpenAI API key to local storage
-export const saveOpenAIApiKey = (apiKey: string): void => {
-  localStorage.setItem('openai_api_key', apiKey);
-};
+// Your OpenAI API key - replace with your actual API key
+const OPENAI_API_KEY = "sk-your-openai-api-key-here";
 
 // Function to generate text content using OpenAI
 export const generateTextContent = async (prompt: string): Promise<string> => {
-  const apiKey = getOpenAIApiKey();
-  
-  if (!apiKey) {
-    throw new Error("OpenAI API key is required. Please add your API key in the settings.");
-  }
-  
   try {
     const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: "gpt-4o-mini", // Using a supported model
@@ -63,18 +50,12 @@ export const generateTextContent = async (prompt: string): Promise<string> => {
 
 // Function to generate image content using OpenAI
 export const generateImageContent = async (prompt: string): Promise<string> => {
-  const apiKey = getOpenAIApiKey();
-  
-  if (!apiKey) {
-    throw new Error("OpenAI API key is required. Please add your API key in the settings.");
-  }
-  
   try {
     const response = await fetch(`${OPENAI_API_URL}/images/generations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: "dall-e-3",
