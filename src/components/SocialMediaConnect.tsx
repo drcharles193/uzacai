@@ -1,21 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
 
 interface SocialPlatform {
   id: string;
   name: string;
   icon: React.ReactNode;
   connected: boolean;
-  authUrl: string;
 }
 
 const SocialMediaConnect: React.FC = () => {
   const { toast } = useToast();
-  const [isAuthenticating, setIsAuthenticating] = useState<string | null>(null);
-  
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
     {
       id: 'twitter',
@@ -25,8 +21,7 @@ const SocialMediaConnect: React.FC = () => {
           <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
         </svg>
       ),
-      connected: false,
-      authUrl: 'https://twitter.com/i/oauth2/authorize'
+      connected: false
     },
     {
       id: 'instagram',
@@ -38,8 +33,7 @@ const SocialMediaConnect: React.FC = () => {
           <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
         </svg>
       ),
-      connected: false,
-      authUrl: 'https://api.instagram.com/oauth/authorize'
+      connected: false
     },
     {
       id: 'facebook',
@@ -49,8 +43,7 @@ const SocialMediaConnect: React.FC = () => {
           <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
         </svg>
       ),
-      connected: false,
-      authUrl: 'https://www.facebook.com/v16.0/dialog/oauth'
+      connected: false
     },
     {
       id: 'linkedin',
@@ -62,159 +55,24 @@ const SocialMediaConnect: React.FC = () => {
           <circle cx="4" cy="4" r="2"></circle>
         </svg>
       ),
-      connected: false,
-      authUrl: 'https://www.linkedin.com/oauth/v2/authorization'
+      connected: false
     }
   ]);
 
-  // Check for OAuth callback
-  useEffect(() => {
-    const handleOAuthCallback = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const state = urlParams.get('state');
-      const error = urlParams.get('error');
-      
-      if (error) {
-        toast({
-          title: "Authentication Error",
-          description: `Error connecting account: ${error}`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (code && state) {
-        // Find which platform this is for based on state
-        const platformId = state.split('-')[0];
-        const platform = platforms.find(p => p.id === platformId);
+  const toggleConnection = (id: string) => {
+    setPlatforms(platforms.map(platform => {
+      if (platform.id === id) {
+        const newConnectedState = !platform.connected;
         
-        if (platform) {
-          try {
-            // In a real app, you'd send this code to your backend to exchange for tokens
-            // Simulate API call
-            setIsAuthenticating(platformId);
-            
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Update platform status
-            setPlatforms(platforms.map(p => 
-              p.id === platformId ? { ...p, connected: true } : p
-            ));
-            
-            toast({
-              title: "Account Connected",
-              description: `Your ${platform.name} account has been connected successfully.`
-            });
-            
-            // Clean up URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } catch (error) {
-            console.error('Error exchanging code for token:', error);
-            toast({
-              title: "Connection Error",
-              description: `Failed to connect your ${platform.name} account. Please try again.`,
-              variant: "destructive"
-            });
-          } finally {
-            setIsAuthenticating(null);
-          }
-        }
+        toast({
+          title: newConnectedState ? "Account Connected" : "Account Disconnected",
+          description: `Your ${platform.name} account has been ${newConnectedState ? 'connected' : 'disconnected'} successfully.`
+        });
+        
+        return { ...platform, connected: newConnectedState };
       }
-    };
-    
-    handleOAuthCallback();
-  }, []);
-  
-  // Load connection status from localStorage on component mount
-  useEffect(() => {
-    const loadConnectionStatus = () => {
-      const savedConnections = localStorage.getItem('socialConnections');
-      if (savedConnections) {
-        try {
-          const connections = JSON.parse(savedConnections);
-          setPlatforms(platforms.map(platform => ({
-            ...platform,
-            connected: connections[platform.id] || false
-          })));
-        } catch (error) {
-          console.error('Error loading connection status:', error);
-        }
-      }
-    };
-    
-    loadConnectionStatus();
-  }, []);
-  
-  // Save connection status to localStorage when it changes
-  useEffect(() => {
-    const saveConnectionStatus = () => {
-      const connections = platforms.reduce((acc, platform) => {
-        acc[platform.id] = platform.connected;
-        return acc;
-      }, {} as Record<string, boolean>);
-      
-      localStorage.setItem('socialConnections', JSON.stringify(connections));
-    };
-    
-    saveConnectionStatus();
-  }, [platforms]);
-
-  const initiateOAuth = (platform: SocialPlatform) => {
-    // Generate a random state for security
-    const state = `${platform.id}-${Math.random().toString(36).substring(2, 15)}`;
-    
-    // In a real app, these would be environment variables
-    const clientId = platform.id === 'twitter' ? 'YOUR_TWITTER_CLIENT_ID' :
-                    platform.id === 'facebook' ? 'YOUR_FACEBOOK_CLIENT_ID' :
-                    platform.id === 'instagram' ? 'YOUR_INSTAGRAM_CLIENT_ID' : 'YOUR_LINKEDIN_CLIENT_ID';
-    
-    // Construct redirect URI - this should match what you've registered with the OAuth provider
-    const redirectUri = `${window.location.origin}${window.location.pathname}`;
-    
-    // Construct the full auth URL
-    const scope = platform.id === 'twitter' ? 'tweet.read%20users.read%20offline.access' :
-                 platform.id === 'facebook' ? 'public_profile,email' :
-                 platform.id === 'instagram' ? 'user_profile,user_media' : 'r_liteprofile,r_emailaddress,w_member_social';
-    
-    const authUrl = `${platform.authUrl}?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${state}&scope=${scope}`;
-    
-    // In a real implementation, you would redirect to this URL
-    // For demo purposes, we'll simulate a successful connection
-    simulateOAuthFlow(platform);
-  };
-
-  const simulateOAuthFlow = async (platform: SocialPlatform) => {
-    try {
-      setIsAuthenticating(platform.id);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Toggle the connection status
-      const newConnectedState = !platform.connected;
-      
-      setPlatforms(platforms.map(p => {
-        if (p.id === platform.id) {
-          return { ...p, connected: newConnectedState };
-        }
-        return p;
-      }));
-      
-      toast({
-        title: newConnectedState ? "Account Connected" : "Account Disconnected",
-        description: `Your ${platform.name} account has been ${newConnectedState ? 'connected' : 'disconnected'} successfully.`
-      });
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: `Failed to ${platform.connected ? 'disconnect' : 'connect'} your ${platform.name} account. Please try again.`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsAuthenticating(null);
-    }
+      return platform;
+    }));
   };
 
   return (
@@ -247,18 +105,10 @@ const SocialMediaConnect: React.FC = () => {
                       <Button
                         variant={platform.connected ? "outline" : "default"}
                         size="sm"
-                        onClick={() => initiateOAuth(platform)}
-                        disabled={isAuthenticating === platform.id}
+                        onClick={() => toggleConnection(platform.id)}
                         className={platform.connected ? 'border-primary/50 text-primary hover:bg-primary/5' : ''}
                       >
-                        {isAuthenticating === platform.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Connecting...
-                          </>
-                        ) : (
-                          platform.connected ? 'Disconnect' : 'Connect'
-                        )}
+                        {platform.connected ? 'Disconnect' : 'Connect'}
                       </Button>
                     </div>
                   ))}

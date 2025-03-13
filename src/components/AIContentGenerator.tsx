@@ -3,16 +3,11 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Lock, Loader2, Copy, Download, AlertCircle } from "lucide-react";
-import { useAuth } from '@/hooks/useAuth';
 
 type ContentType = 'text' | 'image' | 'both';
 
 const AIContentGenerator: React.FC = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
@@ -20,110 +15,6 @@ const AIContentGenerator: React.FC = () => {
     text?: string;
     imageUrl?: string;
   }>({});
-  
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load API key from localStorage on component mount
-  React.useEffect(() => {
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
-
-  const handleCopyText = () => {
-    if (generatedContent.text) {
-      navigator.clipboard.writeText(generatedContent.text);
-      toast({
-        title: "Copied to clipboard",
-        description: "Text content has been copied to your clipboard."
-      });
-    }
-  };
-
-  const handleDownloadImage = () => {
-    if (generatedContent.imageUrl) {
-      const link = document.createElement('a');
-      link.href = generatedContent.imageUrl;
-      link.download = 'ai-generated-image.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: "Download started",
-        description: "Your image is being downloaded."
-      });
-    }
-  };
-
-  const generateText = async (promptText: string) => {
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a social media content creator assistant. Create engaging social media content based on the user\'s prompt. Keep it concise, engaging, and suitable for platforms like Instagram, Facebook, and Twitter. Include relevant hashtags.'
-            },
-            {
-              role: 'user',
-              content: promptText
-            }
-          ],
-          max_tokens: 300
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to generate text');
-      }
-
-      const data = await response.json();
-      return data.choices[0]?.message?.content || 'Sorry, no content was generated.';
-    } catch (error) {
-      console.error('Text generation error:', error);
-      throw error;
-    }
-  };
-
-  const generateImage = async (promptText: string) => {
-    try {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: `Create a social media image for the following prompt: ${promptText}. Make it visually engaging and suitable for social platforms.`,
-          n: 1,
-          size: '1024x1024'
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to generate image');
-      }
-
-      const data = await response.json();
-      return data.data[0]?.url;
-    } catch (error) {
-      console.error('Image generation error:', error);
-      throw error;
-    }
-  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -135,52 +26,48 @@ const AIContentGenerator: React.FC = () => {
       return;
     }
 
-    if (!apiKey.trim()) {
-      setShowApiKeyInput(true);
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenAI API key to continue.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
-    setError(null);
     
-    try {
-      // Save API key to localStorage
-      localStorage.setItem('openai_api_key', apiKey);
+    // Simulate AI generation delay
+    setTimeout(() => {
+      // Mock AI results - in a real implementation, this would call actual AI services
+      const mockResults = {
+        text: contentType !== 'image' ? generateMockText(prompt) : undefined,
+        imageUrl: contentType !== 'text' ? generateMockImage() : undefined,
+      };
       
-      const newContent: {text?: string; imageUrl?: string} = {};
+      setGeneratedContent(mockResults);
+      setLoading(false);
       
-      if (contentType === 'text' || contentType === 'both') {
-        newContent.text = await generateText(prompt);
-      }
-      
-      if (contentType === 'image' || contentType === 'both') {
-        newContent.imageUrl = await generateImage(prompt);
-      }
-      
-      setGeneratedContent(newContent);
       toast({
         title: "Content Generated",
         description: "Your AI content has been created successfully."
       });
-    } catch (error) {
-      let errorMessage = 'An error occurred during content generation';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      setError(errorMessage);
-      toast({
-        title: "Generation Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    }, 2000);
+  };
+
+  const generateMockText = (prompt: string) => {
+    const templates = [
+      "✨ Just discovered the perfect way to start my day! #MorningRoutine #SelfCare",
+      "This view never gets old. Nature is truly the best artist! #NatureLovers #Sunset",
+      "New project in the works! Can't wait to share what I've been working on. #ComingSoon #ExcitingNews",
+      "When life gives you lemons, make lemonade... or maybe a lemon drop martini! 🍸 #WeekendVibes",
+      "Feeling inspired after today's workshop. So many new ideas to implement! #Growth #Learning"
+    ];
+    
+    return templates[Math.floor(Math.random() * templates.length)];
+  };
+
+  const generateMockImage = () => {
+    const images = [
+      "https://images.unsplash.com/photo-1501426026826-31c667bdf23d",
+      "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+      "https://images.unsplash.com/photo-1493612276216-ee3925520721",
+      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
+      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2"
+    ];
+    
+    return images[Math.floor(Math.random() * images.length)];
   };
 
   return (
@@ -198,7 +85,7 @@ const AIContentGenerator: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="glass-card rounded-xl overflow-hidden shadow-md animate-scale">
             <div className="p-6 md:p-8">
-              <Tabs defaultValue={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
+              <Tabs defaultValue="both" onValueChange={(value) => setContentType(value as ContentType)}>
                 <TabsList className="grid grid-cols-3 mb-6">
                   <TabsTrigger value="text">Text</TabsTrigger>
                   <TabsTrigger value="image">Image</TabsTrigger>
@@ -206,25 +93,6 @@ const AIContentGenerator: React.FC = () => {
                 </TabsList>
                 
                 <div className="space-y-4">
-                  {showApiKeyInput && (
-                    <div className="mb-6 space-y-2">
-                      <label className="block text-sm font-medium text-foreground flex items-center gap-2">
-                        <Lock size={16} />
-                        OpenAI API Key
-                      </label>
-                      <Input
-                        type="password"
-                        placeholder="sk-..."
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Your API key is stored locally in your browser and never sent to our servers.
-                      </p>
-                    </div>
-                  )}
-
                   <label className="block text-sm font-medium text-foreground">
                     Your Prompt
                   </label>
@@ -240,14 +108,6 @@ const AIContentGenerator: React.FC = () => {
                     </div>
                   </div>
                   
-                  {error && (
-                    <Alert variant="destructive" className="my-4">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Error</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-                  
                   <Button
                     className="w-full py-6 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-base transition-all duration-300 shadow-md hover:shadow-lg"
                     onClick={handleGenerate}
@@ -255,24 +115,16 @@ const AIContentGenerator: React.FC = () => {
                   >
                     {loading ? (
                       <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
                         Generating...
                       </span>
                     ) : (
                       'Generate Content'
                     )}
                   </Button>
-
-                  {!showApiKeyInput && (
-                    <div className="text-center">
-                      <button 
-                        onClick={() => setShowApiKeyInput(true)}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Set OpenAI API Key
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {(generatedContent.text || generatedContent.imageUrl) && (
@@ -289,13 +141,7 @@ const AIContentGenerator: React.FC = () => {
                             {generatedContent.text}
                           </div>
                           <div className="flex justify-end">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-xs flex items-center gap-1"
-                              onClick={handleCopyText}
-                            >
-                              <Copy size={14} />
+                            <Button variant="outline" size="sm" className="text-xs">
                               Copy
                             </Button>
                           </div>
@@ -315,13 +161,7 @@ const AIContentGenerator: React.FC = () => {
                             />
                           </div>
                           <div className="flex justify-end">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-xs flex items-center gap-1"
-                              onClick={handleDownloadImage}
-                            >
-                              <Download size={14} />
+                            <Button variant="outline" size="sm" className="text-xs">
                               Download
                             </Button>
                           </div>
