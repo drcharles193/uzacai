@@ -6,11 +6,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock, Loader2, Copy, Download, AlertCircle } from "lucide-react";
+import { useAuth } from '@/hooks/useAuth';
 
 type ContentType = 'text' | 'image' | 'both';
 
 const AIContentGenerator: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
@@ -22,6 +24,14 @@ const AIContentGenerator: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load API key from localStorage on component mount
+  React.useEffect(() => {
+    const savedApiKey = localStorage.getItem('openai_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, []);
 
   const handleCopyText = () => {
     if (generatedContent.text) {
@@ -139,6 +149,9 @@ const AIContentGenerator: React.FC = () => {
     setError(null);
     
     try {
+      // Save API key to localStorage
+      localStorage.setItem('openai_api_key', apiKey);
+      
       const newContent: {text?: string; imageUrl?: string} = {};
       
       if (contentType === 'text' || contentType === 'both') {
