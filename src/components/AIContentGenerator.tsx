@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { Loader } from "lucide-react";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -15,6 +16,75 @@ const AIContentGenerator: React.FC = () => {
     text?: string;
     imageUrl?: string;
   }>({});
+  const [apiKey, setApiKey] = useState<string>('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(false);
+
+  const generateTextWithOpenAI = async (prompt: string): Promise<string> => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a social media content writer. Create engaging, concise social media posts (maximum 280 characters) that include relevant hashtags.'
+            },
+            {
+              role: 'user',
+              content: `Create a social media post about: ${prompt}`
+            }
+          ],
+          max_tokens: 150,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate content');
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content.trim() || '';
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      throw error;
+    }
+  };
+
+  const generateImageWithOpenAI = async (prompt: string): Promise<string> => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: `Create an image for a social media post about: ${prompt}`,
+          n: 1,
+          size: '1024x1024'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate image');
+      }
+
+      const data = await response.json();
+      return data.data[0]?.url || '';
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      throw error;
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -26,48 +96,53 @@ const AIContentGenerator: React.FC = () => {
       return;
     }
 
+    if (!apiKey && !showApiKeyInput) {
+      setShowApiKeyInput(true);
+      toast({
+        title: "API Key Required",
+        description: "Please enter your OpenAI API key to generate content.",
+      });
+      return;
+    }
+
+    if (!apiKey) {
+      toast({
+        title: "Missing API Key",
+        description: "Please enter your OpenAI API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     
-    // Simulate AI generation delay
-    setTimeout(() => {
-      // Mock AI results - in a real implementation, this would call actual AI services
-      const mockResults = {
-        text: contentType !== 'image' ? generateMockText(prompt) : undefined,
-        imageUrl: contentType !== 'text' ? generateMockImage() : undefined,
-      };
+    try {
+      const results: { text?: string; imageUrl?: string } = {};
       
-      setGeneratedContent(mockResults);
-      setLoading(false);
+      if (contentType !== 'image') {
+        results.text = await generateTextWithOpenAI(prompt);
+      }
+      
+      if (contentType !== 'text') {
+        results.imageUrl = await generateImageWithOpenAI(prompt);
+      }
+      
+      setGeneratedContent(results);
       
       toast({
         title: "Content Generated",
         description: "Your AI content has been created successfully."
       });
-    }, 2000);
-  };
-
-  const generateMockText = (prompt: string) => {
-    const templates = [
-      "✨ Just discovered the perfect way to start my day! #MorningRoutine #SelfCare",
-      "This view never gets old. Nature is truly the best artist! #NatureLovers #Sunset",
-      "New project in the works! Can't wait to share what I've been working on. #ComingSoon #ExcitingNews",
-      "When life gives you lemons, make lemonade... or maybe a lemon drop martini! 🍸 #WeekendVibes",
-      "Feeling inspired after today's workshop. So many new ideas to implement! #Growth #Learning"
-    ];
-    
-    return templates[Math.floor(Math.random() * templates.length)];
-  };
-
-  const generateMockImage = () => {
-    const images = [
-      "https://images.unsplash.com/photo-1501426026826-31c667bdf23d",
-      "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
-      "https://images.unsplash.com/photo-1493612276216-ee3925520721",
-      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2"
-    ];
-    
-    return images[Math.floor(Math.random() * images.length)];
+    } catch (error) {
+      console.error('Generation error:', error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate content. Please check your API key and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,6 +168,24 @@ const AIContentGenerator: React.FC = () => {
                 </TabsList>
                 
                 <div className="space-y-4">
+                  {showApiKeyInput && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        OpenAI API Key
+                      </label>
+                      <input
+                        type="password"
+                        className="w-full p-2 rounded-lg border border-border bg-background/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all duration-200"
+                        placeholder="Enter your OpenAI API key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your API key is used only in your browser and is not stored on our servers.
+                      </p>
+                    </div>
+                  )}
+
                   <label className="block text-sm font-medium text-foreground">
                     Your Prompt
                   </label>
@@ -114,17 +207,25 @@ const AIContentGenerator: React.FC = () => {
                     disabled={loading}
                   >
                     {loading ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader className="h-4 w-4 animate-spin" />
                         Generating...
                       </span>
                     ) : (
                       'Generate Content'
                     )}
                   </Button>
+
+                  {!showApiKeyInput && (
+                    <div className="text-center">
+                      <button 
+                        onClick={() => setShowApiKeyInput(true)}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Set OpenAI API Key
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {(generatedContent.text || generatedContent.imageUrl) && (
@@ -141,7 +242,18 @@ const AIContentGenerator: React.FC = () => {
                             {generatedContent.text}
                           </div>
                           <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-xs"
+                              onClick={() => {
+                                navigator.clipboard.writeText(generatedContent.text || '');
+                                toast({
+                                  title: "Copied",
+                                  description: "Text copied to clipboard"
+                                });
+                              }}
+                            >
                               Copy
                             </Button>
                           </div>
@@ -161,7 +273,23 @@ const AIContentGenerator: React.FC = () => {
                             />
                           </div>
                           <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-xs"
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = generatedContent.imageUrl || '';
+                                link.download = 'generated-image.png';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                toast({
+                                  title: "Download Started",
+                                  description: "Image download has started"
+                                });
+                              }}
+                            >
                               Download
                             </Button>
                           </div>
