@@ -1,10 +1,8 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Textarea } from "@/components/ui/textarea";
-import { generateTextContent, generateImageContent } from "@/services/api";
-import { Progress } from "@/components/ui/progress";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -17,7 +15,6 @@ const AIContentGenerator: React.FC = () => {
     text?: string;
     imageUrl?: string;
   }>({});
-  const [progress, setProgress] = useState(0);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -30,71 +27,47 @@ const AIContentGenerator: React.FC = () => {
     }
 
     setLoading(true);
-    setGeneratedContent({});
-    setProgress(0);
     
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(timer);
-          return prev;
-        }
-        return prev + 5;
-      });
-    }, 500);
-    
-    try {
-      const results: { text?: string; imageUrl?: string } = {};
+    // Simulate AI generation delay
+    setTimeout(() => {
+      // Mock AI results - in a real implementation, this would call actual AI services
+      const mockResults = {
+        text: contentType !== 'image' ? generateMockText(prompt) : undefined,
+        imageUrl: contentType !== 'text' ? generateMockImage() : undefined,
+      };
       
-      // Generate text if the content type includes text
-      if (contentType === 'text' || contentType === 'both') {
-        results.text = await generateTextContent(prompt);
-      }
-      
-      // Generate image if the content type includes image
-      if (contentType === 'image' || contentType === 'both') {
-        results.imageUrl = await generateImageContent(prompt);
-      }
-      
-      setGeneratedContent(results);
-      setProgress(100);
+      setGeneratedContent(mockResults);
+      setLoading(false);
       
       toast({
         title: "Content Generated",
         description: "Your AI content has been created successfully."
       });
-    } catch (error) {
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate content. Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      clearInterval(timer);
-      setProgress(100);
-      setLoading(false);
-    }
+    }, 2000);
   };
 
-  const handleCopyText = () => {
-    if (generatedContent.text) {
-      navigator.clipboard.writeText(generatedContent.text);
-      toast({
-        title: "Copied to Clipboard",
-        description: "The generated text has been copied to your clipboard."
-      });
-    }
+  const generateMockText = (prompt: string) => {
+    const templates = [
+      "✨ Just discovered the perfect way to start my day! #MorningRoutine #SelfCare",
+      "This view never gets old. Nature is truly the best artist! #NatureLovers #Sunset",
+      "New project in the works! Can't wait to share what I've been working on. #ComingSoon #ExcitingNews",
+      "When life gives you lemons, make lemonade... or maybe a lemon drop martini! 🍸 #WeekendVibes",
+      "Feeling inspired after today's workshop. So many new ideas to implement! #Growth #Learning"
+    ];
+    
+    return templates[Math.floor(Math.random() * templates.length)];
   };
 
-  const handleDownloadImage = () => {
-    if (generatedContent.imageUrl) {
-      const link = document.createElement('a');
-      link.href = generatedContent.imageUrl;
-      link.download = `ai-generated-image-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+  const generateMockImage = () => {
+    const images = [
+      "https://images.unsplash.com/photo-1501426026826-31c667bdf23d",
+      "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+      "https://images.unsplash.com/photo-1493612276216-ee3925520721",
+      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
+      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2"
+    ];
+    
+    return images[Math.floor(Math.random() * images.length)];
   };
 
   return (
@@ -124,46 +97,34 @@ const AIContentGenerator: React.FC = () => {
                     Your Prompt
                   </label>
                   <div className="relative">
-                    <Textarea
+                    <textarea
                       className="w-full min-h-[120px] p-4 rounded-lg border border-border bg-background/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all duration-200 resize-none"
                       placeholder="Describe the content you want to generate... (e.g., 'A motivational post about achieving goals with a modern workspace image')"
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      maxLength={500}
                     />
                     <div className="absolute right-3 bottom-3 text-xs text-muted-foreground">
                       {prompt.length}/500
                     </div>
                   </div>
                   
-                  <div className="flex justify-between items-center">
-                    <Button
-                      className="py-6 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-base transition-all duration-300 shadow-md hover:shadow-lg"
-                      onClick={handleGenerate}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Generating...
-                        </span>
-                      ) : (
-                        'Generate Content'
-                      )}
-                    </Button>
-                  </div>
-                  
-                  {loading && (
-                    <div className="mt-4">
-                      <Progress value={progress} className="h-2" />
-                      <p className="text-xs text-center mt-1 text-muted-foreground">
-                        {progress < 100 ? 'Generating content...' : 'Generation complete!'}
-                      </p>
-                    </div>
-                  )}
+                  <Button
+                    className="w-full py-6 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-base transition-all duration-300 shadow-md hover:shadow-lg"
+                    onClick={handleGenerate}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </span>
+                    ) : (
+                      'Generate Content'
+                    )}
+                  </Button>
                 </div>
 
                 {(generatedContent.text || generatedContent.imageUrl) && (
@@ -180,7 +141,7 @@ const AIContentGenerator: React.FC = () => {
                             {generatedContent.text}
                           </div>
                           <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs" onClick={handleCopyText}>
+                            <Button variant="outline" size="sm" className="text-xs">
                               Copy
                             </Button>
                           </div>
@@ -200,7 +161,7 @@ const AIContentGenerator: React.FC = () => {
                             />
                           </div>
                           <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs" onClick={handleDownloadImage}>
+                            <Button variant="outline" size="sm" className="text-xs">
                               Download
                             </Button>
                           </div>
