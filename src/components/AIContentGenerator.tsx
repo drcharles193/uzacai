@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { generateText, generateImage, hasApiKey } from "@/services/openai";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -11,6 +13,7 @@ const AIContentGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [generatedContent, setGeneratedContent] = useState<{
     text?: string;
     imageUrl?: string;
@@ -26,48 +29,76 @@ const AIContentGenerator: React.FC = () => {
       return;
     }
 
+    if (!hasApiKey()) {
+      toast({
+        title: "API Key Missing",
+        description: "Please add your OpenAI API key in the openai.ts file to use this feature.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
+    setProgress(0);
     
-    // Simulate AI generation delay
-    setTimeout(() => {
-      // Mock AI results - in a real implementation, this would call actual AI services
-      const mockResults = {
-        text: contentType !== 'image' ? generateMockText(prompt) : undefined,
-        imageUrl: contentType !== 'text' ? generateMockImage() : undefined,
-      };
+    try {
+      // Reset content
+      setGeneratedContent({});
       
-      setGeneratedContent(mockResults);
-      setLoading(false);
+      // Generate text if needed
+      if (contentType !== 'image') {
+        setProgress(20);
+        const text = await generateText(prompt);
+        setProgress(contentType === 'both' ? 50 : 100);
+        setGeneratedContent(prev => ({ ...prev, text }));
+      }
+      
+      // Generate image if needed
+      if (contentType !== 'text') {
+        setProgress(contentType === 'both' ? 60 : 50);
+        const imageUrl = await generateImage(prompt);
+        setProgress(100);
+        setGeneratedContent(prev => ({ ...prev, imageUrl }));
+      }
       
       toast({
         title: "Content Generated",
         description: "Your AI content has been created successfully."
       });
-    }, 2000);
+    } catch (error) {
+      console.error("Error generating content:", error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate content. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const generateMockText = (prompt: string) => {
-    const templates = [
-      "✨ Just discovered the perfect way to start my day! #MorningRoutine #SelfCare",
-      "This view never gets old. Nature is truly the best artist! #NatureLovers #Sunset",
-      "New project in the works! Can't wait to share what I've been working on. #ComingSoon #ExcitingNews",
-      "When life gives you lemons, make lemonade... or maybe a lemon drop martini! 🍸 #WeekendVibes",
-      "Feeling inspired after today's workshop. So many new ideas to implement! #Growth #Learning"
-    ];
-    
-    return templates[Math.floor(Math.random() * templates.length)];
+  const handleCopyText = () => {
+    if (generatedContent.text) {
+      navigator.clipboard.writeText(generatedContent.text);
+      toast({
+        description: "Text copied to clipboard"
+      });
+    }
   };
 
-  const generateMockImage = () => {
-    const images = [
-      "https://images.unsplash.com/photo-1501426026826-31c667bdf23d",
-      "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
-      "https://images.unsplash.com/photo-1493612276216-ee3925520721",
-      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2"
-    ];
-    
-    return images[Math.floor(Math.random() * images.length)];
+  const handleDownloadImage = () => {
+    if (generatedContent.imageUrl) {
+      const link = document.createElement('a');
+      link.href = generatedContent.imageUrl;
+      link.download = `ai-image-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        description: "Image download started"
+      });
+    }
   };
 
   return (
@@ -125,6 +156,13 @@ const AIContentGenerator: React.FC = () => {
                       'Generate Content'
                     )}
                   </Button>
+                  
+                  {loading && (
+                    <div className="mt-2">
+                      <Progress value={progress} className="h-2" />
+                      <p className="text-xs text-right mt-1 text-muted-foreground">{progress}% complete</p>
+                    </div>
+                  )}
                 </div>
 
                 {(generatedContent.text || generatedContent.imageUrl) && (
@@ -141,7 +179,7 @@ const AIContentGenerator: React.FC = () => {
                             {generatedContent.text}
                           </div>
                           <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs">
+                            <Button variant="outline" size="sm" className="text-xs" onClick={handleCopyText}>
                               Copy
                             </Button>
                           </div>
@@ -161,7 +199,7 @@ const AIContentGenerator: React.FC = () => {
                             />
                           </div>
                           <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs">
+                            <Button variant="outline" size="sm" className="text-xs" onClick={handleDownloadImage}>
                               Download
                             </Button>
                           </div>
