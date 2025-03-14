@@ -1,10 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { generateText, generateImage, hasApiKey } from "@/services/openai";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { generateText, generateImage, hasApiKey, setApiKey, removeApiKey, getApiKey } from "@/services/openai";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -14,10 +17,46 @@ const AIContentGenerator: React.FC = () => {
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [hasKey, setHasKey] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<{
     text?: string;
     imageUrl?: string;
   }>({});
+
+  useEffect(() => {
+    // Check if API key exists on component mount
+    setHasKey(hasApiKey());
+  }, []);
+
+  const handleSaveApiKey = () => {
+    if (apiKeyInput.trim()) {
+      setApiKey(apiKeyInput.trim());
+      setHasKey(true);
+      setApiKeyDialogOpen(false);
+      setApiKeyInput('');
+      toast({
+        title: "API Key Saved",
+        description: "Your OpenAI API key has been saved.",
+      });
+    } else {
+      toast({
+        title: "Invalid API Key",
+        description: "Please enter a valid API key.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveApiKey = () => {
+    removeApiKey();
+    setHasKey(false);
+    toast({
+      title: "API Key Removed",
+      description: "Your OpenAI API key has been removed.",
+    });
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -30,11 +69,7 @@ const AIContentGenerator: React.FC = () => {
     }
 
     if (!hasApiKey()) {
-      toast({
-        title: "API Key Missing",
-        description: "Please add your OpenAI API key in the openai.ts file to use this feature.",
-        variant: "destructive",
-      });
+      setApiKeyDialogOpen(true);
       return;
     }
 
@@ -111,6 +146,24 @@ const AIContentGenerator: React.FC = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-slide-up">
             Generate engaging text and images with a simple prompt. Our AI understands your brand voice and creates content that resonates with your audience.
           </p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setApiKeyDialogOpen(true)}
+              className="mt-2"
+            >
+              {hasKey ? "Change API Key" : "Set OpenAI API Key"}
+            </Button>
+            {hasKey && (
+              <Button 
+                variant="outline" 
+                onClick={handleRemoveApiKey}
+                className="mt-2"
+              >
+                Remove API Key
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="max-w-4xl mx-auto">
@@ -239,6 +292,37 @@ const AIContentGenerator: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* API Key Dialog */}
+      <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter your OpenAI API Key</DialogTitle>
+            <DialogDescription>
+              Your API key will be stored locally in your browser. It's never sent to our servers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label htmlFor="apiKey">API Key</Label>
+            <Input 
+              id="apiKey" 
+              value={apiKeyInput} 
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="sk-..."
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              You can get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenAI's dashboard</a>.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveApiKey}>Save API Key</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

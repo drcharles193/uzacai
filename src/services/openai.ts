@@ -1,17 +1,30 @@
 
 // OpenAI API service
 
-const OPENAI_API_KEY = ""; // Your OpenAI API key goes here
+// Use localStorage to store and retrieve the API key
+const getApiKey = (): string => {
+  return localStorage.getItem('openai_api_key') || "";
+};
+
+const setApiKey = (key: string): void => {
+  localStorage.setItem('openai_api_key', key);
+};
+
+const removeApiKey = (): void => {
+  localStorage.removeItem('openai_api_key');
+};
+
 const OPENAI_API_URL = "https://api.openai.com/v1";
 
 // Helper function to check if API key is available
 export const hasApiKey = (): boolean => {
-  return !!OPENAI_API_KEY;
+  return !!getApiKey();
 };
 
 // Generate text using OpenAI
 export const generateText = async (prompt: string): Promise<string> => {
-  if (!hasApiKey()) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -20,7 +33,7 @@ export const generateText = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
@@ -53,7 +66,8 @@ export const generateText = async (prompt: string): Promise<string> => {
 
 // Generate image using OpenAI (DALL-E)
 export const generateImage = async (prompt: string): Promise<string> => {
-  if (!hasApiKey()) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -62,7 +76,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "dall-e-3",
@@ -84,3 +98,5 @@ export const generateImage = async (prompt: string): Promise<string> => {
     throw error;
   }
 };
+
+export { getApiKey, setApiKey, removeApiKey };
