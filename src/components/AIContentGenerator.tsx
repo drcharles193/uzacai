@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { generateText, generateImage, hasApiKey, setApiKey, removeApiKey, getApiKey } from "@/services/openai";
+import { generateText, generateImage, hasApiKey, setApiKey } from "@/services/openai";
+
+// Import our new components
+import ApiKeyDialog from "@/components/content-generator/ApiKeyDialog";
+import ApiKeyManager from "@/components/content-generator/ApiKeyManager";
+import ContentPrompt from "@/components/content-generator/ContentPrompt";
+import GeneratedContent from "@/components/content-generator/GeneratedContent";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -40,22 +41,7 @@ const AIContentGenerator: React.FC = () => {
         title: "API Key Saved",
         description: "Your OpenAI API key has been saved.",
       });
-    } else {
-      toast({
-        title: "Invalid API Key",
-        description: "Please enter a valid API key.",
-        variant: "destructive",
-      });
     }
-  };
-
-  const handleRemoveApiKey = () => {
-    removeApiKey();
-    setHasKey(false);
-    toast({
-      title: "API Key Removed",
-      description: "Your OpenAI API key has been removed.",
-    });
   };
 
   const handleGenerate = async () => {
@@ -112,30 +98,6 @@ const AIContentGenerator: React.FC = () => {
     }
   };
 
-  const handleCopyText = () => {
-    if (generatedContent.text) {
-      navigator.clipboard.writeText(generatedContent.text);
-      toast({
-        description: "Text copied to clipboard"
-      });
-    }
-  };
-
-  const handleDownloadImage = () => {
-    if (generatedContent.imageUrl) {
-      const link = document.createElement('a');
-      link.href = generatedContent.imageUrl;
-      link.download = `ai-image-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        description: "Image download started"
-      });
-    }
-  };
-
   return (
     <section id="features" className="py-16 md:py-24">
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
@@ -146,24 +108,12 @@ const AIContentGenerator: React.FC = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-slide-up">
             Generate engaging text and images with a simple prompt. Our AI understands your brand voice and creates content that resonates with your audience.
           </p>
-          <div className="mt-4 flex justify-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setApiKeyDialogOpen(true)}
-              className="mt-2"
-            >
-              {hasKey ? "Change API Key" : "Set OpenAI API Key"}
-            </Button>
-            {hasKey && (
-              <Button 
-                variant="outline" 
-                onClick={handleRemoveApiKey}
-                className="mt-2"
-              >
-                Remove API Key
-              </Button>
-            )}
-          </div>
+          
+          <ApiKeyManager 
+            hasKey={hasKey} 
+            setHasKey={setHasKey} 
+            onOpenDialog={() => setApiKeyDialogOpen(true)}
+          />
         </div>
         
         <div className="max-w-4xl mx-auto">
@@ -176,91 +126,15 @@ const AIContentGenerator: React.FC = () => {
                   <TabsTrigger value="both">Both</TabsTrigger>
                 </TabsList>
                 
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-foreground">
-                    Your Prompt
-                  </label>
-                  <div className="relative">
-                    <textarea
-                      className="w-full min-h-[120px] p-4 rounded-lg border border-border bg-background/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all duration-200 resize-none"
-                      placeholder="Describe the content you want to generate... (e.g., 'A motivational post about achieving goals with a modern workspace image')"
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                    />
-                    <div className="absolute right-3 bottom-3 text-xs text-muted-foreground">
-                      {prompt.length}/500
-                    </div>
-                  </div>
-                  
-                  <Button
-                    className="w-full py-6 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-base transition-all duration-300 shadow-md hover:shadow-lg"
-                    onClick={handleGenerate}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Generating...
-                      </span>
-                    ) : (
-                      'Generate Content'
-                    )}
-                  </Button>
-                  
-                  {loading && (
-                    <div className="mt-2">
-                      <Progress value={progress} className="h-2" />
-                      <p className="text-xs text-right mt-1 text-muted-foreground">{progress}% complete</p>
-                    </div>
-                  )}
-                </div>
+                <ContentPrompt
+                  prompt={prompt}
+                  setPrompt={setPrompt}
+                  loading={loading}
+                  progress={progress}
+                  onGenerate={handleGenerate}
+                />
 
-                {(generatedContent.text || generatedContent.imageUrl) && (
-                  <div className="mt-8 p-6 rounded-lg border border-border bg-secondary/30 animate-fade-in">
-                    <h3 className="text-lg font-semibold mb-4">Generated Content</h3>
-                    
-                    <div className="space-y-6">
-                      {generatedContent.text && (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-foreground">
-                            Caption
-                          </label>
-                          <div className="p-4 rounded-lg bg-background">
-                            {generatedContent.text}
-                          </div>
-                          <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs" onClick={handleCopyText}>
-                              Copy
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {generatedContent.imageUrl && (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-foreground">
-                            Image
-                          </label>
-                          <div className="rounded-lg overflow-hidden bg-background/60 border border-border/50">
-                            <img 
-                              src={generatedContent.imageUrl} 
-                              alt="Generated content" 
-                              className="w-full h-auto object-cover"
-                            />
-                          </div>
-                          <div className="flex justify-end">
-                            <Button variant="outline" size="sm" className="text-xs" onClick={handleDownloadImage}>
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <GeneratedContent content={generatedContent} />
               </Tabs>
             </div>
           </div>
@@ -293,36 +167,13 @@ const AIContentGenerator: React.FC = () => {
         </div>
       </div>
 
-      {/* API Key Dialog */}
-      <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter your OpenAI API Key</DialogTitle>
-            <DialogDescription>
-              Your API key will be stored locally in your browser. It's never sent to our servers.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <Label htmlFor="apiKey">API Key</Label>
-            <Input 
-              id="apiKey" 
-              value={apiKeyInput} 
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder="sk-..."
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              You can get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenAI's dashboard</a>.
-            </p>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveApiKey}>Save API Key</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ApiKeyDialog
+        open={apiKeyDialogOpen}
+        onOpenChange={setApiKeyDialogOpen}
+        apiKeyInput={apiKeyInput}
+        setApiKeyInput={setApiKeyInput}
+        onSave={handleSaveApiKey}
+      />
     </section>
   );
 };
