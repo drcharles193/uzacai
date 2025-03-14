@@ -1,12 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { generateText, generateImage, hasApiKey, setApiKey } from "@/services/openai";
+import { generateText, generateImage } from "@/services/openai";
 
 // Import our new components
-import ApiKeyDialog from "@/components/content-generator/ApiKeyDialog";
-import ApiKeyManager from "@/components/content-generator/ApiKeyManager";
 import ContentPrompt from "@/components/content-generator/ContentPrompt";
 import GeneratedContent from "@/components/content-generator/GeneratedContent";
 
@@ -18,31 +16,10 @@ const AIContentGenerator: React.FC = () => {
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [hasKey, setHasKey] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<{
     text?: string;
     imageUrl?: string;
   }>({});
-
-  useEffect(() => {
-    // Check if API key exists on component mount
-    setHasKey(hasApiKey());
-  }, []);
-
-  const handleSaveApiKey = () => {
-    if (apiKeyInput.trim()) {
-      setApiKey(apiKeyInput.trim());
-      setHasKey(true);
-      setApiKeyDialogOpen(false);
-      setApiKeyInput('');
-      toast({
-        title: "API Key Saved",
-        description: "Your OpenAI API key has been saved.",
-      });
-    }
-  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -51,11 +28,6 @@ const AIContentGenerator: React.FC = () => {
         description: "Please enter a prompt to generate content.",
         variant: "destructive",
       });
-      return;
-    }
-
-    if (!hasApiKey()) {
-      setApiKeyDialogOpen(true);
       return;
     }
 
@@ -108,12 +80,6 @@ const AIContentGenerator: React.FC = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-slide-up">
             Generate engaging text and images with a simple prompt. Our AI understands your brand voice and creates content that resonates with your audience.
           </p>
-          
-          <ApiKeyManager 
-            hasKey={hasKey} 
-            setHasKey={setHasKey} 
-            onOpenDialog={() => setApiKeyDialogOpen(true)}
-          />
         </div>
         
         <div className="max-w-4xl mx-auto">
@@ -166,14 +132,6 @@ const AIContentGenerator: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <ApiKeyDialog
-        open={apiKeyDialogOpen}
-        onOpenChange={setApiKeyDialogOpen}
-        apiKeyInput={apiKeyInput}
-        setApiKeyInput={setApiKeyInput}
-        onSave={handleSaveApiKey}
-      />
     </section>
   );
 };

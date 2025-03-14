@@ -1,30 +1,18 @@
 
-// OpenAI API service
+// OpenAI API service with fixed API key
 
-// Use localStorage to store and retrieve the API key
-const getApiKey = (): string => {
-  return localStorage.getItem('openai_api_key') || "";
-};
-
-const setApiKey = (key: string): void => {
-  localStorage.setItem('openai_api_key', key);
-};
-
-const removeApiKey = (): void => {
-  localStorage.removeItem('openai_api_key');
-};
-
+// Fixed API key - replace with your actual API key
+const OPENAI_API_KEY = "your-openai-api-key-here";
 const OPENAI_API_URL = "https://api.openai.com/v1";
 
 // Helper function to check if API key is available
 export const hasApiKey = (): boolean => {
-  return !!getApiKey();
+  return !!OPENAI_API_KEY;
 };
 
 // Generate text using OpenAI
 export const generateText = async (prompt: string): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
+  if (!OPENAI_API_KEY) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -33,7 +21,7 @@ export const generateText = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
@@ -66,8 +54,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 
 // Generate image using OpenAI (DALL-E)
 export const generateImage = async (prompt: string): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
+  if (!OPENAI_API_KEY) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -76,7 +63,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "dall-e-3",
@@ -99,4 +86,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
   }
 };
 
-export { getApiKey, setApiKey, removeApiKey };
+// These functions are no longer needed but kept for backward compatibility
+export const getApiKey = (): string => OPENAI_API_KEY;
+export const setApiKey = (_key: string): void => {};
+export const removeApiKey = (): void => {};
