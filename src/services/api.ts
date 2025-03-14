@@ -7,17 +7,25 @@
 // OpenAI API endpoint
 const OPENAI_API_URL = "https://api.openai.com/v1";
 
-// Your OpenAI API key - replace with your actual API key
-const OPENAI_API_KEY = "sk-your-openai-api-key-here";
+// Function to get API key from localStorage
+const getOpenAIKey = (): string => {
+  return localStorage.getItem('openai_api_key') || '';
+};
 
 // Function to generate text content using OpenAI
 export const generateTextContent = async (prompt: string): Promise<string> => {
+  const apiKey = getOpenAIKey();
+  
+  if (!apiKey) {
+    throw new Error('OpenAI API key not found. Please set your API key first.');
+  }
+  
   try {
     const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: "gpt-4o-mini", // Using a supported model
@@ -50,12 +58,18 @@ export const generateTextContent = async (prompt: string): Promise<string> => {
 
 // Function to generate image content using OpenAI
 export const generateImageContent = async (prompt: string): Promise<string> => {
+  const apiKey = getOpenAIKey();
+  
+  if (!apiKey) {
+    throw new Error('OpenAI API key not found. Please set your API key first.');
+  }
+  
   try {
     const response = await fetch(`${OPENAI_API_URL}/images/generations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: "dall-e-3",
@@ -76,4 +90,19 @@ export const generateImageContent = async (prompt: string): Promise<string> => {
     console.error('Error generating image:', error);
     throw error;
   }
+};
+
+// Function to check if API key is valid
+export const isAPIKeySet = (): boolean => {
+  return !!localStorage.getItem('openai_api_key');
+};
+
+// Function to set API key
+export const setAPIKey = (key: string): void => {
+  localStorage.setItem('openai_api_key', key);
+};
+
+// Function to clear API key
+export const clearAPIKey = (): void => {
+  localStorage.removeItem('openai_api_key');
 };
