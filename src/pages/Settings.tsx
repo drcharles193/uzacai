@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -460,7 +461,14 @@ const Settings = () => {
           {(activeTab === 'security' || activeTab === 'organization' || activeTab === 'users') && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="bg-blue-50 rounded-full p-4 mb-4">
-                {tabs.find(tab => tab.id === activeTab)?.icon && <tabs.find(tab => tab.id === activeTab)!.icon size={32} className="text-blue-500" />}
+                {(() => {
+                  const currentTab = tabs.find(tab => tab.id === activeTab);
+                  if (currentTab?.icon) {
+                    const IconComponent = currentTab.icon;
+                    return <IconComponent size={32} className="text-blue-500" />;
+                  }
+                  return null;
+                })()}
               </div>
               <h3 className="text-xl font-medium mb-2">Coming Soon</h3>
               <p className="text-gray-500 max-w-md">
@@ -475,3 +483,4 @@ const Settings = () => {
 };
 
 export default Settings;
+
