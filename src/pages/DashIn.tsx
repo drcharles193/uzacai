@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -102,7 +103,7 @@ const DashIn = () => {
         
         {/* Settings at bottom */}
         <div className="mt-auto mb-6">
-          <Link to="#" className="text-gray-400 hover:text-white">
+          <Link to="/settings" className="text-gray-400 hover:text-white">
             <Settings size={20} />
           </Link>
         </div>
@@ -138,7 +139,14 @@ const DashIn = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
             </Button>
             
-            {/* Profile dropdown replacing the plus icon */}
+            {/* Settings icon with link */}
+            <Link to="/settings">
+              <Button variant="ghost" size="icon" className="text-gray-500">
+                <Settings size={20} />
+              </Button>
+            </Link>
+            
+            {/* Profile dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-gray-500">
