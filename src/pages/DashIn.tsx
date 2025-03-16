@@ -58,8 +58,9 @@ const DashIn = () => {
         {/* Top navigation bar */}
         <div className="bg-white border-b px-6 py-3 flex justify-between items-center">
           <div className="flex gap-6">
-            <div className="text-lg font-semibold border-b-2 border-[#689675] text-black pb-1">SocialPilot</div>
-            <div className="text-lg font-medium text-gray-500">Reviews</div>
+            <div className="text-lg font-semibold border-b-2 border-[#689675] text-black pb-1">Accounts</div>
+            <div className="text-lg font-medium text-gray-500">
+          </div>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="text-gray-500">
