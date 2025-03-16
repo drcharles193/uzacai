@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -120,26 +119,6 @@ const DashIn = () => {
       console.error('Error disconnecting account:', error);
       toast.error(error.message || 'Error disconnecting account');
     }
-  };
-
-  const handleSocialAccountDisconnected = (platformId: string) => {
-    setConnectedAccounts(accounts => accounts.filter(acc => acc.platform !== platformId));
-    
-    if (connectedAccounts.length === 1) {
-      setHasConnectedAccounts(false);
-    }
-  };
-
-  const handleSocialConnectDone = () => {
-    setShowConnectDialog(false);
-    // Refetch user connected accounts to ensure UI is updated
-    const fetchUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        fetchConnectedAccounts(user.id);
-      }
-    };
-    fetchUserData();
   };
 
   const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
@@ -331,12 +310,7 @@ const DashIn = () => {
             <DialogTitle>Connect Your Social Accounts</DialogTitle>
           </DialogHeader>
           <div className="p-4">
-            <SocialMediaConnect 
-              isDialog={true} 
-              onClose={() => setShowConnectDialog(false)} 
-              onAccountDisconnected={handleSocialAccountDisconnected}
-              onDone={handleSocialConnectDone} // Add the onDone prop here
-            />
+            <SocialMediaConnect isDialog={true} onClose={() => setShowConnectDialog(false)} />
           </div>
         </DialogContent>
       </Dialog>
