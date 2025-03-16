@@ -9,7 +9,6 @@ import NotFound from "./pages/NotFound";
 import Trial from "./pages/Trial";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
-import ViewHome from "./pages/ViewHome";
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -48,9 +47,8 @@ const App = () => {
       console.log("Auth state changed:", event, session);
       setIsAuthenticated(!!session);
       
-      // If the user signs in, set isAuthenticated to true
-      // Fixed the type comparison issue by using a more generic condition
-      if (session) {
+      // If the user signs in or signs up, set isAuthenticated to true
+      if (event === 'SIGNED_IN' || event === 'SIGNED_UP') {
         setIsAuthenticated(true);
       }
     });
@@ -90,8 +88,6 @@ const App = () => {
               // If already logged in, redirect to dashboard
               isLoggedIn ? <Navigate to="/dashboard" /> : <Auth />
             } />
-            {/* Special route to view home page even when logged in */}
-            <Route path="/view-home" element={<ViewHome />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
