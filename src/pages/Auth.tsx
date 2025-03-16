@@ -20,7 +20,7 @@ const Auth = () => {
         
         if (data?.session) {
           // User is authenticated, redirect to dashboard
-          navigate('/dashboard');
+          window.location.href = '/dashboard';
         } else {
           // No session found, set loading to false to show login options
           setLoading(false);
@@ -36,7 +36,7 @@ const Auth = () => {
     // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        navigate('/dashboard');
+        window.location.href = '/dashboard';
       }
     });
 
