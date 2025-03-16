@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -127,6 +128,18 @@ const DashIn = () => {
     if (connectedAccounts.length === 1) {
       setHasConnectedAccounts(false);
     }
+  };
+
+  const handleSocialConnectDone = () => {
+    setShowConnectDialog(false);
+    // Refetch user connected accounts to ensure UI is updated
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        fetchConnectedAccounts(user.id);
+      }
+    };
+    fetchUserData();
   };
 
   const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
@@ -322,6 +335,7 @@ const DashIn = () => {
               isDialog={true} 
               onClose={() => setShowConnectDialog(false)} 
               onAccountDisconnected={handleSocialAccountDisconnected}
+              onDone={handleSocialConnectDone} // Add the onDone prop here
             />
           </div>
         </DialogContent>

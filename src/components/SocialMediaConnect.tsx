@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -26,12 +27,14 @@ interface SocialMediaConnectProps {
   isDialog?: boolean;
   onClose?: () => void;
   onAccountDisconnected?: (platformId: string) => void;
+  onDone?: () => void; // New prop for handling the Done button click
 }
 
 const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({ 
   isDialog = false, 
   onClose,
-  onAccountDisconnected
+  onAccountDisconnected,
+  onDone
 }) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -431,9 +434,15 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   };
 
   const openDialog = () => setIsOpen(true);
+  
   const closeDialog = () => {
     setIsOpen(false);
     if (onClose) onClose();
+  };
+  
+  const handleDoneClick = () => {
+    closeDialog();
+    if (onDone) onDone(); // Call the onDone callback when Done button is clicked
   };
 
   const PlatformList = () => (
@@ -535,7 +544,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
                     <Button 
                       variant="outline"
                       size="sm"
-                      onClick={closeDialog}
+                      onClick={handleDoneClick} // Changed to handleDoneClick to use the new handler
                       className="ml-auto"
                     >
                       Done
