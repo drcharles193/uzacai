@@ -52,13 +52,16 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
     try {
       if (isSignUp) {
         // Sign up
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 14); // 14 days from now
+        
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              signupDate: new Date().toISOString(),
-              trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days from now
+              firstName: email.split('@')[0], // Default first name from email
+              trialEndsAt: trialEndDate.toISOString() // 14 days from now
             }
           }
         });
