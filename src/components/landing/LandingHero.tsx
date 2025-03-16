@@ -28,7 +28,7 @@ const LandingHero: React.FC = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up">
-            <Button className="px-8 py-6 rounded-full text-base" size="lg" asChild>
+            <Button asChild className="px-8 py-6 rounded-full text-base" size="lg">
               <Link to="/trial">Start Your Free Trial</Link>
             </Button>
             <Button variant="outline" className="px-8 py-6 rounded-full text-base" size="lg">
