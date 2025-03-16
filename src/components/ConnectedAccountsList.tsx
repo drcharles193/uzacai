@@ -137,7 +137,7 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
                       size="sm"
                       onClick={() => openDisconnectConfirmation(account.platform)}
                       disabled={disconnecting === account.platform}
-                      className="text-red-500 border-red-200 hover:bg-red-50"
+                      className="text-[#689675] border-[#689675]/30 hover:bg-[#689675]/10 hover:text-[#689675] hover:border-[#689675]"
                     >
                       {disconnecting === account.platform ? 'Disconnecting...' : 'Disconnect'}
                     </Button>
@@ -153,7 +153,7 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-[#689675]" />
               Disconnect Account
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -165,7 +165,7 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
             <AlertDialogCancel onClick={handleCancelDisconnect}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => accountToDisconnect && disconnectAccount(accountToDisconnect)}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-[#689675] hover:bg-[#85A88E]"
             >
               Disconnect
             </AlertDialogAction>
