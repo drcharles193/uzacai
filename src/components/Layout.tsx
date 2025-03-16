@@ -1,27 +1,22 @@
-
 import React, { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
 import SignInDialog from './SignInDialog';
-
 interface LayoutProps {
   children: React.ReactNode;
 }
-
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<LayoutProps> = ({
+  children
+}) => {
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-
   const openSignInDialog = () => {
     setIsSignInOpen(true);
   };
-
   const closeSignInDialog = () => {
     setIsSignInOpen(false);
   };
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  return <div className="min-h-screen flex flex-col bg-background">
       <header className="w-full py-4 px-6 md:px-10 border-b border-border/40 sticky top-0 backdrop-blur-md bg-background/80 z-50">
         <div className="container max-w-7xl mx-auto flex justify-between items-center animate-fade-in">
           <a href="/" className="flex items-center gap-2 group">
@@ -42,7 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               Sign in
             </Button>
             <Button size="sm" className="rounded-full" asChild>
-              <Link to="/trial">Start Free Trial</Link>
+              <Link to="/trial">Start Your Free Trial</Link>
             </Button>
           </div>
         </div>
@@ -112,42 +107,37 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </footer>
 
       <SignInDialog isOpen={isSignInOpen} onClose={closeSignInDialog} />
-    </div>
-  );
+    </div>;
 };
-
-const NavLink: React.FC<{ href: string; children: React.ReactNode }> = ({ href, children }) => (
-  <a 
-    href={href} 
-    className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors duration-200 focus-ring rounded-md"
-  >
+const NavLink: React.FC<{
+  href: string;
+  children: React.ReactNode;
+}> = ({
+  href,
+  children
+}) => <a href={href} className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors duration-200 focus-ring rounded-md">
     {children}
-  </a>
-);
-
-const FooterLink: React.FC<{ href: string; children: React.ReactNode }> = ({ href, children }) => (
-  <li>
-    <a 
-      href={href} 
-      className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 focus-ring"
-    >
+  </a>;
+const FooterLink: React.FC<{
+  href: string;
+  children: React.ReactNode;
+}> = ({
+  href,
+  children
+}) => <li>
+    <a href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 focus-ring">
       {children}
     </a>
-  </li>
-);
-
-const FooterIconLink: React.FC<{ href: string; ariaLabel: string; children: React.ReactNode }> = ({ 
-  href, 
-  ariaLabel, 
-  children 
-}) => (
-  <a 
-    href={href} 
-    aria-label={ariaLabel}
-    className="text-muted-foreground hover:text-foreground transition-colors duration-200 focus-ring p-2 rounded-full bg-muted/50 hover:bg-muted"
-  >
+  </li>;
+const FooterIconLink: React.FC<{
+  href: string;
+  ariaLabel: string;
+  children: React.ReactNode;
+}> = ({
+  href,
+  ariaLabel,
+  children
+}) => <a href={href} aria-label={ariaLabel} className="text-muted-foreground hover:text-foreground transition-colors duration-200 focus-ring p-2 rounded-full bg-muted/50 hover:bg-muted">
     {children}
-  </a>
-);
-
+  </a>;
 export default Layout;
