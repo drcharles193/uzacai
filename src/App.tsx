@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Trial from "./pages/Trial";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import UserPage from "./pages/UserPage";
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -70,6 +71,13 @@ const App = () => {
               element={
                 // User must be authenticated to access the dashboard
                 localStorage.getItem('socialAI_user') ? <Dashboard /> : <Navigate to="/auth" />
+              } 
+            />
+            <Route 
+              path="/user" 
+              element={
+                // User must be authenticated to access the user page
+                localStorage.getItem('socialAI_user') ? <UserPage /> : <Navigate to="/auth" />
               } 
             />
             <Route path="/auth" element={<Auth />} />

@@ -11,7 +11,8 @@ import {
   Inbox, 
   FileText, 
   Settings,
-  Library
+  Library,
+  User
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,6 +32,11 @@ const sidebarItems = [
     path: '/dashboard',
     color: '#FFCB05',
     isHighlighted: true
+  },
+  { 
+    name: 'User Profile', 
+    icon: User, 
+    path: '/user' 
   },
   { 
     name: 'Posts', 
