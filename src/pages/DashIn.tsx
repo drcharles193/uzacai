@@ -121,6 +121,14 @@ const DashIn = () => {
     }
   };
 
+  const handleSocialAccountDisconnected = (platformId: string) => {
+    setConnectedAccounts(accounts => accounts.filter(acc => acc.platform !== platformId));
+    
+    if (connectedAccounts.length === 1) {
+      setHasConnectedAccounts(false);
+    }
+  };
+
   const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -310,7 +318,11 @@ const DashIn = () => {
             <DialogTitle>Connect Your Social Accounts</DialogTitle>
           </DialogHeader>
           <div className="p-4">
-            <SocialMediaConnect isDialog={true} onClose={() => setShowConnectDialog(false)} />
+            <SocialMediaConnect 
+              isDialog={true} 
+              onClose={() => setShowConnectDialog(false)} 
+              onAccountDisconnected={handleSocialAccountDisconnected}
+            />
           </div>
         </DialogContent>
       </Dialog>
