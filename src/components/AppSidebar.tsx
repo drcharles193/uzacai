@@ -10,8 +10,6 @@ import {
   Inbox, 
   FileText, 
   Settings,
-  Library,
-  Home,
   Plus,
   List,
   ChevronDown,
@@ -27,13 +25,6 @@ const AppSidebar = () => {
   
   // Define sidebar main items
   const sidebarItems = [
-    { 
-      name: 'Home', 
-      icon: Home, 
-      path: '/',
-      color: '#FFCB05',
-      exact: true
-    },
     { 
       name: 'Dashboard', 
       icon: LayoutDashboard, 
@@ -88,25 +79,13 @@ const AppSidebar = () => {
   return (
     <div 
       className={cn(
-        "bg-[#1A2238] flex flex-col h-screen transition-all duration-300",
+        "bg-[#1A2238] flex flex-col h-full transition-all duration-300",
         expanded ? "w-56" : "w-[60px]"
       )}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      <div className="flex items-center p-4 mb-6">
-        <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center">
-          <MessageSquare size={16} className="text-white" />
-        </div>
-        <span className={cn(
-          "text-white text-xl font-semibold ml-3 transition-opacity duration-300",
-          expanded ? "opacity-100" : "opacity-0 absolute"
-        )}>
-          SocialPilot
-        </span>
-      </div>
-      
-      <div className="flex flex-col flex-1 px-2 gap-1">
+      <div className="flex flex-col flex-1 px-2 gap-1 mt-4">
         {sidebarItems.map((item) => (
           <div key={item.name} className="relative">
             {item.hasSubmenu ? (
