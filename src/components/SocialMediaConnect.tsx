@@ -8,15 +8,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 
 interface SocialPlatform {
   id: string;
   name: string;
   icon: React.ReactNode;
+  color: string;
   connected: boolean;
   accountName?: string;
 }
@@ -33,47 +35,111 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
+  const [connectionSuccess, setConnectionSuccess] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
     {
       id: 'twitter',
-      name: 'Twitter',
+      name: 'Twitter / X',
+      color: '#1DA1F2',
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
-        </svg>
+        <Twitter className="w-5 h-5" />
       ),
       connected: false
     },
     {
       id: 'instagram',
       name: 'Instagram',
+      color: '#E1306C',
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-        </svg>
+        <Instagram className="w-5 h-5" />
       ),
       connected: false
     },
     {
       id: 'facebook',
       name: 'Facebook',
+      color: '#4267B2',
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-        </svg>
+        <Facebook className="w-5 h-5" />
       ),
       connected: false
     },
     {
       id: 'linkedin',
       name: 'LinkedIn',
+      color: '#0077B5',
+      icon: (
+        <Linkedin className="w-5 h-5" />
+      ),
+      connected: false
+    },
+    {
+      id: 'youtube',
+      name: 'YouTube',
+      color: '#FF0000',
+      icon: (
+        <Youtube className="w-5 h-5" />
+      ),
+      connected: false
+    },
+    {
+      id: 'pinterest',
+      name: 'Pinterest',
+      color: '#E60023',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
-          <rect x="2" y="9" width="4" height="12"></rect>
-          <circle cx="4" cy="4" r="2"></circle>
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+        </svg>
+      ),
+      connected: false
+    },
+    {
+      id: 'tiktok',
+      name: 'TikTok',
+      color: '#000000',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+          <path d="M9 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>
+          <path d="M15 8a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+          <path d="M15 8v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-4a4 4 0 0 1 4-4h8"></path>
+        </svg>
+      ),
+      connected: false
+    },
+    {
+      id: 'threads',
+      name: 'Threads',
+      color: '#000000',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+          <path d="M6 12a6 6 0 0 0 12 0v-4a6 6 0 0 0-12 0v4z"></path>
+          <path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6"></path>
+          <path d="M12 22v-6"></path>
+        </svg>
+      ),
+      connected: false
+    },
+    {
+      id: 'bluesky',
+      name: 'Bluesky',
+      color: '#0085FF',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+          <path d="M7 16a4 4 0 0 1-4-4 7 7 0 0 1 7-7 7 7 0 0 1 7 7 4 4 0 0 1-4 4H7z"></path>
+          <path d="M7 16v6"></path>
+          <path d="M15 8h4a4 4 0 0 1 4 4M11 6V4c0-1.1.9-2 2-2h7"></path>
+        </svg>
+      ),
+      connected: false
+    },
+    {
+      id: 'tumblr',
+      name: 'Tumblr',
+      color: '#36465D',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+          <path d="M9 3c-4 0-5 4-5 4v3h2v4H4v5c4 2 7 1 8-1v-8h3v-3s-3-1-3-3v2c0 0 0-3-3-3z"></path>
         </svg>
       ),
       connected: false
@@ -118,6 +184,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const connectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
+      setConnectionSuccess(null);
+      setConnectionError(null);
       
       // Get current user
       const { data: { session } } = await supabase.auth.getSession();
@@ -128,6 +196,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           variant: "destructive"
         });
         setIsConnecting(null);
+        setConnectionError(id);
         return;
       }
       
@@ -156,6 +225,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return platform;
       }));
       
+      setConnectionSuccess(id);
+      
       toast({
         title: "Account Connected",
         description: `Your ${platforms.find(p => p.id === id)?.name} account has been connected successfully.`
@@ -163,6 +234,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
     } catch (error: any) {
       console.error("Error connecting platform:", error);
+      setConnectionError(id);
       toast({
         title: "Connection Failed",
         description: error.message || "Failed to connect account. Please try again.",
@@ -170,12 +242,20 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       });
     } finally {
       setIsConnecting(null);
+      
+      // Auto-clear status indicators after a few seconds
+      setTimeout(() => {
+        setConnectionSuccess(null);
+        setConnectionError(null);
+      }, 3000);
     }
   };
 
   const disconnectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
+      setConnectionSuccess(null);
+      setConnectionError(null);
       
       // Get current user
       const { data: { session } } = await supabase.auth.getSession();
@@ -186,6 +266,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           variant: "destructive"
         });
         setIsConnecting(null);
+        setConnectionError(id);
         return;
       }
       
@@ -215,6 +296,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
     } catch (error: any) {
       console.error("Error disconnecting platform:", error);
+      setConnectionError(id);
       toast({
         title: "Disconnection Failed",
         description: error.message || "Failed to disconnect account. Please try again.",
@@ -222,6 +304,12 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       });
     } finally {
       setIsConnecting(null);
+      
+      // Auto-clear status indicators after a few seconds
+      setTimeout(() => {
+        setConnectionSuccess(null);
+        setConnectionError(null);
+      }, 3000);
     }
   };
 
@@ -232,14 +320,17 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   };
 
   const PlatformList = () => (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {platforms.map((platform) => (
         <div 
           key={platform.id}
-          className={`p-4 rounded-lg border ${platform.connected ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/60'} transition-all duration-300 flex items-center justify-between`}
+          className={`p-4 rounded-lg border ${platform.connected ? `border-[${platform.color}]/30 bg-[${platform.color}]/5` : 'border-border bg-background/60'} transition-all duration-300 flex items-center justify-between`}
         >
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${platform.connected ? 'bg-primary/10 text-primary' : 'bg-secondary text-foreground/70'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${platform.connected ? `bg-[${platform.color}]/10 text-[${platform.color}]` : 'bg-secondary text-foreground/70'}`} style={{ 
+              color: platform.connected ? platform.color : undefined,
+              backgroundColor: platform.connected ? `${platform.color}10` : undefined
+            }}>
               {platform.icon}
             </div>
             <div>
@@ -252,20 +343,33 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
             </div>
           </div>
           
-          <Button
-            variant={platform.connected ? "outline" : "default"}
-            size="sm"
-            onClick={() => platform.connected 
-              ? disconnectPlatform(platform.id) 
-              : connectPlatform(platform.id)
-            }
-            disabled={isConnecting !== null}
-            className={platform.connected ? 'border-primary/50 text-primary hover:bg-primary/5' : ''}
-          >
-            {isConnecting === platform.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : platform.connected ? 'Disconnect' : 'Connect'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {connectionSuccess === platform.id && (
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            )}
+            {connectionError === platform.id && (
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            )}
+            
+            <Button
+              variant={platform.connected ? "outline" : "default"}
+              size="sm"
+              onClick={() => platform.connected 
+                ? disconnectPlatform(platform.id) 
+                : connectPlatform(platform.id)
+              }
+              disabled={isConnecting !== null}
+              className={platform.connected ? 'border-primary/50 text-primary hover:bg-primary/5' : ''}
+              style={{
+                borderColor: platform.connected ? platform.color : undefined,
+                color: platform.connected ? platform.color : undefined,
+              }}
+            >
+              {isConnecting === platform.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : platform.connected ? 'Disconnect' : 'Connect'}
+            </Button>
+          </div>
         </div>
       ))}
     </div>
@@ -275,24 +379,52 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   if (isDialog) {
     return (
       <>
-        <Button onClick={openDialog}>Connect Account</Button>
+        <Button onClick={openDialog} className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Connect Account
+        </Button>
         
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="sm:max-w-md md:max-w-lg">
+          <DialogContent className="sm:max-w-md lg:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Connect Your Social Accounts</DialogTitle>
+              <DialogTitle>Connect Your Social Media Accounts</DialogTitle>
+              <DialogDescription>
+                Link your accounts to publish content across multiple platforms at once.
+              </DialogDescription>
             </DialogHeader>
             
             <div className="p-4">
               <PlatformList />
               
-              <div className="pt-4 border-t border-border mt-4">
+              <div className="pt-6 border-t border-border mt-6">
                 <div className="text-sm text-muted-foreground">
                   <div className="flex items-center gap-2 mb-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    <span>Your account data is secure</span>
+                    <span className="font-medium">Your account data is secure</span>
                   </div>
-                  <p>We use official APIs and never store your passwords.</p>
+                  <p>We use official APIs and never store your passwords. Connect once and publish everywhere.</p>
+                </div>
+                
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Need help? </span>
+                    <Button variant="link" className="p-0 h-auto text-primary">View our guide</Button>
+                  </div>
+                  
+                  {platforms.some(p => p.connected) && (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={closeDialog}
+                      className="ml-auto"
+                    >
+                      Done
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
