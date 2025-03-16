@@ -44,13 +44,7 @@ const App = () => {
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, session);
       setIsAuthenticated(!!session);
-      
-      // If the user signs in or signs up, set isAuthenticated to true
-      if (event === 'SIGNED_IN' || event === 'SIGNED_UP') {
-        setIsAuthenticated(true);
-      }
     });
 
     return () => {
@@ -62,9 +56,6 @@ const App = () => {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  // Check if user is logged in from localStorage or session
-  const isLoggedIn = localStorage.getItem('socialAI_user') !== null || isAuthenticated;
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -72,22 +63,16 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={
-              // If user is logged in, redirect to dashboard
-              isLoggedIn ? <Navigate to="/dashboard" /> : <Index />
-            } />
+            <Route path="/" element={<Index />} />
             <Route path="/trial" element={<Trial />} />
             <Route 
               path="/dashboard" 
               element={
                 // User must be authenticated to access the dashboard
-                isLoggedIn ? <Dashboard /> : <Navigate to="/auth" />
+                localStorage.getItem('socialAI_user') ? <Dashboard /> : <Navigate to="/auth" />
               } 
             />
-            <Route path="/auth" element={
-              // If already logged in, redirect to dashboard
-              isLoggedIn ? <Navigate to="/dashboard" /> : <Auth />
-            } />
+            <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
