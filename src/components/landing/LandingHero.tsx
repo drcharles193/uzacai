@@ -1,10 +1,7 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
-
 const LandingHero: React.FC = () => {
-  return (
-    <section className="relative py-20 md:py-32 overflow-hidden">
+  return <section className="relative py-20 md:py-32 overflow-hidden">
       {/* Background elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl"></div>
@@ -19,7 +16,7 @@ const LandingHero: React.FC = () => {
             <span className="ml-2">Transform Your Social Media</span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 max-w-4xl animate-slide-up">
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 max-w-4xl animate-slide-up lg:text-7xl">
             Automate Your <span className="text-primary">Social Media</span> With AI
           </h1>
           
@@ -45,31 +42,32 @@ const LandingHero: React.FC = () => {
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 to-transparent rounded-2xl blur-md"></div>
           <div className="glass-card rounded-2xl overflow-hidden shadow-md">
             <div className="aspect-video w-full bg-secondary/40 rounded-t-2xl p-6">
-              <img 
-                src="/placeholder.svg" 
-                alt="SocialAI Dashboard Preview" 
-                className="w-full h-full object-cover rounded-lg border border-border/50"
-              />
+              <img src="/placeholder.svg" alt="SocialAI Dashboard Preview" className="w-full h-full object-cover rounded-lg border border-border/50" />
             </div>
           </div>
         </div>
         
         <div className="mt-16 md:mt-24 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
-          {[
-            { stat: '10x', desc: 'Faster Content Creation' },
-            { stat: '86%', desc: 'Increase in Engagement' },
-            { stat: '5000+', desc: 'Business Users' },
-            { stat: '120M+', desc: 'Posts Generated' },
-          ].map((item, index) => (
-            <div key={index} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
+          {[{
+          stat: '10x',
+          desc: 'Faster Content Creation'
+        }, {
+          stat: '86%',
+          desc: 'Increase in Engagement'
+        }, {
+          stat: '5000+',
+          desc: 'Business Users'
+        }, {
+          stat: '120M+',
+          desc: 'Posts Generated'
+        }].map((item, index) => <div key={index} className="animate-slide-up" style={{
+          animationDelay: `${index * 100}ms`
+        }}>
               <div className="font-display font-bold text-3xl md:text-4xl mb-2">{item.stat}</div>
               <div className="text-sm text-muted-foreground">{item.desc}</div>
-            </div>
-          ))}
+            </div>)}
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default LandingHero;
