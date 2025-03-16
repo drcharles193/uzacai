@@ -47,9 +47,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   
   return (
     <SidebarProvider>
-      <div className="flex w-full min-h-screen">
+      <div className="flex w-full h-screen overflow-hidden">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Top notification bar */}
           <div className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-2 text-center flex justify-between items-center px-4">
             <div className="flex items-center gap-2">
@@ -77,8 +77,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </div>
           </div>
           
-          {/* Main content */}
-          <div className="flex-1 p-8 bg-slate-100">
+          {/* Main content with overflow scroll */}
+          <div className="flex-1 p-8 bg-slate-100 overflow-auto">
             {children}
           </div>
         </div>
