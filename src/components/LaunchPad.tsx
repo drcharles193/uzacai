@@ -1,62 +1,104 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
-import LaunchpadTabs from './launchpad/LaunchpadTabs';
+import AccountsTab from './launchpad/AccountsTab';
+import PostPreviewTab from './launchpad/PostPreviewTab';
+import CommentsTab from './launchpad/CommentsTab';
+import { X } from 'lucide-react';
+import { Button } from './ui/button';
+
+interface SocialAccount {
+  platform: string;
+  account_name: string;
+  account_type?: string;
+  platform_account_id?: string;
+}
 
 interface LaunchPadProps {
   isOpen: boolean;
   onClose: () => void;
-  connectedAccounts: Array<{
-    platform: string;
-    account_name: string;
-  }>;
+  connectedAccounts: SocialAccount[];
 }
 
-const LaunchPad: React.FC<LaunchPadProps> = ({
-  isOpen,
-  onClose,
-  connectedAccounts
-}) => {
-  const [postContent, setPostContent] = useState('');
+const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccounts }) => {
   const [selectedTab, setSelectedTab] = useState('create');
+  const [postContent, setPostContent] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
+
+  const handleContentChange = (content: string) => {
+    setPostContent(content);
+  };
+
+  const handleToggleAccount = (accountId: string) => {
+    setSelectedAccounts((prev) => {
+      if (prev.includes(accountId)) {
+        return prev.filter(id => id !== accountId);
+      } else {
+        return [...prev, accountId];
+      }
+    });
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-4xl p-0 gap-0">
-        <DialogTitle className="sr-only">Create Post</DialogTitle>
-        
-        <LaunchpadHeader 
-          selectedTab={selectedTab}
-          setSelectedTab={setSelectedTab}
-          onClose={onClose}
-        />
-
-        <div className="flex flex-1 h-[600px]">
-          <div className="w-3/5 border-r p-4">
-            <PostContentEditor 
-              postContent={postContent}
-              setPostContent={setPostContent}
-              mediaFiles={mediaFiles}
-              setMediaFiles={setMediaFiles}
-              mediaPreviewUrls={mediaPreviewUrls}
-              setMediaPreviewUrls={setMediaPreviewUrls}
-              selectedAccounts={selectedAccounts}
-            />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh]">
+        <div className="flex flex-col h-full">
+          <div className="flex justify-between items-center border-b py-2 px-4">
+            <div>
+              <h2 className="text-lg font-semibold">Create Post</h2>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-
-          <div className="w-2/5 p-4">
-            <LaunchpadTabs 
-              postContent={postContent}
-              mediaPreviewUrls={mediaPreviewUrls}
-              connectedAccounts={connectedAccounts}
-              selectedAccounts={selectedAccounts}
-              setSelectedAccounts={setSelectedAccounts}
-            />
+          
+          <LaunchpadHeader selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
+          
+          <div className="flex-1 overflow-auto">
+            {selectedTab === 'create' && (
+              <div className="flex divide-x h-full">
+                <div className="w-2/3 p-4 overflow-auto">
+                  <PostContentEditor
+                    content={postContent}
+                    onChange={handleContentChange}
+                  />
+                </div>
+                <div className="w-1/3 overflow-auto">
+                  <AccountsTab
+                    accounts={connectedAccounts}
+                    selectedAccounts={selectedAccounts}
+                    onToggleAccount={handleToggleAccount}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {selectedTab === 'drafts' && (
+              <div className="p-4 h-full">
+                <p className="text-center text-gray-500 p-8">No drafts saved yet.</p>
+              </div>
+            )}
+            
+            {selectedTab === 'content' && (
+              <div className="flex divide-x h-full">
+                <div className="w-1/2 p-4 overflow-auto">
+                  <PostPreviewTab content={postContent} />
+                </div>
+                <div className="w-1/2 overflow-auto">
+                  <CommentsTab />
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="border-t p-4 flex justify-between">
+            <Button variant="outline">Save as Draft</Button>
+            <div className="space-x-2">
+              <Button variant="outline">Schedule</Button>
+              <Button disabled={!postContent || selectedAccounts.length === 0}>Publish Now</Button>
+            </div>
           </div>
         </div>
       </DialogContent>

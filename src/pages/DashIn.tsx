@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut, Plus } from 'lucide-react';
+import { UserRound, LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ import SocialMediaConnect from '@/components/SocialMediaConnect';
 import PublishingSummary from '@/components/PublishingSummary';
 import ConnectedAccountsList from '@/components/ConnectedAccountsList';
 import LaunchPad from '@/components/LaunchPad';
+import AppSidebar from '@/components/AppSidebar';
 
 interface SocialAccount {
   platform: string;
@@ -81,6 +83,14 @@ const DashIn = () => {
     };
     fetchUserData();
     fetchConnectedAccounts();
+    
+    // Listen for launchpad open event
+    const handleOpenLaunchPad = () => setShowLaunchPad(true);
+    window.addEventListener('open-launchpad', handleOpenLaunchPad);
+    
+    return () => {
+      window.removeEventListener('open-launchpad', handleOpenLaunchPad);
+    };
   }, [navigate]);
 
   const handleSignOut = async () => {
@@ -118,41 +128,7 @@ const DashIn = () => {
   const hasConnectedAccounts = connectedAccounts.length > 0;
 
   return <div className="flex min-h-screen">
-      <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
-        <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center mb-12">
-          <MessageSquare size={16} className="text-white" />
-        </div>
-        
-        <div className="flex flex-col gap-8">
-          <Link to="/dashin" className="text-white hover:text-[#85A88E]">
-            <Grid size={20} />
-          </Link>
-          <Link to="#" className="text-gray-400 hover:text-white">
-            <MessageSquare size={20} />
-          </Link>
-          <Link to="#" className="text-gray-400 hover:text-white">
-            <CalendarDays size={20} />
-          </Link>
-          <Link to="#" className="text-gray-400 hover:text-white">
-            <Users size={20} />
-          </Link>
-          <Link to="#" className="text-gray-400 hover:text-white">
-            <BarChart3 size={20} />
-          </Link>
-          <Link to="#" className="text-gray-400 hover:text-white">
-            <Inbox size={20} />
-          </Link>
-          <Link to="#" className="text-gray-400 hover:text-white">
-            <FileText size={20} />
-          </Link>
-        </div>
-        
-        <div className="mt-auto mb-6">
-          <Link to="/settings" className="text-gray-400 hover:text-white">
-            <Settings size={20} />
-          </Link>
-        </div>
-      </div>
+      <AppSidebar />
       
       <div className="flex-1 flex flex-col">
         <div className="bg-[#689675] text-white p-2 text-center flex justify-between items-center px-6">
