@@ -22,9 +22,9 @@ const Testimonials: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 md:py-32 bg-muted/30">
+    <section className="py-16 md:py-24 bg-muted/30">
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <span>Success Stories</span>
           </div>

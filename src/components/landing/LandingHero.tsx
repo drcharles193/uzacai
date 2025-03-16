@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
+
 const LandingHero: React.FC = () => {
-  return <section className="relative py-20 md:py-32 overflow-hidden">
+  return <section className="relative py-16 md:py-24 overflow-hidden">
       {/* Background elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl"></div>
@@ -10,7 +11,7 @@ const LandingHero: React.FC = () => {
       </div>
       
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
-        <div className="flex flex-col items-center text-center mb-12 md:mb-16 animate-fade-in">
+        <div className="flex flex-col items-center text-center mb-10 md:mb-12 animate-fade-in">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-fade-in">
             <span className="animate-pulse-subtle">●</span>
             <span className="ml-2">Transform Your Social Media</span>
@@ -20,7 +21,7 @@ const LandingHero: React.FC = () => {
             Automate Your <span className="text-primary">Social Media</span> With AI
           </h1>
           
-          <p className="text-xl text-muted-foreground max-w-2xl mb-10 animate-slide-up">
+          <p className="text-xl text-muted-foreground max-w-2xl mb-8 animate-slide-up">
             AI-powered content creation and scheduling across all platforms. Generate captivating posts that convert and save hours every week.
           </p>
           
@@ -33,12 +34,12 @@ const LandingHero: React.FC = () => {
             </Button>
           </div>
           
-          <div className="mt-8 text-sm text-muted-foreground animate-slide-up">
+          <div className="mt-6 text-sm text-muted-foreground animate-slide-up">
             No credit card required • Cancel anytime • 14-day free trial
           </div>
         </div>
         
-        <div className="relative mx-auto max-w-5xl mt-16 animate-scale">
+        <div className="relative mx-auto max-w-5xl mt-12 animate-scale">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 to-transparent rounded-2xl blur-md"></div>
           <div className="glass-card rounded-2xl overflow-hidden shadow-md">
             <div className="aspect-video w-full bg-secondary/40 rounded-t-2xl p-6">
@@ -47,7 +48,7 @@ const LandingHero: React.FC = () => {
           </div>
         </div>
         
-        <div className="mt-16 md:mt-24 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
+        <div className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
           {[{
           stat: '10x',
           desc: 'Faster Content Creation'
@@ -70,4 +71,5 @@ const LandingHero: React.FC = () => {
       </div>
     </section>;
 };
+
 export default LandingHero;

@@ -27,9 +27,9 @@ const HowItWorks: React.FC = () => {
   ];
 
   return (
-    <section id="how-it-works" className="py-20 md:py-32 bg-secondary/30">
+    <section id="how-it-works" className="py-16 md:py-24 bg-secondary/30">
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <span>Simple Process</span>
           </div>

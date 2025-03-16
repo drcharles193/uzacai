@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,7 @@ const CTASection: React.FC = () => {
   };
 
   return (
-    <section className="py-20 md:py-32 relative overflow-hidden">
+    <section className="py-16 md:py-24 relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-muted/30 to-background"></div>
       
@@ -42,11 +41,11 @@ const CTASection: React.FC = () => {
             Transform Your Social Media Strategy with SocialAI
           </h2>
           
-          <p className="text-xl text-muted-foreground mb-10 animate-slide-up">
+          <p className="text-xl text-muted-foreground mb-8 animate-slide-up">
             Join thousands of marketers who save hours every week while creating better content that drives real results.
           </p>
           
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto mb-8 animate-slide-up">
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto mb-6 animate-slide-up">
             <Input
               type="email"
               placeholder="Enter your email address"
@@ -61,7 +60,7 @@ const CTASection: React.FC = () => {
             No credit card required • 14-day free trial • Cancel anytime
           </p>
           
-          <div className="mt-16 pt-8 border-t border-border flex flex-wrap justify-center gap-6 animate-slide-up">
+          <div className="mt-12 pt-6 border-t border-border flex flex-wrap justify-center gap-6 animate-slide-up">
             {[
               '/placeholder.svg',
               '/placeholder.svg',

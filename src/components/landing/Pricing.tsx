@@ -62,9 +62,9 @@ const Pricing: React.FC = () => {
   ];
 
   return (
-    <section id="pricing" className="py-20 md:py-32">
+    <section id="pricing" className="py-16 md:py-24">
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <span>Simple Pricing</span>
           </div>
@@ -151,7 +151,7 @@ const Pricing: React.FC = () => {
           ))}
         </div>
         
-        <div className="mt-16 text-center">
+        <div className="mt-12 text-center">
           <p className="text-muted-foreground mb-4">
             Need a custom plan for your enterprise? Contact our sales team.
           </p>
