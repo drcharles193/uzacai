@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -151,12 +150,12 @@ const Settings = () => {
               key={tab.id}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left mb-1 ${
                 activeTab === tab.id 
-                  ? 'bg-blue-50 text-blue-600' 
+                  ? 'bg-primary/10 text-primary' 
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
               onClick={() => setActiveTab(tab.id)}
             >
-              <tab.icon size={18} />
+              <tab.icon size={18} className={activeTab === tab.id ? 'text-primary' : ''} />
               <span>{tab.name}</span>
             </button>
           ))}
@@ -183,7 +182,7 @@ const Settings = () => {
           {activeTab === 'profile' && (
             <div className="space-y-8">
               <section>
-                <h3 className="text-lg font-medium mb-4 pb-1 border-b border-yellow-400 w-fit">
+                <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
                   Personal Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -227,7 +226,7 @@ const Settings = () => {
               </section>
 
               <section>
-                <h3 className="text-lg font-medium mb-4 pb-1 border-b border-yellow-400 w-fit">
+                <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
                   Localization
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -349,7 +348,7 @@ const Settings = () => {
           {/* Notifications Tab Content */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium mb-4 pb-1 border-b border-yellow-400 w-fit">
+              <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
                 Notification Preferences
               </h3>
               <div className="space-y-4">
@@ -403,7 +402,7 @@ const Settings = () => {
           {/* Subscriptions Tab Content */}
           {activeTab === 'subscriptions' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium mb-4 pb-1 border-b border-yellow-400 w-fit">
+              <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
                 Your Subscription
               </h3>
               
@@ -411,7 +410,7 @@ const Settings = () => {
                 <div className="p-6 border-b">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-2">
+                      <div className="inline-block px-3 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium mb-2">
                         Active
                       </div>
                       <h3 className="text-xl font-semibold">Free Trial Plan</h3>
@@ -428,15 +427,15 @@ const Settings = () => {
                   <h4 className="font-medium mb-4">Plan Features</h4>
                   <ul className="space-y-3">
                     <li className="flex items-center gap-2">
-                      <Check size={18} className="text-green-500" />
+                      <Check size={18} className="text-primary" />
                       <span>5 social media accounts</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check size={18} className="text-green-500" />
+                      <Check size={18} className="text-primary" />
                       <span>Basic content scheduling</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check size={18} className="text-green-500" />
+                      <Check size={18} className="text-primary" />
                       <span>Standard analytics</span>
                     </li>
                     <li className="flex items-center gap-2 text-gray-400">
@@ -460,12 +459,12 @@ const Settings = () => {
           {/* Other tabs could be implemented here */}
           {(activeTab === 'security' || activeTab === 'organization' || activeTab === 'users') && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="bg-blue-50 rounded-full p-4 mb-4">
+              <div className="bg-primary/10 rounded-full p-4 mb-4">
                 {(() => {
                   const currentTab = tabs.find(tab => tab.id === activeTab);
                   if (currentTab?.icon) {
                     const IconComponent = currentTab.icon;
-                    return <IconComponent size={32} className="text-blue-500" />;
+                    return <IconComponent size={32} className="text-primary" />;
                   }
                   return null;
                 })()}
@@ -483,4 +482,3 @@ const Settings = () => {
 };
 
 export default Settings;
-
