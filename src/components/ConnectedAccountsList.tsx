@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -6,6 +5,16 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SocialAccount {
   platform: string;
@@ -21,6 +30,8 @@ interface ConnectedAccountsListProps {
 
 const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts, onAccountDisconnected }) => {
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
 
   const getPlatformIcon = (platform: string) => {
     switch(platform) {
@@ -41,6 +52,11 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
           </svg>
         );
     }
+  };
+
+  const initiateDisconnect = (platform: string) => {
+    setPlatformToDisconnect(platform);
+    setConfirmDialogOpen(true);
   };
 
   const disconnectAccount = async (platform: string) => {
@@ -111,7 +127,7 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => disconnectAccount(account.platform)}
+                      onClick={() => initiateDisconnect(account.platform)}
                       disabled={disconnecting === account.platform}
                       className="text-red-500 border-red-200 hover:bg-red-50"
                     >
@@ -124,6 +140,33 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to disconnect your {platformToDisconnect && platformToDisconnect.charAt(0).toUpperCase() + platformToDisconnect.slice(1)} account? 
+              This will remove all access and you'll need to reconnect it to publish content again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPlatformToDisconnect(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (platformToDisconnect) {
+                  disconnectAccount(platformToDisconnect);
+                  setPlatformToDisconnect(null);
+                  setConfirmDialogOpen(false);
+                }
+              }}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
