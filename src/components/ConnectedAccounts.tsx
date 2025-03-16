@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -204,7 +205,7 @@ const ConnectedAccounts: React.FC<ConnectedAccountsProps> = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDisconnect}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-[#689675] hover:bg-[#85A88EA8] text-white"
             >
               Disconnect
             </AlertDialogAction>
