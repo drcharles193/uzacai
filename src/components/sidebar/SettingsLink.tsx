@@ -11,7 +11,7 @@ interface SettingsLinkProps {
 
 const SettingsLink: React.FC<SettingsLinkProps> = ({ expanded, isActive }) => {
   return (
-    <div className="px-2 mb-6 mt-auto">
+    <div className="px-2 mb-8 mt-auto border-t border-[#2A2F3C] pt-4">
       <Link 
         to="/settings" 
         className={cn(

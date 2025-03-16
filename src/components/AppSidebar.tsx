@@ -30,14 +30,14 @@ const AppSidebar = () => {
   return (
     <div 
       className={cn(
-        "bg-[#1A2238] flex flex-col h-screen transition-all duration-300",
+        "bg-[#1A2238] flex flex-col h-screen sticky top-0 transition-all duration-300",
         expanded ? "w-56" : "w-[60px]"
       )}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      {/* Main sidebar items with flex-1 to allow them to take available space */}
-      <div className="flex flex-col flex-1 px-2 gap-1 mt-4">
+      {/* Main sidebar items with proper spacing */}
+      <div className="flex flex-col flex-1 px-2 gap-2 mt-6 overflow-y-auto">
         {sidebarItems.map((item) => (
           <div key={item.name} className="relative">
             <SidebarItem
@@ -52,8 +52,7 @@ const AppSidebar = () => {
         ))}
       </div>
       
-      {/* Settings icon positioned at the very bottom with margin-top auto 
-         to push it to the bottom regardless of content above */}
+      {/* Settings icon positioned at the very bottom */}
       <SettingsLink 
         expanded={expanded} 
         isActive={isActive} 
