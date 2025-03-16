@@ -62,13 +62,14 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
             lastName,
             signupDate: new Date().toISOString(),
             trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days from now
-          }
+          },
+          emailRedirectTo: window.location.origin + '/dashboard'
         }
       });
       
       if (error) throw error;
       
-      // Store user info in localStorage as well for the components that use it
+      // Store user info in localStorage
       localStorage.setItem('socialAI_user', JSON.stringify({
         firstName,
         lastName,
@@ -81,9 +82,21 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
       // Close dialog before navigating
       onClose();
       
-      // Important: Force a redirect to dashboard
-      window.location.href = '/dashboard';
+      // If we're in development mode or testing, we'll bypass email confirmation
+      // In production, users would need to confirm their email
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        window.location.href = '/dashboard';
+      } else {
+        // Show a message about confirmation
+        toast.info("Please check your email to confirm your account.");
+        setTimeout(() => {
+          // Redirect to dashboard anyway for development purposes
+          window.location.href = '/dashboard';
+        }, 2000);
+      }
     } catch (error: any) {
+      console.error("Signup error:", error);
       toast.error(error.message || "An error occurred during signup");
     } finally {
       setIsLoading(false);

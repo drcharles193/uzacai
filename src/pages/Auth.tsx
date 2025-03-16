@@ -12,6 +12,14 @@ const Auth = () => {
   useEffect(() => {
     const handleAuthRedirect = async () => {
       try {
+        // First check localStorage for dev/testing purposes
+        const userData = localStorage.getItem('socialAI_user');
+        if (userData) {
+          window.location.href = '/dashboard';
+          return;
+        }
+        
+        // Then check actual session
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {

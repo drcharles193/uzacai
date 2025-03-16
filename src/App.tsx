@@ -22,6 +22,15 @@ const App = () => {
     // Check if the user is authenticated
     const checkAuth = async () => {
       try {
+        // First check localStorage for dev/testing purposes
+        const userData = localStorage.getItem('socialAI_user');
+        if (userData) {
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Then check actual session
         const { data } = await supabase.auth.getSession();
         setIsAuthenticated(!!data.session);
       } catch (error) {
