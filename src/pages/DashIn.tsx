@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut } from 'lucide-react';
+import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,11 +8,26 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SocialMediaConnect from '@/components/SocialMediaConnect';
+import PublishingSummary from '@/components/PublishingSummary';
+import ConnectedAccounts from '@/components/ConnectedAccounts';
+
+interface ConnectedAccount {
+  id: string;
+  platform: string;
+  accountName: string;
+  queued: number;
+  errors: number;
+  status: string;
+}
+
 const DashIn = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
+  const [hasConnectedAccounts, setHasConnectedAccounts] = useState(false);
+
   useEffect(() => {
     // Fetch the current user data when component mounts
     const fetchUserData = async () => {
@@ -21,6 +36,7 @@ const DashIn = () => {
           user
         }
       } = await supabase.auth.getUser();
+      
       if (user) {
         // Get user metadata
         const userMeta = user.user_metadata;
@@ -38,18 +54,47 @@ const DashIn = () => {
           endDate.setDate(endDate.getDate() + 14);
         }
         setTrialEndDate(endDate);
+
+        // Check for connected social accounts
+        fetchConnectedAccounts(user.id);
       } else {
         // Redirect to home if no user is found
         navigate('/');
       }
     };
+    
     fetchUserData();
   }, [navigate]);
+
+  const fetchConnectedAccounts = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setHasConnectedAccounts(true);
+        const formattedAccounts: ConnectedAccount[] = data.map(account => ({
+          id: account.id,
+          platform: account.platform,
+          accountName: account.account_name || `${account.platform} Account`,
+          queued: 0,
+          errors: 0,
+          status: 'active'
+        }));
+        setConnectedAccounts(formattedAccounts);
+      }
+    } catch (error: any) {
+      console.error('Error fetching social accounts:', error);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
-      const {
-        error
-      } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       if (error) throw error;
       toast.success('Signed out successfully');
       navigate('/');
@@ -64,9 +109,12 @@ const DashIn = () => {
     month: 'short',
     year: 'numeric'
   }) : '...';
-  return <div className="flex min-h-screen">
+
+  return (
+    <div className="flex min-h-screen">
       {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
+        
         <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center mb-12">
           <MessageSquare size={16} className="text-white" />
         </div>
@@ -124,6 +172,13 @@ const DashIn = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* Create Post Button - Only show if accounts are connected */}
+            {hasConnectedAccounts && (
+              <Button className="bg-[#689675] hover:bg-[#85A88EA8] flex items-center gap-2">
+                <PlusCircle size={18} />
+                <span>Create Post</span>
+              </Button>
+            )}
             
             <Button variant="ghost" size="icon" className="text-gray-500">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><line x1="22" y1="6" x2="2" y2="6"></line></svg>
@@ -173,45 +228,63 @@ const DashIn = () => {
         
         {/* Main content */}
         <div className="flex-1 bg-gray-100 p-10">
-          <div className="max-w-5xl mx-auto flex">
-            {/* Left content */}
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-700 mb-4">Hey, {userName || 'there'}!</h1>
-              
-              <p className="text-gray-600 mb-2">Welcome to SocialAI . . .</p>
-              
-              <p className="text-gray-600 mb-2">
-                This is your dashboard, where you will see a summary of your queued and published posts.
-              </p>
-              
-              <p className="text-gray-600 mb-4">
-                Get started by connecting your first account.
-              </p>
-              
-              <Button className="bg-[#689675] hover:bg-[#85A88EA8] mt-4" onClick={() => setShowConnectDialog(true)}>
-                <span>Connect Account</span>
-              </Button>
-              
-              {/* Social Media Connect Dialog */}
-              <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-                <DialogContent className="sm:max-w-md md:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Connect Your Social Accounts</DialogTitle>
-                  </DialogHeader>
-                  <div className="p-4">
-                    <SocialMediaConnect isDialog={true} onClose={() => setShowConnectDialog(false)} />
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            
-            {/* Right illustration */}
-            <div className="w-[300px]">
-              <img alt="Dashboard illustration" className="w-full h-auto" src="/lovable-uploads/13323779-e347-427f-b65f-61bb092752dc.png" />
-            </div>
+          <div className="max-w-5xl mx-auto">
+            {hasConnectedAccounts ? (
+              <>
+                <h1 className="text-4xl font-bold text-gray-700 mb-6">Hey, {userName || 'there'}!</h1>
+                
+                {/* Publishing Summary */}
+                <PublishingSummary />
+                
+                {/* Connected Accounts */}
+                <div className="mt-8">
+                  <ConnectedAccounts accounts={connectedAccounts} />
+                </div>
+              </>
+            ) : (
+              <div className="flex">
+                {/* Left content */}
+                <div className="flex-1">
+                  <h1 className="text-4xl font-bold text-gray-700 mb-4">Hey, {userName || 'there'}!</h1>
+                  
+                  <p className="text-gray-600 mb-2">Welcome to SocialAI . . .</p>
+                  
+                  <p className="text-gray-600 mb-2">
+                    This is your dashboard, where you will see a summary of your queued and published posts.
+                  </p>
+                  
+                  <p className="text-gray-600 mb-4">
+                    Get started by connecting your first account.
+                  </p>
+                  
+                  <Button className="bg-[#689675] hover:bg-[#85A88EA8] mt-4" onClick={() => setShowConnectDialog(true)}>
+                    <span>Connect Account</span>
+                  </Button>
+                </div>
+                
+                {/* Right illustration */}
+                <div className="w-[300px]">
+                  <img alt="Dashboard illustration" className="w-full h-auto" src="/lovable-uploads/13323779-e347-427f-b65f-61bb092752dc.png" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>;
+      
+      {/* Social Media Connect Dialog */}
+      <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
+        <DialogContent className="sm:max-w-md md:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Connect Your Social Accounts</DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <SocialMediaConnect isDialog={true} onClose={() => setShowConnectDialog(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 };
+
 export default DashIn;
