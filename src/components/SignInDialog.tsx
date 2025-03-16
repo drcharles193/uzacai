@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -16,14 +16,22 @@ import { supabase } from '@/integrations/supabase/client';
 interface SignInDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  prefillEmail?: string;
 }
 
-const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
+const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose, prefillEmail = '' }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  
+  // Update email if prefillEmail changes
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(prefillEmail);
+    }
+  }, [prefillEmail]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
