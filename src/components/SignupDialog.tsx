@@ -71,12 +71,15 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
       
       if (error) throw error;
       
-      // Success message and navigation to dashboard
+      // Success message
       toast.success(`Account created for ${firstName} ${lastName}!`);
+      
+      // Close dialog
       onClose();
       
-      // Navigate to dashboard
-      navigate('/dashin');
+      // Explicitly navigate to dashboard
+      console.log("Navigating to /dashin");
+      navigate('/dashin', { replace: true });
     } catch (error: any) {
       toast.error(error.message || "An error occurred during registration");
     } finally {
