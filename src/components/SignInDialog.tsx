@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
+import SignupDialog from './SignupDialog';
 
 interface SignInDialogProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignupDialogOpen, setIsSignupDialogOpen] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,59 +89,69 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
     }
   };
   
-  const toggleMode = () => {
-    setIsSignUp(!isSignUp);
+  const openSignupDialog = () => {
+    // Close the current sign-in dialog
+    onClose();
+    // Open the signup dialog
+    setIsSignupDialogOpen(true);
   };
-  
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md md:max-w-lg w-[90%]">
-        <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold">
-            {isSignUp ? 'Create an account' : 'Welcome back!'}
-          </DialogTitle>
-          <button 
-            onClick={onClose} 
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </button>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="bg-yellow-50"
-          />
-          
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-yellow-50"
-          />
-          
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
-          </Button>
-          
-          <div className="flex justify-center text-sm">
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-md md:max-w-lg w-[90%]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              {isSignUp ? 'Create an account' : 'Welcome back!'}
+            </DialogTitle>
             <button 
-              type="button" 
-              onClick={toggleMode} 
-              className="text-primary hover:underline"
+              onClick={onClose} 
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
             >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
             </button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-yellow-50"
+            />
+            
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-yellow-50"
+            />
+            
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
+            </Button>
+            
+            <div className="flex justify-center text-sm">
+              <button 
+                type="button" 
+                onClick={openSignupDialog} 
+                className="text-primary hover:underline"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <SignupDialog 
+        isOpen={isSignupDialogOpen} 
+        onClose={() => setIsSignupDialogOpen(false)} 
+      />
+    </>
   );
 };
 
