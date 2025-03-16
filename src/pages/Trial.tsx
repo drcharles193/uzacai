@@ -231,7 +231,7 @@ const Trial = () => {
                       className="w-full mt-4" 
                       variant={plan.popular ? "default" : "outline"}
                     >
-                      {plan.popular ? "Start Free Trial" : "Choose Plan"}
+                      Start Free Trial
                     </Button>
                     
                     <ul className="mt-4 space-y-2">
@@ -297,7 +297,7 @@ const Trial = () => {
                     className="w-full mt-2" 
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    {plan.popular ? "Start Free Trial" : "Choose Plan"}
+                    Start Free Trial
                   </Button>
                 </div>
               ))}

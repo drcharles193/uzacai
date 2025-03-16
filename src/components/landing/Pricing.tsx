@@ -58,7 +58,7 @@ const Pricing: React.FC = () => {
         "White-label options",
       ],
       popular: false,
-      buttonText: "Request a Demo"
+      buttonText: "Start Free Trial"
     }
   ];
 
@@ -137,7 +137,7 @@ const Pricing: React.FC = () => {
                   variant={plan.popular ? "default" : "outline"}
                   asChild
                 >
-                  <Link to="/trial">{plan.buttonText}</Link>
+                  <Link to="/trial">Start Free Trial</Link>
                 </Button>
                 
                 <ul className="space-y-3 text-sm">
