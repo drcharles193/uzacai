@@ -18,13 +18,32 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
+// Define types for sidebar items
+interface SubmenuItem {
+  name: string;
+  icon: React.ComponentType<any>;
+  path: string;
+  comingSoon?: boolean;
+}
+
+interface SidebarItem {
+  name: string;
+  icon: React.ComponentType<any>;
+  path: string;
+  color?: string;
+  exact?: boolean;
+  hasSubmenu?: boolean;
+  submenuItems?: SubmenuItem[];
+  comingSoon?: boolean;
+}
+
 const AppSidebar = () => {
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   
   // Define sidebar main items
-  const sidebarItems = [
+  const sidebarItems: SidebarItem[] = [
     { 
       name: 'Dashboard', 
       icon: LayoutDashboard, 
