@@ -9,7 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      social_accounts: {
+        Row: {
+          access_token: string | null
+          account_name: string | null
+          account_type: string | null
+          connected_at: string | null
+          id: string
+          last_used_at: string | null
+          metadata: Json | null
+          platform: string
+          platform_account_id: string | null
+          refresh_token: string | null
+          token_expires_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_name?: string | null
+          account_type?: string | null
+          connected_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          platform: string
+          platform_account_id?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          account_name?: string | null
+          account_type?: string | null
+          connected_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          platform?: string
+          platform_account_id?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

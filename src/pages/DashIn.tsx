@@ -17,11 +17,19 @@ import {
   Avatar,
   AvatarFallback,
 } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import SocialMediaConnect from '@/components/SocialMediaConnect';
 
 const DashIn = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+  const [showConnectDialog, setShowConnectDialog] = useState(false);
   
   useEffect(() => {
     // Fetch the current user data when component mounts
@@ -70,7 +78,8 @@ const DashIn = () => {
     ? trialEndDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) 
     : '...';
   
-  return <div className="flex min-h-screen">
+  return (
+    <div className="flex min-h-screen">
       {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
         <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center mb-12">
@@ -179,8 +188,7 @@ const DashIn = () => {
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-gray-700 mb-4">Hey, {userName || 'there'}!</h1>
               
-              <p className="text-gray-600 mb-2">Welcome to SocialAI . . .
-            </p>
+              <p className="text-gray-600 mb-2">Welcome to SocialAI . . .</p>
               
               <p className="text-gray-600 mb-2">
                 This is your dashboard, where you will see a summary of your queued and published posts.
@@ -190,9 +198,24 @@ const DashIn = () => {
                 Get started by connecting your first account.
               </p>
               
-              <Button className="bg-[#689675] hover:bg-[#85A88EA8] mt-4">
+              <Button 
+                className="bg-[#689675] hover:bg-[#85A88EA8] mt-4"
+                onClick={() => setShowConnectDialog(true)}
+              >
                 <span>Connect Account</span>
               </Button>
+              
+              {/* Social Media Connect Dialog */}
+              <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
+                <DialogContent className="sm:max-w-md md:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Connect Your Social Accounts</DialogTitle>
+                  </DialogHeader>
+                  <div className="p-4">
+                    <SocialMediaConnect isDialog={true} onClose={() => setShowConnectDialog(false)} />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             
             {/* Right illustration */}
@@ -202,6 +225,8 @@ const DashIn = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default DashIn;
