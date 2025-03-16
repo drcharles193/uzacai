@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, CheckCircle2, AlertCircle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
 
 interface SocialPlatform {
   id: string;
@@ -26,11 +25,15 @@ interface SocialPlatform {
 interface SocialMediaConnectProps {
   isDialog?: boolean;
   onClose?: () => void;
+  onDone?: () => void;
+  onAccountDisconnected?: (platformId: string) => void;
 }
 
 const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({ 
   isDialog = false, 
-  onClose 
+  onClose,
+  onDone,
+  onAccountDisconnected
 }) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -426,6 +429,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         description: `Your ${platforms.find(p => p.id === id)?.name} account has been disconnected.`
       });
       
+      // Notify parent component about the disconnection
+      if (onAccountDisconnected) {
+        onAccountDisconnected(id);
+      }
+      
     } catch (error: any) {
       console.error("Error disconnecting platform:", error);
       setConnectionError(id);
@@ -449,6 +457,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const closeDialog = () => {
     setIsOpen(false);
     if (onClose) onClose();
+  };
+
+  const handleDone = () => {
+    closeDialog();
+    if (onDone) onDone();
   };
 
   const PlatformList = () => (
@@ -551,7 +564,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
                     <Button 
                       variant="outline"
                       size="sm"
-                      onClick={closeDialog}
+                      onClick={handleDone}
                       className="ml-auto"
                     >
                       Done

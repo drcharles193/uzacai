@@ -1,0 +1,131 @@
+
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
+
+interface SocialAccount {
+  platform: string;
+  account_name: string;
+  account_type?: string;
+  platform_account_id?: string;
+}
+
+interface ConnectedAccountsListProps {
+  accounts: SocialAccount[];
+  onAccountDisconnected: (platformId: string) => void;
+}
+
+const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts, onAccountDisconnected }) => {
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+
+  const getPlatformIcon = (platform: string) => {
+    switch(platform) {
+      case 'facebook':
+        return <Facebook size={20} className="text-[#4267B2]" />;
+      case 'instagram':
+        return <Instagram size={20} className="text-[#E1306C]" />;
+      case 'linkedin':
+        return <Linkedin size={20} className="text-[#0077B5]" />;
+      case 'twitter':
+        return <Twitter size={20} className="text-[#1DA1F2]" />;
+      case 'youtube':
+        return <Youtube size={20} className="text-[#FF0000]" />;
+      default:
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+          </svg>
+        );
+    }
+  };
+
+  const disconnectAccount = async (platform: string) => {
+    try {
+      setDisconnecting(platform);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("You must be signed in to disconnect accounts");
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('social_accounts')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('platform', platform);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} account disconnected`);
+      onAccountDisconnected(platform);
+      
+    } catch (error: any) {
+      console.error("Error disconnecting account:", error);
+      toast.error(`Failed to disconnect ${platform} account`);
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  if (accounts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold mb-4">Publishing by Accounts</h2>
+      
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[250px]">Account Name</TableHead>
+                <TableHead className="text-center">Queued</TableHead>
+                <TableHead className="text-center">Errors</TableHead>
+                <TableHead className="text-center">Planned Until</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((account) => (
+                <TableRow key={`${account.platform}-${account.account_name}`}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {getPlatformIcon(account.platform)}
+                      <span>{account.account_name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">0</TableCell>
+                  <TableCell className="text-center">0</TableCell>
+                  <TableCell className="text-center">Not Scheduled</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => disconnectAccount(account.platform)}
+                      disabled={disconnecting === account.platform}
+                      className="text-red-500 border-red-200 hover:bg-red-50"
+                    >
+                      {disconnecting === account.platform ? 'Disconnecting...' : 'Disconnect'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default ConnectedAccountsList;
