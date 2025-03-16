@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Link } from 'react-router-dom';
+import SignupDialog from '@/components/SignupDialog';
 
 const Trial = () => {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual');
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
   
   const plans = [
     {
@@ -61,6 +64,11 @@ const Trial = () => {
       color: "white"
     }
   ];
+  
+  const openSignupDialog = (planName: string) => {
+    setSelectedPlan(planName);
+    setIsSignupOpen(true);
+  };
   
   const featureCategories = [
     {
@@ -230,6 +238,7 @@ const Trial = () => {
                     <Button 
                       className="w-full mt-4" 
                       variant={plan.popular ? "default" : "outline"}
+                      onClick={() => openSignupDialog(plan.name)}
                     >
                       Start Free Trial
                     </Button>
@@ -296,6 +305,7 @@ const Trial = () => {
                   <Button 
                     className="w-full mt-2" 
                     variant={plan.popular ? "default" : "outline"}
+                    onClick={() => openSignupDialog(plan.name)}
                   >
                     Start Free Trial
                   </Button>
@@ -305,7 +315,7 @@ const Trial = () => {
           </div>
         </section>
 
-        <section className="py-10">
+        <section className="py-10 bg-muted/30">
           <div className="container max-w-5xl mx-auto px-4 text-center">
             <h2 className="text-xl font-medium mb-6">Trusted by Agencies and Brands Worldwide</h2>
             <div className="grid grid-cols-5 gap-8 items-center">
@@ -363,6 +373,12 @@ const Trial = () => {
           <p>© {new Date().getFullYear()} SocialAI. All rights reserved.</p>
         </div>
       </footer>
+      
+      <SignupDialog 
+        isOpen={isSignupOpen} 
+        onClose={() => setIsSignupOpen(false)} 
+        planName={selectedPlan} 
+      />
     </div>
   );
 };

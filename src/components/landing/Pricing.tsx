@@ -3,11 +3,14 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SignupDialog from '@/components/SignupDialog';
 
 type PricingPeriod = 'monthly' | 'annual';
 
 const Pricing: React.FC = () => {
   const [billingPeriod, setBillingPeriod] = useState<PricingPeriod>('annual');
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
   
   const plans = [
     {
@@ -61,6 +64,11 @@ const Pricing: React.FC = () => {
       buttonText: "Start Free Trial"
     }
   ];
+
+  const openSignupDialog = (planName: string) => {
+    setSelectedPlan(planName);
+    setIsSignupOpen(true);
+  };
 
   return (
     <section id="pricing" className="py-12 md:py-20">
@@ -135,9 +143,9 @@ const Pricing: React.FC = () => {
                 <Button 
                   className={`w-full mb-6 ${!plan.popular ? 'bg-primary/90 hover:bg-primary' : ''}`}
                   variant={plan.popular ? "default" : "outline"}
-                  asChild
+                  onClick={() => openSignupDialog(plan.name)}
                 >
-                  <Link to="/trial">Start Free Trial</Link>
+                  Start Free Trial
                 </Button>
                 
                 <ul className="space-y-3 text-sm">
@@ -160,6 +168,12 @@ const Pricing: React.FC = () => {
           <Button variant="outline">Contact Sales</Button>
         </div>
       </div>
+
+      <SignupDialog 
+        isOpen={isSignupOpen} 
+        onClose={() => setIsSignupOpen(false)} 
+        planName={selectedPlan} 
+      />
     </section>
   );
 };
