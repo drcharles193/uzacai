@@ -21,7 +21,7 @@ interface SummaryCardProps {
 const SummaryCard: React.FC<SummaryCardProps> = ({ icon, count, label }) => (
   <Card className="flex-1">
     <CardContent className="p-6 flex items-center gap-4">
-      <div className="text-blue-500">{icon}</div>
+      <div className="text-[#689675]">{icon}</div>
       <div>
         <div className="text-2xl font-bold">{count}</div>
         <div className="text-sm text-gray-500">{label}</div>
@@ -85,7 +85,7 @@ const PublishingSummary: React.FC = () => {
               <Line 
                 type="monotone" 
                 dataKey="posts" 
-                stroke="#3b82f6" 
+                stroke="#689675" 
                 activeDot={{ r: 8 }} 
               />
             </LineChart>
