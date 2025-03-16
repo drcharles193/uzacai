@@ -6,6 +6,7 @@ import { X, Image, Smile, Code, Clock, Calendar, Sparkles, Upload, FileImage, Fi
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from './AIPostGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 interface LaunchPadProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,6 +15,7 @@ interface LaunchPadProps {
     account_name: string;
   }>;
 }
+
 const LaunchPad: React.FC<LaunchPadProps> = ({
   isOpen,
   onClose,
@@ -28,25 +30,27 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
   const {
     toast
   } = useToast();
+
   const handleContentGenerated = (content: string) => {
     setPostContent(content);
   };
+
   const handleAccountToggle = (accountName: string) => {
     setSelectedAccounts(prev => prev.includes(accountName) ? prev.filter(name => name !== accountName) : [...prev, accountName]);
   };
+
   const handleDeviceUpload = () => {
-    // Trigger file input click
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const newFiles = Array.from(files);
     setMediaFiles(prev => [...prev, ...newFiles]);
 
-    // Create preview URLs for the files
     const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
     setMediaPreviewUrls(prev => [...prev, ...newPreviewUrls]);
     toast({
@@ -54,14 +58,15 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
       description: `Added ${newFiles.length} media files to your post`
     });
   };
+
   const handleExternalUpload = (source: string) => {
     toast({
       title: "External Upload",
       description: `Connect to ${source} to select media (coming soon)`
     });
   };
+
   const removeMedia = (index: number) => {
-    // Release the object URL to avoid memory leaks
     URL.revokeObjectURL(mediaPreviewUrls[index]);
     setMediaFiles(prev => prev.filter((_, i) => i !== index));
     setMediaPreviewUrls(prev => prev.filter((_, i) => i !== index));
@@ -70,6 +75,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
       description: "Media file removed from your post"
     });
   };
+
   return <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-4xl p-0 gap-0">
         <DialogTitle className="sr-only">Create Post</DialogTitle>
@@ -95,7 +101,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
         </div>
 
         <div className="flex flex-1 h-[600px]">
-          {/* Left Side - Post Editor */}
           <div className="w-3/5 border-r p-4">
             <div className="mb-4">
               <div className="font-medium text-lg">Original Draft</div>
@@ -103,7 +108,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
                 <textarea className="w-full min-h-[300px] p-4 rounded-md border border-border resize-none focus:outline-none focus:ring-1 focus:ring-[#689675]" placeholder="Start writing post caption or..." value={postContent} onChange={e => setPostContent(e.target.value)} />
               </div>
               
-              {/* Media Previews */}
               {mediaPreviewUrls.length > 0 && <div className="mt-4 grid grid-cols-2 gap-2">
                   {mediaPreviewUrls.map((url, index) => <div key={index} className="relative group">
                       <img src={url} alt={`Media preview ${index + 1}`} className="w-full h-24 object-cover rounded-md border border-gray-200" />
@@ -113,7 +117,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
                     </div>)}
                 </div>}
               
-              {/* Hidden file input */}
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" multiple className="hidden" />
               
               <div className="flex justify-end mt-2 gap-2">
@@ -148,8 +151,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               </div>
             </div>
 
-            
-
             <div className="flex justify-between mt-16">
               <Button variant="outline" className="gap-2 hover:border-[#689675] hover:text-[#689675]">
                 <Clock className="h-4 w-4" />
@@ -162,7 +163,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
             </div>
           </div>
 
-          {/* Right Side - Account Selection */}
           <div className="w-2/5 p-4">
             <Tabs defaultValue="accounts" className="w-full">
               <TabsList className="space-x-4 mb-6">
@@ -178,21 +178,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               </TabsList>
 
               <TabsContent value="accounts" className="mt-0">
-                <div className="mb-4">
-                  <div className="flex justify-between">
-                    <div className="flex gap-4">
-                      
-                      
-                    </div>
-                    <div className="relative">
-                      <input type="text" placeholder="Search an account" className="pl-3 pr-8 py-2 text-sm border rounded-md" />
-                      <svg className="absolute right-3 top-2.5 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="selectAll" className="h-4 w-4" />
@@ -251,4 +236,5 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
       </DialogContent>
     </Dialog>;
 };
+
 export default LaunchPad;
