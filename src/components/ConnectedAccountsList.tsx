@@ -1,11 +1,20 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Twitter, Youtube, AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SocialAccount {
   platform: string;
@@ -21,6 +30,8 @@ interface ConnectedAccountsListProps {
 
 const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts, onAccountDisconnected }) => {
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [accountToDisconnect, setAccountToDisconnect] = useState<string | null>(null);
 
   const getPlatformIcon = (platform: string) => {
     switch(platform) {
@@ -43,9 +54,20 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
     }
   };
 
+  const openDisconnectConfirmation = (platform: string) => {
+    setAccountToDisconnect(platform);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleCancelDisconnect = () => {
+    setConfirmDialogOpen(false);
+    setAccountToDisconnect(null);
+  };
+
   const disconnectAccount = async (platform: string) => {
     try {
       setDisconnecting(platform);
+      setConfirmDialogOpen(false);
       
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -72,6 +94,7 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
       toast.error(`Failed to disconnect ${platform} account`);
     } finally {
       setDisconnecting(null);
+      setAccountToDisconnect(null);
     }
   };
 
@@ -111,7 +134,7 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => disconnectAccount(account.platform)}
+                      onClick={() => openDisconnectConfirmation(account.platform)}
                       disabled={disconnecting === account.platform}
                       className="text-red-500 border-red-200 hover:bg-red-50"
                     >
@@ -124,6 +147,30 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Disconnect Account
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to disconnect your {accountToDisconnect ? `${accountToDisconnect.charAt(0).toUpperCase() + accountToDisconnect.slice(1)}` : ''} account? 
+              This will remove the connection between your account and this platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDisconnect}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => accountToDisconnect && disconnectAccount(accountToDisconnect)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

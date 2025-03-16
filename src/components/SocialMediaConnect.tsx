@@ -9,9 +9,19 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, CheckCircle2, AlertCircle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
 
 interface SocialPlatform {
   id: string;
@@ -41,6 +51,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [connectionSuccess, setConnectionSuccess] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
     {
       id: 'twitter',
@@ -151,7 +163,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   ]);
 
   useEffect(() => {
-    // Fetch user's connected accounts from Supabase
     const fetchConnectedAccounts = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -184,13 +195,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     
     fetchConnectedAccounts();
 
-    // Set up message listener for Twitter OAuth popup callback
     const handleTwitterCallback = (event: MessageEvent) => {
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
         console.log('Received Twitter callback:', code, state);
         
-        // Process the Twitter callback
         completeTwitterConnection(code, state);
       }
     };
@@ -199,7 +208,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     
     return () => {
       window.removeEventListener('message', handleTwitterCallback);
-      // Close Twitter OAuth window if still open on component unmount
       if (twitterWindow && !twitterWindow.closed) {
         twitterWindow.close();
       }
@@ -210,7 +218,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     try {
       setIsConnecting('twitter');
       
-      // Get current user
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
@@ -223,7 +230,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      // Call our edge function to complete the OAuth flow
       const response = await supabase.functions.invoke('social-auth', {
         body: JSON.stringify({
           platform: 'twitter',
@@ -237,7 +243,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         throw new Error(response.error.message || "Failed to connect Twitter account");
       }
       
-      // Update platforms state with the connected account
       setPlatforms(platforms.map(platform => {
         if (platform.id === 'twitter') {
           return { 
@@ -267,7 +272,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     } finally {
       setIsConnecting(null);
       
-      // Auto-clear status indicators after a few seconds
       setTimeout(() => {
         setConnectionSuccess(null);
         setConnectionError(null);
@@ -281,7 +285,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       setConnectionSuccess(null);
       setConnectionError(null);
       
-      // Get current user
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
@@ -294,9 +297,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      // Special handling for Twitter
       if (id === 'twitter') {
-        // Request Twitter auth URL from our edge function
         const response = await supabase.functions.invoke('social-auth', {
           body: JSON.stringify({
             platform: 'twitter',
@@ -313,7 +314,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           throw new Error("No Twitter auth URL returned");
         }
         
-        // Open a popup for Twitter auth
         const width = 600, height = 600;
         const left = window.innerWidth / 2 - width / 2;
         const top = window.innerHeight / 2 - height / 2;
@@ -330,11 +330,9 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
         setTwitterWindow(twitterPopup);
         
-        // The rest will be handled by the message event listener
         return;
       } 
       
-      // For other platforms, use the existing mock flow
       const response = await supabase.functions.invoke('social-auth', {
         body: JSON.stringify({
           platform: id,
@@ -346,7 +344,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         throw new Error(response.error.message || "Failed to connect account");
       }
       
-      // Update platforms state with the connected account
       setPlatforms(platforms.map(platform => {
         if (platform.id === id) {
           return { 
@@ -377,7 +374,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       if (id !== 'twitter') {
         setIsConnecting(null);
         
-        // Auto-clear status indicators after a few seconds
         setTimeout(() => {
           setConnectionSuccess(null);
           setConnectionError(null);
@@ -386,13 +382,23 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
+  const openDisconnectConfirmation = (id: string) => {
+    setPlatformToDisconnect(id);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleCancelDisconnect = () => {
+    setConfirmDialogOpen(false);
+    setPlatformToDisconnect(null);
+  };
+
   const disconnectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
       setConnectionSuccess(null);
       setConnectionError(null);
+      setConfirmDialogOpen(false);
       
-      // Get current user
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
@@ -405,7 +411,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      // Delete the connection from database
       const { error } = await supabase
         .from('social_accounts')
         .delete()
@@ -416,7 +421,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         throw new Error(error.message || "Failed to disconnect account");
       }
       
-      // Update local state
       setPlatforms(platforms.map(platform => {
         if (platform.id === id) {
           return { ...platform, connected: false, accountName: undefined };
@@ -429,7 +433,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         description: `Your ${platforms.find(p => p.id === id)?.name} account has been disconnected.`
       });
       
-      // Notify parent component about the disconnection
       if (onAccountDisconnected) {
         onAccountDisconnected(id);
       }
@@ -444,8 +447,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       });
     } finally {
       setIsConnecting(null);
+      setPlatformToDisconnect(null);
       
-      // Auto-clear status indicators after a few seconds
       setTimeout(() => {
         setConnectionSuccess(null);
         setConnectionError(null);
@@ -500,7 +503,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
               variant={platform.connected ? "outline" : "default"}
               size="sm"
               onClick={() => platform.connected 
-                ? disconnectPlatform(platform.id) 
+                ? openDisconnectConfirmation(platform.id) 
                 : connectPlatform(platform.id)
               }
               disabled={isConnecting !== null}
@@ -520,7 +523,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     </div>
   );
 
-  // Component can be used either as a section or in a dialog
   if (isDialog) {
     return (
       <>
@@ -579,7 +581,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     );
   }
 
-  // Full section component for landing page
   return (
     <section id="social-connect" className="py-16 md:py-24 bg-secondary/30">
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
@@ -651,3 +652,4 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 };
 
 export default SocialMediaConnect;
+
