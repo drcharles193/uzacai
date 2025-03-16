@@ -125,10 +125,10 @@ const PublishingSummary: React.FC = () => {
                 <Line 
                   type="monotone" 
                   dataKey="posts" 
-                  stroke="#3b82f6" 
+                  stroke="#689675" 
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 8 }}
+                  activeDot={{ r: 8, fill: "#689675" }}
                 />
               </LineChart>
             </ResponsiveContainer>
