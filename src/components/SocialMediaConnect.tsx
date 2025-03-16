@@ -507,10 +507,10 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
                 : connectPlatform(platform.id)
               }
               disabled={isConnecting !== null}
-              className={platform.connected ? 'border-primary/50 text-primary hover:bg-primary/5' : ''}
+              className={platform.connected ? 'border-[#689675]/50 text-[#689675] hover:bg-[#689675]/5' : ''}
               style={{
-                borderColor: platform.connected ? platform.color : undefined,
-                color: platform.connected ? platform.color : undefined,
+                borderColor: platform.connected ? '#689675' : undefined,
+                color: platform.connected ? '#689675' : undefined,
               }}
             >
               {isConnecting === platform.id ? (
@@ -647,9 +647,33 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Add the disconnect confirmation dialog */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-[#689675]" />
+              Disconnect Account
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to disconnect your {platformToDisconnect ? `${platforms.find(p => p.id === platformToDisconnect)?.name}` : ''} account? 
+              This will remove the connection between your account and this platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDisconnect}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => platformToDisconnect && disconnectPlatform(platformToDisconnect)}
+              className="bg-[#689675] hover:bg-[#85A88E]"
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 };
 
 export default SocialMediaConnect;
-
