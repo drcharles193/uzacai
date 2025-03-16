@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 interface SignupDialogProps {
   isOpen: boolean;
@@ -24,8 +25,9 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -47,20 +49,43 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
       return;
     }
     
-    // Store user info in localStorage (in a real app, this would go to a backend)
-    localStorage.setItem('socialAI_user', JSON.stringify({
-      firstName,
-      lastName,
-      email,
-      signupDate: new Date().toISOString()
-    }));
+    setIsLoading(true);
     
-    // Success message and navigation to dashboard
-    toast.success(`Account created for ${firstName} ${lastName}!`);
-    onClose();
-    
-    // Navigate to dashboard
-    navigate('/dashboard');
+    try {
+      // Sign up with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            firstName,
+            lastName,
+            signupDate: new Date().toISOString(),
+            trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days from now
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Store user info in localStorage as well for the components that use it
+      localStorage.setItem('socialAI_user', JSON.stringify({
+        firstName,
+        lastName,
+        email,
+        signupDate: new Date().toISOString()
+      }));
+      
+      toast.success(`Account created for ${firstName} ${lastName}!`);
+      onClose();
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred during signup");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -117,8 +142,8 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
             className="bg-yellow-50"
           />
           
-          <Button type="submit" className="w-full bg-[#689675] hover:bg-[#85A88EA8]">
-            Create My Account
+          <Button type="submit" className="w-full bg-[#689675] hover:bg-[#85A88EA8]" disabled={isLoading}>
+            {isLoading ? 'Processing...' : 'Create My Account'}
           </Button>
           
           <div className="flex justify-center gap-6 text-sm">

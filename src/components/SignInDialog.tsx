@@ -52,36 +52,29 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
     
     try {
-      if (isSignUp) {
-        // Sign up
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              signupDate: new Date().toISOString(),
-              trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days from now
-            }
-          }
-        });
-        
-        if (error) throw error;
-        
-        toast.success("Account created! Please check your email to confirm your registration.");
-        onClose();
-      } else {
-        // Sign in
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (error) throw error;
-        
-        toast.success("Successfully signed in!");
-        onClose();
-        navigate('/dashboard');
+      // Sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      // Get user metadata
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData && userData.user && userData.user.user_metadata) {
+        // Store in localStorage for components that use it
+        localStorage.setItem('socialAI_user', JSON.stringify({
+          firstName: userData.user.user_metadata.firstName || '',
+          lastName: userData.user.user_metadata.lastName || '',
+          email: userData.user.email,
+          signupDate: userData.user.user_metadata.signupDate || new Date().toISOString()
+        }));
       }
+      
+      toast.success("Successfully signed in!");
+      onClose();
+      navigate('/dashboard');
     } catch (error: any) {
       toast.error(error.message || "An error occurred during authentication");
     } finally {
