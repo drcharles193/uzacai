@@ -101,6 +101,26 @@ const DashIn = () => {
     setShowConnectDialog(true);
   };
 
+  const handleDisconnectAccount = async (accountId: string) => {
+    try {
+      const { error } = await supabase
+        .from('social_accounts')
+        .delete()
+        .eq('id', accountId);
+
+      if (error) throw error;
+      
+      setConnectedAccounts(accounts => accounts.filter(acc => acc.id !== accountId));
+      
+      if (connectedAccounts.length === 1) {
+        setHasConnectedAccounts(false);
+      }
+    } catch (error: any) {
+      console.error('Error disconnecting account:', error);
+      toast.error(error.message || 'Error disconnecting account');
+    }
+  };
+
   const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -251,7 +271,8 @@ const DashIn = () => {
                 <div className="mt-8">
                   <ConnectedAccounts 
                     accounts={connectedAccounts} 
-                    onConnectMore={handleConnectMoreAccounts} 
+                    onConnectMore={handleConnectMoreAccounts}
+                    onDisconnect={handleDisconnectAccount}
                   />
                 </div>
               </>

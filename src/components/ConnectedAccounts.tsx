@@ -1,10 +1,20 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 interface Account {
   id: string;
@@ -18,10 +28,17 @@ interface Account {
 interface ConnectedAccountsProps {
   accounts: Account[];
   onConnectMore: () => void;
+  onDisconnect?: (accountId: string) => Promise<void>;
 }
 
-const ConnectedAccounts: React.FC<ConnectedAccountsProps> = ({ accounts, onConnectMore }) => {
-  // Function to get platform icon
+const ConnectedAccounts: React.FC<ConnectedAccountsProps> = ({ 
+  accounts, 
+  onConnectMore, 
+  onDisconnect 
+}) => {
+  const [disconnectAccount, setDisconnectAccount] = useState<Account | null>(null);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
       case 'instagram':
@@ -63,83 +80,138 @@ const ConnectedAccounts: React.FC<ConnectedAccountsProps> = ({ accounts, onConne
     }
   };
 
-  // Function to get status badge
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+  const handleDisconnectClick = (account: Account) => {
+    setDisconnectAccount(account);
+    setIsAlertOpen(true);
+  };
+
+  const confirmDisconnect = async () => {
+    if (disconnectAccount && onDisconnect) {
+      try {
+        await onDisconnect(disconnectAccount.id);
+        toast({
+          title: "Account disconnected",
+          description: `${disconnectAccount.accountName} has been disconnected successfully.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to disconnect account. Please try again.",
+          variant: "destructive",
+        });
+        console.error("Error disconnecting account:", error);
+      }
+    }
+    setIsAlertOpen(false);
+    setDisconnectAccount(null);
+  };
+
+  const getStatusBadge = (account: Account) => {
+    switch (account.status.toLowerCase()) {
       case 'active':
-        return <Badge className="bg-[#689675] hover:bg-[#85A88EA8]">Active</Badge>;
+        return (
+          <Badge 
+            className="bg-[#689675] hover:bg-[#85A88EA8] cursor-pointer"
+            onClick={() => handleDisconnectClick(account)}
+          >
+            Active
+          </Badge>
+        );
       case 'pending':
         return <Badge variant="secondary">Pending</Badge>;
       case 'error':
         return <Badge variant="destructive">Error</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{account.status}</Badge>;
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>Connected Accounts</span>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="border-[#689675] text-[#689675] hover:bg-[#689675]/10"
-            onClick={onConnectMore}
-          >
-            <PlusCircle size={16} className="mr-1" />
-            Connect More
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {accounts.map((account) => (
-            <div key={account.id} className="border rounded-lg p-4">
-              <div className="flex items-center gap-4">
-                <div className="text-[#689675]">
-                  {getPlatformIcon(account.platform)}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-3">
-                    <div>
-                      <h3 className="font-medium">{account.accountName}</h3>
-                      <p className="text-sm text-gray-500 capitalize">{account.platform}</p>
-                    </div>
-                    <div>
-                      {getStatusBadge(account.status)}
-                    </div>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            <span>Connected Accounts</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-[#689675] text-[#689675] hover:bg-[#689675]/10"
+              onClick={onConnectMore}
+            >
+              <PlusCircle size={16} className="mr-1" />
+              Connect More
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {accounts.map((account) => (
+              <div key={account.id} className="border rounded-lg p-4">
+                <div className="flex items-center gap-4">
+                  <div className="text-[#689675]">
+                    {getPlatformIcon(account.platform)}
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Queued Posts</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="font-medium">{account.queued}</span>
-                        <Progress value={account.queued * 10} className="h-2 flex-1" />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-3">
+                      <div>
+                        <h3 className="font-medium">{account.accountName}</h3>
+                        <p className="text-sm text-gray-500 capitalize">{account.platform}</p>
+                      </div>
+                      <div>
+                        {getStatusBadge(account)}
                       </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Errors</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="font-medium">{account.errors}</span>
-                        <Progress value={account.errors * 10} className="h-2 flex-1 bg-secondary [&>div]:bg-red-500" />
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Queued Posts</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="font-medium">{account.queued}</span>
+                          <Progress value={account.queued * 10} className="h-2 flex-1" />
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Planned Until</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="font-medium text-[#689675]">Mar 24</span>
+                      <div>
+                        <p className="text-sm text-gray-500">Errors</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="font-medium">{account.errors}</span>
+                          <Progress value={account.errors * 10} className="h-2 flex-1 bg-secondary [&>div]:bg-red-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Planned Until</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="font-medium text-[#689675]">Mar 24</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to disconnect {disconnectAccount?.accountName}? 
+              This will remove all access and any scheduled posts for this account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDisconnect}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
