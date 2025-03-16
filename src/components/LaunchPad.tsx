@@ -79,9 +79,9 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                   value={postContent}
                   onChange={(e) => setPostContent(e.target.value)}
                 />
-                <div className="absolute right-3 top-3">
-                  <AIPostGenerator onContentGenerated={handleContentGenerated} />
-                </div>
+              </div>
+              <div className="flex justify-end mt-2">
+                <AIPostGenerator onContentGenerated={handleContentGenerated} />
               </div>
             </div>
 
