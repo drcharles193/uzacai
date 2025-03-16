@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 
 const LandingHero: React.FC = () => {
   return <section className="relative py-16 md:py-24 overflow-hidden">
@@ -26,8 +28,8 @@ const LandingHero: React.FC = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up">
-            <Button className="px-8 py-6 rounded-full text-base" size="lg">
-              Start Your Free Trial
+            <Button className="px-8 py-6 rounded-full text-base" size="lg" asChild>
+              <Link to="/trial">Start Your Free Trial</Link>
             </Button>
             <Button variant="outline" className="px-8 py-6 rounded-full text-base" size="lg">
               Request a Demo
