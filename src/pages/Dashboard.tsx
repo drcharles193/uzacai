@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface UserData {
   firstName: string;
@@ -28,7 +27,7 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-12">
           <div>
             <h1 className="text-3xl font-bold mb-4">Hey, {user.firstName}!</h1>
             <p className="text-gray-600 mb-2">Welcome to SocialPilot.</p>
@@ -46,34 +45,11 @@ const Dashboard = () => {
           
           <div className="flex-shrink-0">
             <img 
-              src="/lovable-uploads/4df2de78-9efe-4a28-b1c0-e1a6887e82ad.png" 
+              src="/lovable-uploads/f84b90e0-797b-47ee-813b-d628b15a655c.png" 
               alt="Dashboard illustration" 
               className="w-64 h-auto"
             />
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">Connect Your Accounts</h3>
-              <p className="text-gray-500 text-sm">Link your social media profiles to schedule and post content.</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">Create Your First Post</h3>
-              <p className="text-gray-500 text-sm">Start creating and scheduling content across your platforms.</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">Explore Analytics</h3>
-              <p className="text-gray-500 text-sm">Track performance metrics for your social media accounts.</p>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </DashboardLayout>
