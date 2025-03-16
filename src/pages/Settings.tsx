@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Bell, CreditCard, Shield, Building2, Users, 
-  X, ChevronDown, Save, Check
+  X, ChevronDown, Save, Check, ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Define the tabs in the settings page
 const tabs = [
   { id: 'profile', icon: User, name: 'Profile' },
   { id: 'security', icon: Shield, name: 'Security' },
@@ -49,14 +48,12 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get query param if any (for direct navigation to tabs)
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
     if (tab && tabs.some(t => t.id === tab)) {
       setActiveTab(tab);
     }
 
-    // Fetch user data
     const fetchUserData = async () => {
       try {
         setIsLoading(true);
@@ -75,7 +72,6 @@ const Settings = () => {
             language: metadata?.language || 'English'
           });
         } else {
-          // Redirect to home if no user
           navigate('/');
         }
       } catch (error) {
@@ -125,7 +121,6 @@ const Settings = () => {
   };
 
   const handleDiscard = () => {
-    // Reload the page to discard changes
     window.location.reload();
   };
 
@@ -135,7 +130,6 @@ const Settings = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Left sidebar */}
       <div className="w-56 border-r bg-white">
         <div className="flex items-center justify-between p-4 border-b">
           <h1 className="text-lg font-medium">Settings</h1>
@@ -162,14 +156,23 @@ const Settings = () => {
         </nav>
       </div>
       
-      {/* Main content */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto p-6">
-          {/* Header */}
           <div className="flex items-center justify-between pb-4 mb-6 border-b">
-            <h2 className="text-xl font-semibold">
-              {tabs.find(tab => tab.id === activeTab)?.name}
-            </h2>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleExit}
+                className="flex items-center gap-1 text-gray-700"
+              >
+                <ArrowLeft size={16} />
+                Exit Settings
+              </Button>
+              <h2 className="text-xl font-semibold">
+                {tabs.find(tab => tab.id === activeTab)?.name}
+              </h2>
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleDiscard}>
                 Discard
@@ -178,7 +181,6 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Profile Tab Content */}
           {activeTab === 'profile' && (
             <div className="space-y-8">
               <section>
@@ -345,7 +347,6 @@ const Settings = () => {
             </div>
           )}
 
-          {/* Notifications Tab Content */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
@@ -399,7 +400,6 @@ const Settings = () => {
             </div>
           )}
 
-          {/* Subscriptions Tab Content */}
           {activeTab === 'subscriptions' && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
@@ -456,7 +456,6 @@ const Settings = () => {
             </div>
           )}
 
-          {/* Other tabs could be implemented here */}
           {(activeTab === 'security' || activeTab === 'organization' || activeTab === 'users') && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="bg-primary/10 rounded-full p-4 mb-4">
