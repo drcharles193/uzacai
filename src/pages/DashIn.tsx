@@ -9,13 +9,13 @@ const DashIn = () => {
     <div className="flex min-h-screen">
       {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
-        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mb-12">
+        <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center mb-12">
           <MessageSquare size={16} className="text-white" />
         </div>
         
         {/* Navigation Icons */}
         <div className="flex flex-col gap-8">
-          <Link to="/dashin" className="text-white hover:text-yellow-400">
+          <Link to="/dashin" className="text-white hover:text-[#85A88E]">
             <Grid size={20} />
           </Link>
           <Link to="#" className="text-gray-400 hover:text-white">
@@ -49,7 +49,7 @@ const DashIn = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Top notification bar */}
-        <div className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-2 text-center flex justify-between items-center px-6">
+        <div className="bg-gradient-to-r from-[#5A7D64] to-[#85A88E] text-white p-2 text-center flex justify-between items-center px-6">
           <div className="flex items-center gap-2">
             <span>🛈 Your Ultimate Trial Expires On 29th Mar, 2025.</span>
           </div>
@@ -61,7 +61,7 @@ const DashIn = () => {
         {/* Top navigation bar */}
         <div className="bg-white border-b px-6 py-3 flex justify-between items-center">
           <div className="flex gap-6">
-            <div className="text-lg font-semibold border-b-2 border-yellow-400 text-black pb-1">SocialPilot</div>
+            <div className="text-lg font-semibold border-b-2 border-[#689675] text-black pb-1">SocialPilot</div>
             <div className="text-lg font-medium text-gray-500">Reviews</div>
           </div>
           <div className="flex items-center gap-4">
@@ -97,7 +97,7 @@ const DashIn = () => {
                 Get started by connecting your first account.
               </p>
               
-              <Button className="bg-blue-600 hover:bg-blue-700 mt-4">
+              <Button className="bg-[#689675] hover:bg-[#85A88EA8] mt-4">
                 <span>Connect Account</span>
               </Button>
             </div>

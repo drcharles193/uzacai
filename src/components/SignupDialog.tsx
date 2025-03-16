@@ -60,7 +60,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
     onClose();
     
     // Navigate to dashboard
-    navigate('/dashboard');
+    navigate('/dashin');
   };
   
   return (

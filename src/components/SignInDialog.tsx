@@ -67,6 +67,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
         
         toast.success("Account created! Please check your email to confirm your registration.");
         onClose();
+        navigate('/dashin'); // Redirect to DashIn page
       } else {
         // Sign in
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -78,7 +79,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
         
         toast.success("Successfully signed in!");
         onClose();
-        navigate('/dashboard');
+        navigate('/dashin'); // Redirect to DashIn page
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred during authentication");
