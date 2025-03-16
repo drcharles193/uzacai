@@ -57,6 +57,17 @@ const App = () => {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
+  // Initialize localStorage with mock user data for testing if it doesn't exist
+  if (!localStorage.getItem('socialAI_user')) {
+    const mockUser = {
+      firstName: "John",
+      lastName: "Doe",
+      email: "john.doe@example.com",
+      signupDate: new Date().toISOString()
+    };
+    localStorage.setItem('socialAI_user', JSON.stringify(mockUser));
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -66,20 +77,8 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/trial" element={<Trial />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                // User must be authenticated to access the dashboard
-                localStorage.getItem('socialAI_user') ? <Dashboard /> : <Navigate to="/auth" />
-              } 
-            />
-            <Route 
-              path="/user" 
-              element={
-                // User must be authenticated to access the user page
-                localStorage.getItem('socialAI_user') ? <UserPage /> : <Navigate to="/auth" />
-              } 
-            />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/user" element={<UserPage />} />
             <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

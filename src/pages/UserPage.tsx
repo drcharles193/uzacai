@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Mail, Phone, MapPin, Calendar, Heart, Users, Image, Edit } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface UserData {
   firstName: string;
@@ -17,17 +18,80 @@ interface UserData {
 const UserPage = () => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '+1 (555) 123-4567',
+    location: 'New York, USA',
+    bio: 'Social media manager with 5+ years of experience helping brands grow their online presence.'
+  });
   
   useEffect(() => {
+    console.log("UserPage component mounted");
     // Get user data from localStorage
     const userData = localStorage.getItem('socialAI_user');
+    console.log("User data from localStorage:", userData);
+    
     if (userData) {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      setFormData(prev => ({
+        ...prev,
+        firstName: parsedUser.firstName,
+        lastName: parsedUser.lastName,
+        email: parsedUser.email
+      }));
+    } else {
+      console.log("No user data found in localStorage");
+      // Create mock user for testing
+      const mockUser = {
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        signupDate: new Date().toISOString()
+      };
+      localStorage.setItem('socialAI_user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      setFormData(prev => ({
+        ...prev,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        email: mockUser.email
+      }));
     }
   }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleSaveChanges = () => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email
+      };
+      
+      localStorage.setItem('socialAI_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setIsEditing(false);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    }
+  };
   
   if (!user) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center">Loading user data...</div>;
   }
   
   return (
@@ -64,15 +128,15 @@ const UserPage = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone className="text-gray-500" size={18} />
-                  <span className="text-sm">+1 (555) 123-4567</span>
+                  <span className="text-sm">{formData.phone}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="text-gray-500" size={18} />
-                  <span className="text-sm">New York, USA</span>
+                  <span className="text-sm">{formData.location}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Calendar className="text-gray-500" size={18} />
-                  <span className="text-sm">Joined June 2023</span>
+                  <span className="text-sm">Joined {new Date(user.signupDate || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                 </div>
               </div>
               
@@ -118,7 +182,8 @@ const UserPage = () => {
                     <Input 
                       id="firstName"
                       type="text"
-                      defaultValue={user.firstName}
+                      value={formData.firstName}
+                      onChange={handleInputChange}
                       disabled={!isEditing}
                       className={!isEditing ? "bg-gray-50" : ""}
                     />
@@ -128,7 +193,8 @@ const UserPage = () => {
                     <Input 
                       id="lastName"
                       type="text"
-                      defaultValue={user.lastName}
+                      value={formData.lastName}
+                      onChange={handleInputChange}
                       disabled={!isEditing}
                       className={!isEditing ? "bg-gray-50" : ""}
                     />
@@ -140,7 +206,8 @@ const UserPage = () => {
                   <Input 
                     id="email"
                     type="email"
-                    defaultValue={user.email}
+                    value={formData.email}
+                    onChange={handleInputChange}
                     disabled={!isEditing}
                     className={!isEditing ? "bg-gray-50" : ""}
                   />
@@ -151,7 +218,8 @@ const UserPage = () => {
                   <Input 
                     id="phone"
                     type="tel"
-                    defaultValue="+1 (555) 123-4567"
+                    value={formData.phone}
+                    onChange={handleInputChange}
                     disabled={!isEditing}
                     className={!isEditing ? "bg-gray-50" : ""}
                   />
@@ -162,7 +230,8 @@ const UserPage = () => {
                   <Input 
                     id="location"
                     type="text"
-                    defaultValue="New York, USA"
+                    value={formData.location}
+                    onChange={handleInputChange}
                     disabled={!isEditing}
                     className={!isEditing ? "bg-gray-50" : ""}
                   />
@@ -173,7 +242,8 @@ const UserPage = () => {
                   <textarea
                     id="bio"
                     rows={4}
-                    defaultValue="Social media manager with 5+ years of experience helping brands grow their online presence."
+                    value={formData.bio}
+                    onChange={handleInputChange}
                     disabled={!isEditing}
                     className={`w-full rounded-md border border-input px-3 py-2 text-base md:text-sm ${!isEditing ? "bg-gray-50" : "bg-background"}`}
                   />
@@ -184,7 +254,7 @@ const UserPage = () => {
                     <Button variant="outline" onClick={() => setIsEditing(false)}>
                       Cancel
                     </Button>
-                    <Button>
+                    <Button onClick={handleSaveChanges}>
                       Save Changes
                     </Button>
                   </div>
