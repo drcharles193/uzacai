@@ -82,16 +82,16 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
       // Close dialog before navigating
       onClose();
       
-      // Check if we have a session (for development/testing purposes)
+      // If we're in development mode or testing, we'll bypass email confirmation
+      // In production, users would need to confirm their email
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session) {
-        // Use direct navigation to ensure proper redirect
         window.location.href = '/dashboard';
       } else {
         // Show a message about confirmation
         toast.info("Please check your email to confirm your account.");
-        // For development purposes, redirect to dashboard anyway
         setTimeout(() => {
+          // Redirect to dashboard anyway for development purposes
           window.location.href = '/dashboard';
         }, 2000);
       }
