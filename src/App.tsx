@@ -44,7 +44,11 @@ const App = () => {
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Update authentication state whenever auth state changes
       setIsAuthenticated(!!session);
+      
+      // For debugging
+      console.log("Auth state changed:", event, !!session);
     });
 
     return () => {
@@ -63,16 +67,28 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route 
+              path="/" 
+              element={
+                // If user is authenticated, redirect to dashboard
+                isAuthenticated ? <Navigate to="/dashboard" replace /> : <Index />
+              } 
+            />
             <Route path="/trial" element={<Trial />} />
             <Route 
               path="/dashboard" 
               element={
                 // User must be authenticated to access the dashboard
-                localStorage.getItem('socialAI_user') ? <Dashboard /> : <Navigate to="/auth" />
+                isAuthenticated ? <Dashboard /> : <Navigate to="/auth" replace />
               } 
             />
-            <Route path="/auth" element={<Auth />} />
+            <Route 
+              path="/auth" 
+              element={
+                // If user is already authenticated, redirect to dashboard
+                isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -66,7 +66,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
           // Close dialog before navigating
           onClose();
           
-          // Redirect to dashboard anyway
+          // Redirect to dashboard using direct navigation
           window.location.href = '/dashboard';
           return;
         }
@@ -90,7 +90,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
       // Close dialog before navigating
       onClose();
       
-      // Important: Force a redirect to dashboard
+      // Important: Force a redirect to dashboard with page reload to ensure state is updated
       window.location.href = '/dashboard';
     } catch (error: any) {
       console.error("Sign in error:", error);
