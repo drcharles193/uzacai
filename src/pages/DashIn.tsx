@@ -1,47 +1,32 @@
-
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SocialMediaConnect from '@/components/SocialMediaConnect';
-
 const DashIn = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
-  
   useEffect(() => {
     // Fetch the current user data when component mounts
     const fetchUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (user) {
         // Get user metadata
         const userMeta = user.user_metadata;
         const firstName = userMeta?.firstName || userMeta?.first_name || 'User';
         setUserName(firstName);
-        
+
         // Get trial end date from user metadata or calculate from created_at
         let endDate;
         if (userMeta?.trialEndsAt) {
@@ -58,13 +43,13 @@ const DashIn = () => {
         navigate('/');
       }
     };
-    
     fetchUserData();
   }, [navigate]);
-  
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const {
+        error
+      } = await supabase.auth.signOut();
       if (error) throw error;
       toast.success('Signed out successfully');
       navigate('/');
@@ -72,14 +57,14 @@ const DashIn = () => {
       toast.error(error.message || 'Error signing out');
     }
   };
-  
+
   // Format the trial end date
-  const formattedTrialEndDate = trialEndDate 
-    ? trialEndDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) 
-    : '...';
-  
-  return (
-    <div className="flex min-h-screen">
+  const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  }) : '...';
+  return <div className="flex min-h-screen">
       {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
         <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center mb-12">
@@ -198,10 +183,7 @@ const DashIn = () => {
                 Get started by connecting your first account.
               </p>
               
-              <Button 
-                className="bg-[#689675] hover:bg-[#85A88EA8] mt-4"
-                onClick={() => setShowConnectDialog(true)}
-              >
+              <Button className="bg-[#689675] hover:bg-[#85A88EA8] mt-4" onClick={() => setShowConnectDialog(true)}>
                 <span>Connect Account</span>
               </Button>
               
@@ -220,13 +202,11 @@ const DashIn = () => {
             
             {/* Right illustration */}
             <div className="w-[300px]">
-              <img src="/lovable-uploads/8655d9cc-3470-4541-a4e6-4212d8f2094e.png" alt="Dashboard illustration" className="w-full h-auto" />
+              <img alt="Dashboard illustration" className="w-full h-auto" src="/lovable-uploads/13323779-e347-427f-b65f-61bb092752dc.png" />
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default DashIn;
