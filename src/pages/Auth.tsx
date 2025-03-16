@@ -3,11 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import SignInDialog from '@/components/SignInDialog';
 
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
 
   useEffect(() => {
     const handleAuthRedirect = async () => {
@@ -15,7 +17,7 @@ const Auth = () => {
         // First check localStorage for dev/testing purposes
         const userData = localStorage.getItem('socialAI_user');
         if (userData) {
-          window.location.href = '/dashboard';
+          navigate('/dashboard');
           return;
         }
         
@@ -28,7 +30,7 @@ const Auth = () => {
         
         if (data?.session) {
           // User is authenticated, redirect to dashboard
-          window.location.href = '/dashboard';
+          navigate('/dashboard');
         } else {
           // No session found, set loading to false to show login options
           setLoading(false);
@@ -44,7 +46,7 @@ const Auth = () => {
     // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        window.location.href = '/dashboard';
+        navigate('/dashboard');
       }
     });
 
@@ -82,9 +84,15 @@ const Auth = () => {
         <h1 className="text-2xl font-bold mb-4">Authentication Required</h1>
         <p className="mb-6">Please sign in to access this section.</p>
         <div className="flex gap-4 justify-center">
+          <Button onClick={() => setShowSignInDialog(true)}>Sign In</Button>
           <Button onClick={() => navigate('/')}>Return to Home</Button>
         </div>
       </div>
+
+      <SignInDialog 
+        isOpen={showSignInDialog} 
+        onClose={() => setShowSignInDialog(false)} 
+      />
     </div>
   );
 };

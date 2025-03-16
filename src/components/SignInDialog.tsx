@@ -66,8 +66,8 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
           // Close dialog before navigating
           onClose();
           
-          // Redirect to dashboard anyway
-          window.location.href = '/dashboard';
+          // Use navigate instead of direct window.location for SPA navigation
+          navigate('/dashboard');
           return;
         }
         throw error;
@@ -90,8 +90,8 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
       // Close dialog before navigating
       onClose();
       
-      // Important: Force a redirect to dashboard
-      window.location.href = '/dashboard';
+      // Use navigate instead of direct window.location for SPA navigation
+      navigate('/dashboard');
     } catch (error: any) {
       console.error("Sign in error:", error);
       toast.error(error.message || "An error occurred during authentication");
