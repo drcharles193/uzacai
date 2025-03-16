@@ -10,19 +10,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import SocialMediaConnect from '@/components/SocialMediaConnect';
 import PublishingSummary from '@/components/PublishingSummary';
 import ConnectedAccountsList from '@/components/ConnectedAccountsList';
+import LaunchPad from '@/components/LaunchPad';
+
 interface SocialAccount {
   platform: string;
   account_name: string;
   account_type?: string;
   platform_account_id?: string;
 }
+
 const DashIn = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
+  const [showLaunchPad, setShowLaunchPad] = useState(false);
   const [connectedAccounts, setConnectedAccounts] = useState<SocialAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   const fetchConnectedAccounts = async () => {
     try {
       setIsLoading(true);
@@ -48,8 +53,8 @@ const DashIn = () => {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
-    // Fetch the current user data when component mounts
     const fetchUserData = async () => {
       const {
         data: {
@@ -57,30 +62,27 @@ const DashIn = () => {
         }
       } = await supabase.auth.getUser();
       if (user) {
-        // Get user metadata
         const userMeta = user.user_metadata;
         const firstName = userMeta?.firstName || userMeta?.first_name || 'User';
         setUserName(firstName);
 
-        // Get trial end date from user metadata or calculate from created_at
         let endDate;
         if (userMeta?.trialEndsAt) {
           endDate = new Date(userMeta.trialEndsAt);
         } else {
-          // Calculate 14 days from sign up
           const createdAt = new Date(user.created_at);
           endDate = new Date(createdAt);
           endDate.setDate(endDate.getDate() + 14);
         }
         setTrialEndDate(endDate);
       } else {
-        // Redirect to home if no user is found
         navigate('/');
       }
     };
     fetchUserData();
     fetchConnectedAccounts();
   }, [navigate]);
+
   const handleSignOut = async () => {
     try {
       const {
@@ -93,30 +95,34 @@ const DashIn = () => {
       toast.error(error.message || 'Error signing out');
     }
   };
+
   const handleSocialConnectDone = () => {
     setShowConnectDialog(false);
     fetchConnectedAccounts();
   };
+
   const handleAccountDisconnected = (platformId: string) => {
-    // Update connected accounts list when an account is disconnected
     fetchConnectedAccounts();
   };
 
-  // Format the trial end date
+  const handleCreatePostClick = () => {
+    setShowLaunchPad(true);
+  };
+
   const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric'
   }) : '...';
+
   const hasConnectedAccounts = connectedAccounts.length > 0;
+
   return <div className="flex min-h-screen">
-      {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
         <div className="w-8 h-8 rounded-full bg-[#689675] flex items-center justify-center mb-12">
           <MessageSquare size={16} className="text-white" />
         </div>
         
-        {/* Navigation Icons */}
         <div className="flex flex-col gap-8">
           <Link to="/dashin" className="text-white hover:text-[#85A88E]">
             <Grid size={20} />
@@ -141,7 +147,6 @@ const DashIn = () => {
           </Link>
         </div>
         
-        {/* Settings at bottom */}
         <div className="mt-auto mb-6">
           <Link to="/settings" className="text-gray-400 hover:text-white">
             <Settings size={20} />
@@ -149,9 +154,7 @@ const DashIn = () => {
         </div>
       </div>
       
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
-        {/* Top notification bar */}
         <div className="bg-[#689675] text-white p-2 text-center flex justify-between items-center px-6">
           <div className="flex items-center gap-2">
             <span>🛈 Your Ultimate Trial Expires On {formattedTrialEndDate}.</span>
@@ -161,7 +164,6 @@ const DashIn = () => {
           </Button>
         </div>
         
-        {/* Top navigation bar */}
         <div className="bg-white border-b px-6 py-3 flex justify-between items-center">
           <div className="flex gap-6">
             <div className="text-lg font-semibold border-b-2 border-[#689675] text-black pb-1">Accounts</div>
@@ -169,8 +171,7 @@ const DashIn = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* Create Post button - only show when accounts are connected */}
-            {hasConnectedAccounts && <Button className="flex items-center gap-2">
+            {hasConnectedAccounts && <Button className="flex items-center gap-2" onClick={handleCreatePostClick}>
                 <Plus size={18} />
                 <span>Create Post</span>
               </Button>}
@@ -182,14 +183,12 @@ const DashIn = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
             </Button>
             
-            {/* Settings icon with link */}
             <Link to="/settings">
               <Button variant="ghost" size="icon" className="text-gray-500">
                 <Settings size={20} />
               </Button>
             </Link>
             
-            {/* Profile dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-gray-500">
@@ -221,7 +220,6 @@ const DashIn = () => {
           </div>
         </div>
         
-        {/* Main content */}
         <div className="flex-1 bg-gray-100 p-10">
           {hasConnectedAccounts ? <div className="max-w-5xl mx-auto">
               <div className="flex justify-between items-center mb-6">
@@ -231,13 +229,10 @@ const DashIn = () => {
                 </Button>
               </div>
               
-              {/* Publishing Summary Component */}
               <PublishingSummary />
               
-              {/* Connected Accounts List Component */}
               <ConnectedAccountsList accounts={connectedAccounts} onAccountDisconnected={handleAccountDisconnected} />
             </div> : <div className="max-w-5xl mx-auto flex">
-              {/* Left content */}
               <div className="flex-1">
                 <h1 className="text-4xl font-bold text-gray-700 mb-4">Hey, {userName || 'there'}!</h1>
                 
@@ -256,7 +251,6 @@ const DashIn = () => {
                 </Button>
               </div>
               
-              {/* Right illustration */}
               <div className="w-[300px]">
                 <img alt="Dashboard illustration" className="w-full h-auto" src="/lovable-uploads/13323779-e347-427f-b65f-61bb092752dc.png" />
               </div>
@@ -264,7 +258,6 @@ const DashIn = () => {
         </div>
       </div>
       
-      {/* Social Media Connect Dialog */}
       <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
         <DialogContent className="sm:max-w-md md:max-w-lg">
           <DialogHeader>
@@ -275,6 +268,13 @@ const DashIn = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <LaunchPad 
+        isOpen={showLaunchPad} 
+        onClose={() => setShowLaunchPad(false)} 
+        connectedAccounts={connectedAccounts}
+      />
     </div>;
 };
+
 export default DashIn;
