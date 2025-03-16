@@ -1,11 +1,14 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import SignupDialog from "@/components/SignupDialog";
 
 const CTASection: React.FC = () => {
   const { toast } = useToast();
-  const [email, setEmail] = React.useState('');
+  const [email, setEmail] = useState('');
+  const [showSignupDialog, setShowSignupDialog] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,12 +21,12 @@ const CTASection: React.FC = () => {
       return;
     }
 
-    // Here you would typically send the email to your backend or CRM
-    toast({
-      title: "Thank you for your interest!",
-      description: "We'll be in touch shortly with your trial details.",
-    });
-    setEmail('');
+    // Show the signup dialog with the entered email
+    setShowSignupDialog(true);
+  };
+
+  const closeSignupDialog = () => {
+    setShowSignupDialog(false);
   };
 
   return (
@@ -78,6 +81,13 @@ const CTASection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Signup Dialog */}
+      <SignupDialog 
+        isOpen={showSignupDialog} 
+        onClose={closeSignupDialog} 
+        prefillEmail={email}
+      />
     </section>
   );
 };

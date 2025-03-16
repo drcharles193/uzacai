@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -18,9 +18,10 @@ interface SignupDialogProps {
   isOpen: boolean;
   onClose: () => void;
   planName?: string;
+  prefillEmail?: string;
 }
 
-const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }) => {
+const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName, prefillEmail }) => {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -28,6 +29,13 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  
+  // Set the email if prefillEmail prop is provided
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(prefillEmail);
+    }
+  }, [prefillEmail, isOpen]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
