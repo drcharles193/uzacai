@@ -1,86 +1,18 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  MessageSquare, 
-  Calendar, 
-  Users, 
-  BarChart3, 
-  Inbox, 
-  FileText, 
-  Settings,
-  Plus,
-  List,
-  ChevronDown,
-  ChevronRight,
-  User
-} from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
-
-// Define types for sidebar items
-interface SubmenuItem {
-  name: string;
-  icon: React.ComponentType<any>;
-  path: string;
-  comingSoon?: boolean;
-}
-
-interface SidebarItem {
-  name: string;
-  icon: React.ComponentType<any>;
-  path: string;
-  color?: string;
-  exact?: boolean;
-  hasSubmenu?: boolean;
-  submenuItems?: SubmenuItem[];
-  comingSoon?: boolean;
-}
+import SidebarItem from './sidebar/SidebarItem';
+import SettingsLink from './sidebar/SettingsLink';
+import { getSidebarItems } from './sidebar/sidebarData';
 
 const AppSidebar = () => {
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   
-  // Define sidebar main items
-  const sidebarItems: SidebarItem[] = [
-    { 
-      name: 'Dashboard', 
-      icon: LayoutDashboard, 
-      path: '/dashin',
-    },
-    { 
-      name: 'Posts', 
-      icon: MessageSquare, 
-      path: '#',
-      hasSubmenu: true,
-      submenuItems: [
-        { name: 'Create Post', icon: Plus, path: '#create-post' },
-        { name: 'Manage Posts', icon: List, path: '#', comingSoon: true }
-      ]
-    },
-    { 
-      name: 'Users', 
-      icon: User, 
-      path: '#',
-      comingSoon: true
-    },
-    { 
-      name: 'Analytics', 
-      icon: BarChart3, 
-      path: '/analytics' 
-    },
-    { 
-      name: 'Content', 
-      icon: FileText, 
-      path: '/content' 
-    },
-    { 
-      name: 'Inbox', 
-      icon: Inbox, 
-      path: '/inbox' 
-    },
-  ];
+  // Get sidebar items from our data file
+  const sidebarItems = getSidebarItems();
 
   // Handle post creation functionality
   const handleCreatePost = (e: React.MouseEvent) => {
@@ -108,108 +40,24 @@ const AppSidebar = () => {
       <div className="flex flex-col flex-1 px-2 gap-1 mt-4">
         {sidebarItems.map((item) => (
           <div key={item.name} className="relative">
-            {item.hasSubmenu ? (
-              <div>
-                <button 
-                  onClick={() => setPostMenuOpen(!postMenuOpen)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-2.5 rounded-md",
-                    "text-white hover:bg-[#2A2F3C]",
-                    postMenuOpen && "bg-[#2A2F3C]"
-                  )}
-                >
-                  <item.icon 
-                    className={item.color ? `text-[${item.color}]` : 'text-white'} 
-                    size={20} 
-                  />
-                  <span className={cn(
-                    "text-base transition-opacity duration-300",
-                    expanded ? "opacity-100" : "opacity-0 absolute"
-                  )}>
-                    {item.name}
-                  </span>
-                  {expanded && (
-                    postMenuOpen ? 
-                    <ChevronDown size={16} className="ml-auto text-white" /> : 
-                    <ChevronRight size={16} className="ml-auto text-white" />
-                  )}
-                </button>
-                
-                {postMenuOpen && expanded && (
-                  <div className="ml-2 pl-4 border-l border-[#2A2F3C] mt-1">
-                    {item.submenuItems?.map((subItem) => (
-                      <div key={subItem.name}>
-                        {subItem.comingSoon ? (
-                          <div className="flex items-center gap-2 p-2 text-gray-400 cursor-not-allowed">
-                            <subItem.icon size={16} />
-                            <span>{subItem.name}</span>
-                            <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded ml-auto">Soon</span>
-                          </div>
-                        ) : (
-                          <a 
-                            href={subItem.path}
-                            onClick={subItem.path === '#create-post' ? handleCreatePost : undefined}
-                            className="flex items-center gap-2 p-2 text-white hover:bg-[#2A2F3C] rounded-md"
-                          >
-                            <subItem.icon size={16} />
-                            <span>{subItem.name}</span>
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link 
-                to={item.comingSoon ? "#" : item.path}
-                className={cn(
-                  "flex items-center gap-3 p-2.5 rounded-md",
-                  isActive(item.path, item.exact) ? "bg-[#2A2F3C]" : "",
-                  "text-white hover:bg-[#2A2F3C]",
-                  item.comingSoon && "cursor-not-allowed text-gray-400"
-                )}
-                onClick={e => item.comingSoon && e.preventDefault()}
-              >
-                <item.icon 
-                  className={item.color ? `text-[${item.color}]` : item.comingSoon ? 'text-gray-400' : 'text-white'} 
-                  size={20} 
-                />
-                <span className={cn(
-                  "text-base transition-opacity duration-300",
-                  expanded ? "opacity-100" : "opacity-0 absolute"
-                )}>
-                  {item.name}
-                </span>
-                {item.comingSoon && expanded && (
-                  <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded ml-auto">Soon</span>
-                )}
-              </Link>
-            )}
+            <SidebarItem
+              {...item}
+              isActive={isActive}
+              expanded={expanded}
+              postMenuOpen={postMenuOpen}
+              togglePostMenu={() => setPostMenuOpen(!postMenuOpen)}
+              handleCreatePost={handleCreatePost}
+            />
           </div>
         ))}
       </div>
       
       {/* Settings icon positioned at the very bottom with margin-top auto 
          to push it to the bottom regardless of content above */}
-      <div className="px-2 mb-6 mt-auto">
-        <Link 
-          to="/settings" 
-          className={cn(
-            "flex items-center gap-3 p-2.5 rounded-md",
-            isActive('/settings') ? "bg-[#2A2F3C]" : "",
-            "text-white hover:bg-[#2A2F3C]"
-          )}
-        >
-          <Settings className="text-white" size={20} />
-          <span className={cn(
-            "text-base transition-opacity duration-300",
-            expanded ? "opacity-100" : "opacity-0 absolute"
-          )}>
-            Settings
-          </span>
-        </Link>
-      </div>
+      <SettingsLink 
+        expanded={expanded} 
+        isActive={isActive} 
+      />
     </div>
   );
 };
