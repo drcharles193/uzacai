@@ -63,10 +63,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           
           {/* Top navigation bar */}
           <div className="bg-white border-b px-4 py-2 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="text-lg font-medium">SocialPilot</div>
-              <div className="text-sm px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full">Reviews</div>
-            </div>
+            <div className="text-lg font-medium">SocialPilot</div>
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon">
                 <Bell size={20} />
@@ -81,7 +78,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </div>
           
           {/* Main content */}
-          <div className="flex-1 p-8 bg-[#F0F0F0]">
+          <div className="flex-1 p-8 bg-slate-100">
             {children}
           </div>
         </div>

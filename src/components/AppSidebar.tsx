@@ -6,13 +6,12 @@ import {
   MessageSquare, 
   Calendar, 
   Users, 
-  Target,
+  UserPlus,
   BarChart3, 
   Inbox, 
   FileText, 
-  Wrench,
-  Library,
-  Send
+  Settings,
+  Library
 } from 'lucide-react';
 import {
   Sidebar,
@@ -50,7 +49,7 @@ const sidebarItems = [
   },
   { 
     name: 'Groups', 
-    icon: Target, 
+    icon: UserPlus, 
     path: '/groups' 
   },
   { 
@@ -70,7 +69,7 @@ const sidebarItems = [
   },
   { 
     name: 'Setup', 
-    icon: Wrench, 
+    icon: Settings, 
     path: '/setup' 
   },
 ];
@@ -79,11 +78,11 @@ const AppSidebar = () => {
   const location = useLocation();
   
   return (
-    <Sidebar side="left" variant="sidebar" className="bg-[#232942] border-r-0">
+    <Sidebar side="left" variant="sidebar" className="bg-[#1A1F2C] border-r-0">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2 text-white">
           <div className="bg-blue-500 p-1.5 rounded-full">
-            <Send size={18} className="text-white" />
+            <MessageSquare size={18} className="text-white" />
           </div>
           <span className="text-xl font-semibold">SocialPilot</span>
         </div>
@@ -96,7 +95,7 @@ const AppSidebar = () => {
               <SidebarMenuButton 
                 asChild 
                 isActive={location.pathname === item.path}
-                className="text-white hover:bg-[#2A324A] data-[active=true]:bg-[#2A324A]"
+                className="text-white hover:bg-[#2A2F3C] data-[active=true]:bg-[#2A2F3C]"
               >
                 <Link to={item.path} className="flex items-center gap-3 py-2.5">
                   {item.isHighlighted ? (
@@ -117,7 +116,7 @@ const AppSidebar = () => {
       <SidebarFooter className="mt-auto pb-6 px-4">
         <SidebarMenuButton 
           asChild 
-          className="text-white hover:bg-[#2A324A]"
+          className="text-white hover:bg-[#2A2F3C]"
         >
           <Link to="/resources" className="flex items-center gap-3 py-2.5">
             <Library className="text-white" size={20} />
