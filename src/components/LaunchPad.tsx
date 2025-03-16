@@ -1,10 +1,18 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { X, Image, Smile, Code, Clock, Calendar, Sparkles } from 'lucide-react';
+import { X, Image, Smile, Code, Clock, Calendar, Sparkles, Upload, FileImage, FileVideo } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from './AIPostGenerator';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 interface LaunchPadProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,6 +21,7 @@ interface LaunchPadProps {
     account_name: string;
   }>;
 }
+
 const LaunchPad: React.FC<LaunchPadProps> = ({
   isOpen,
   onClose,
@@ -24,12 +33,22 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
   const {
     toast
   } = useToast();
+
   const handleContentGenerated = (content: string) => {
     setPostContent(content);
   };
+
   const handleAccountToggle = (accountName: string) => {
     setSelectedAccounts(prev => prev.includes(accountName) ? prev.filter(name => name !== accountName) : [...prev, accountName]);
   };
+
+  const handleMediaUpload = (source: string) => {
+    toast({
+      title: "Media Upload",
+      description: `Upload from ${source} selected`,
+    });
+  };
+
   return <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-4xl p-0 gap-0">
         <div className="flex border-b">
@@ -61,29 +80,56 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               <div className="relative mt-2">
                 <textarea className="w-full min-h-[300px] p-4 rounded-md border border-border resize-none focus:outline-none focus:ring-1 focus:ring-[#689675]" placeholder="Start writing post caption or..." value={postContent} onChange={e => setPostContent(e.target.value)} />
               </div>
-              <div className="flex justify-end mt-2">
+              <div className="flex justify-end mt-2 gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-gray-500 hover:text-[#689675] hover:border-[#689675] tooltip-wrapper">
+                      <Upload className="h-4 w-4 mr-1" />
+                      Add Media
+                      <span className="tooltip absolute bg-black text-white text-xs py-1 px-2 rounded opacity-0 transition-opacity -top-8 left-1/2 transform -translate-x-1/2 pointer-events-none group-hover:opacity-100">Add Media</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white border border-[#689675]/20">
+                    <DropdownMenuItem onClick={() => handleMediaUpload('My Device')} className="hover:bg-[#689675]/10">
+                      <FileImage className="h-4 w-4 mr-2" />
+                      <span>My Device</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleMediaUpload('Dropbox')} className="hover:bg-[#689675]/10">
+                      <FileVideo className="h-4 w-4 mr-2" />
+                      <span>Dropbox</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleMediaUpload('Google Drive')} className="hover:bg-[#689675]/10">
+                      <FileImage className="h-4 w-4 mr-2" />
+                      <span>Google Drive</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleMediaUpload('Box')} className="hover:bg-[#689675]/10">
+                      <FileVideo className="h-4 w-4 mr-2" />
+                      <span>Box</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <AIPostGenerator onContentGenerated={handleContentGenerated} />
               </div>
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button variant="ghost" size="sm" className="text-gray-500">
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-[#689675]">
                 <Image className="h-4 w-4 mr-1" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-500">
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-[#689675]">
                 <Smile className="h-4 w-4 mr-1" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-500">
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-[#689675]">
                 <Code className="h-4 w-4 mr-1" />
               </Button>
             </div>
 
             <div className="flex justify-between mt-16">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2 hover:border-[#689675] hover:text-[#689675]">
                 <Clock className="h-4 w-4" />
                 Save as Draft
               </Button>
-              <Button className="gap-2" disabled={!postContent.trim() || selectedAccounts.length === 0}>
+              <Button className="gap-2 bg-[#689675] hover:bg-[#85A88EA8]" disabled={!postContent.trim() || selectedAccounts.length === 0}>
                 <Calendar className="h-4 w-4" />
                 Schedule Post
               </Button>
@@ -127,7 +173,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
                     <label htmlFor="selectAll" className="text-sm">
                       {selectedAccounts.length} {selectedAccounts.length === 1 ? 'Account' : 'Accounts'} selected.
                     </label>
-                    {selectedAccounts.length > 0 && <Button variant="link" className="text-blue-500 p-0 h-auto" onClick={() => setSelectedAccounts([])}>
+                    {selectedAccounts.length > 0 && <Button variant="link" className="text-[#689675] p-0 h-auto" onClick={() => setSelectedAccounts([])}>
                         Clear All
                       </Button>}
                   </div>
@@ -172,4 +218,5 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
       </DialogContent>
     </Dialog>;
 };
+
 export default LaunchPad;
