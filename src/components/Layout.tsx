@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({
             <Button variant="outline" size="sm" className="rounded-full" onClick={openSignInDialog}>
               Sign in
             </Button>
-            <Button size="sm" className="rounded-full text-primary-foreground" asChild>
+            <Button size="sm" className="rounded-full text-black" asChild>
               <Link to="/trial">Start Your Free Trial</Link>
             </Button>
           </div>
