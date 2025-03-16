@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Trial from "./pages/Trial";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import ViewHome from "./pages/ViewHome";
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -89,6 +90,8 @@ const App = () => {
               // If already logged in, redirect to dashboard
               isLoggedIn ? <Navigate to="/dashboard" /> : <Auth />
             } />
+            {/* Special route to view home page even when logged in */}
+            <Route path="/view-home" element={<ViewHome />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
