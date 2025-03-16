@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { UserRound, LogOut, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -84,7 +83,6 @@ const DashIn = () => {
     fetchUserData();
     fetchConnectedAccounts();
     
-    // Listen for launchpad open event
     const handleOpenLaunchPad = () => setShowLaunchPad(true);
     window.addEventListener('open-launchpad', handleOpenLaunchPad);
     
@@ -119,6 +117,10 @@ const DashIn = () => {
     setShowLaunchPad(true);
   };
 
+  const handleUpgradeClick = () => {
+    navigate('/upgrade');
+  };
+
   const formattedTrialEndDate = trialEndDate ? trialEndDate.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -135,7 +137,7 @@ const DashIn = () => {
           <div className="flex items-center gap-2">
             <span>🛈 Your Ultimate Trial Expires On {formattedTrialEndDate}.</span>
           </div>
-          <Button variant="outline" className="hover:bg-white border-white text-[#689675]">
+          <Button variant="outline" className="hover:bg-white border-white text-[#689675]" onClick={handleUpgradeClick}>
             Upgrade your account now
           </Button>
         </div>
