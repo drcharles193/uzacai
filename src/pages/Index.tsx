@@ -1,20 +1,22 @@
 
 import React from 'react';
 import Layout from '@/components/Layout';
-import Hero from '@/components/Hero';
-import AIContentGenerator from '@/components/AIContentGenerator';
-import SocialMediaConnect from '@/components/SocialMediaConnect';
-import ScheduleCalendar from '@/components/ScheduleCalendar';
-import PostPreview from '@/components/PostPreview';
+import LandingHero from '@/components/landing/LandingHero';
+import Features from '@/components/landing/Features';
+import HowItWorks from '@/components/landing/HowItWorks';
+import Pricing from '@/components/landing/Pricing';
+import Testimonials from '@/components/landing/Testimonials';
+import CTASection from '@/components/landing/CTASection';
 
 const Index = () => {
   return (
     <Layout>
-      <Hero />
-      <AIContentGenerator />
-      <SocialMediaConnect />
-      <PostPreview />
-      <ScheduleCalendar />
+      <LandingHero />
+      <Features />
+      <HowItWorks />
+      <Testimonials />
+      <Pricing />
+      <CTASection />
     </Layout>
   );
 };
