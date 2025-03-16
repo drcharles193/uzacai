@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import React, { useState, useRef } from 'react';
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X, Image, Smile, Code, Clock, Calendar, Sparkles, Upload, FileImage, FileVideo } from 'lucide-react';
@@ -30,6 +30,9 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
   const [postContent, setPostContent] = useState('');
   const [selectedTab, setSelectedTab] = useState('create');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     toast
   } = useToast();
@@ -42,15 +45,53 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
     setSelectedAccounts(prev => prev.includes(accountName) ? prev.filter(name => name !== accountName) : [...prev, accountName]);
   };
 
-  const handleMediaUpload = (source: string) => {
+  const handleDeviceUpload = () => {
+    // Trigger file input click
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const newFiles = Array.from(files);
+    setMediaFiles(prev => [...prev, ...newFiles]);
+    
+    // Create preview URLs for the files
+    const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+    setMediaPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    
     toast({
-      title: "Media Upload",
-      description: `Upload from ${source} selected`,
+      title: "Media Added",
+      description: `Added ${newFiles.length} media files to your post`,
+    });
+  };
+
+  const handleExternalUpload = (source: string) => {
+    toast({
+      title: "External Upload",
+      description: `Connect to ${source} to select media (coming soon)`,
+    });
+  };
+
+  const removeMedia = (index: number) => {
+    // Release the object URL to avoid memory leaks
+    URL.revokeObjectURL(mediaPreviewUrls[index]);
+    
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    
+    toast({
+      title: "Media Removed",
+      description: "Media file removed from your post",
     });
   };
 
   return <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-4xl p-0 gap-0">
+        <DialogTitle className="sr-only">Create Post</DialogTitle>
         <div className="flex border-b">
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex-1 flex border-r">
             <TabsList className="h-auto bg-transparent border-b-0 p-0">
@@ -80,6 +121,38 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               <div className="relative mt-2">
                 <textarea className="w-full min-h-[300px] p-4 rounded-md border border-border resize-none focus:outline-none focus:ring-1 focus:ring-[#689675]" placeholder="Start writing post caption or..." value={postContent} onChange={e => setPostContent(e.target.value)} />
               </div>
+              
+              {/* Media Previews */}
+              {mediaPreviewUrls.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {mediaPreviewUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={url} 
+                        alt={`Media preview ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-md border border-gray-200"
+                      />
+                      <button 
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeMedia(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Hidden file input */}
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+              />
+              
               <div className="flex justify-end mt-2 gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -90,19 +163,19 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-white border border-[#689675]/20">
-                    <DropdownMenuItem onClick={() => handleMediaUpload('My Device')} className="hover:bg-[#689675]/10">
+                    <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
                       <FileImage className="h-4 w-4 mr-2" />
                       <span>My Device</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleMediaUpload('Dropbox')} className="hover:bg-[#689675]/10">
+                    <DropdownMenuItem onClick={() => handleExternalUpload('Dropbox')} className="hover:bg-[#689675]/10">
                       <FileVideo className="h-4 w-4 mr-2" />
                       <span>Dropbox</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleMediaUpload('Google Drive')} className="hover:bg-[#689675]/10">
+                    <DropdownMenuItem onClick={() => handleExternalUpload('Google Drive')} className="hover:bg-[#689675]/10">
                       <FileImage className="h-4 w-4 mr-2" />
                       <span>Google Drive</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleMediaUpload('Box')} className="hover:bg-[#689675]/10">
+                    <DropdownMenuItem onClick={() => handleExternalUpload('Box')} className="hover:bg-[#689675]/10">
                       <FileVideo className="h-4 w-4 mr-2" />
                       <span>Box</span>
                     </DropdownMenuItem>
@@ -138,7 +211,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
 
           {/* Right Side - Account Selection */}
           <div className="w-2/5 p-4">
-            <Tabs value="accounts" className="w-full">
+            <Tabs defaultValue="accounts" className="w-full">
               <TabsList className="space-x-4 mb-6">
                 <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-gray-100">
                   Post Preview
@@ -202,8 +275,28 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               </TabsContent>
               
               <TabsContent value="preview" className="mt-0">
-                <div className="flex items-center justify-center h-[500px] text-gray-500">
-                  Post preview will appear here
+                <div className="flex flex-col items-center justify-start p-4 border rounded-md h-[500px] overflow-y-auto">
+                  {postContent ? (
+                    <>
+                      <div className="text-gray-700 whitespace-pre-wrap mb-4">{postContent}</div>
+                      {mediaPreviewUrls.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                          {mediaPreviewUrls.map((url, index) => (
+                            <img 
+                              key={index}
+                              src={url} 
+                              alt={`Media ${index + 1}`}
+                              className="w-full h-auto rounded-md"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-gray-500 flex items-center justify-center h-full">
+                      Post preview will appear here
+                    </div>
+                  )}
                 </div>
               </TabsContent>
               
