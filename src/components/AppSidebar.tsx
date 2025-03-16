@@ -189,7 +189,8 @@ const AppSidebar = () => {
         ))}
       </div>
       
-      <div className="mt-auto pb-6 px-2">
+      {/* Settings icon positioned at the very bottom */}
+      <div className="px-2 mb-6 mt-auto">
         <Link 
           to="/settings" 
           className={cn(
