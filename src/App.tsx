@@ -10,6 +10,7 @@ import Trial from "./pages/Trial";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import DashIn from "./pages/DashIn";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashin" element={<DashIn />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

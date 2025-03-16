@@ -8,11 +8,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SocialMediaConnect from '@/components/SocialMediaConnect';
+
 const DashIn = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
+
   useEffect(() => {
     // Fetch the current user data when component mounts
     const fetchUserData = async () => {
@@ -45,6 +47,7 @@ const DashIn = () => {
     };
     fetchUserData();
   }, [navigate]);
+
   const handleSignOut = async () => {
     try {
       const {
@@ -64,6 +67,7 @@ const DashIn = () => {
     month: 'short',
     year: 'numeric'
   }) : '...';
+
   return <div className="flex min-h-screen">
       {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
@@ -148,11 +152,11 @@ const DashIn = () => {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings?tab=profile')}>
                   <UserRound className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings?tab=subscriptions')}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><line x1="22" y1="6" x2="2" y2="6"></line></svg>
                   <span>Subscription</span>
                 </DropdownMenuItem>
@@ -209,4 +213,5 @@ const DashIn = () => {
       </div>
     </div>;
 };
+
 export default DashIn;
