@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { X, Image, Smile, Code, Clock, Calendar, Sparkles, Upload, FileImage, FileVideo } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from './AIPostGenerator';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 interface LaunchPadProps {
   isOpen: boolean;
   onClose: () => void;
@@ -21,7 +14,6 @@ interface LaunchPadProps {
     account_name: string;
   }>;
 }
-
 const LaunchPad: React.FC<LaunchPadProps> = ({
   isOpen,
   onClose,
@@ -36,59 +28,48 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
   const {
     toast
   } = useToast();
-
   const handleContentGenerated = (content: string) => {
     setPostContent(content);
   };
-
   const handleAccountToggle = (accountName: string) => {
     setSelectedAccounts(prev => prev.includes(accountName) ? prev.filter(name => name !== accountName) : [...prev, accountName]);
   };
-
   const handleDeviceUpload = () => {
     // Trigger file input click
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
     const newFiles = Array.from(files);
     setMediaFiles(prev => [...prev, ...newFiles]);
-    
+
     // Create preview URLs for the files
     const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
     setMediaPreviewUrls(prev => [...prev, ...newPreviewUrls]);
-    
     toast({
       title: "Media Added",
-      description: `Added ${newFiles.length} media files to your post`,
+      description: `Added ${newFiles.length} media files to your post`
     });
   };
-
   const handleExternalUpload = (source: string) => {
     toast({
       title: "External Upload",
-      description: `Connect to ${source} to select media (coming soon)`,
+      description: `Connect to ${source} to select media (coming soon)`
     });
   };
-
   const removeMedia = (index: number) => {
     // Release the object URL to avoid memory leaks
     URL.revokeObjectURL(mediaPreviewUrls[index]);
-    
     setMediaFiles(prev => prev.filter((_, i) => i !== index));
     setMediaPreviewUrls(prev => prev.filter((_, i) => i !== index));
-    
     toast({
       title: "Media Removed",
-      description: "Media file removed from your post",
+      description: "Media file removed from your post"
     });
   };
-
   return <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-4xl p-0 gap-0">
         <DialogTitle className="sr-only">Create Post</DialogTitle>
@@ -123,35 +104,17 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               </div>
               
               {/* Media Previews */}
-              {mediaPreviewUrls.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  {mediaPreviewUrls.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img 
-                        src={url} 
-                        alt={`Media preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-md border border-gray-200"
-                      />
-                      <button 
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeMedia(index)}
-                      >
+              {mediaPreviewUrls.length > 0 && <div className="mt-4 grid grid-cols-2 gap-2">
+                  {mediaPreviewUrls.map((url, index) => <div key={index} className="relative group">
+                      <img src={url} alt={`Media preview ${index + 1}`} className="w-full h-24 object-cover rounded-md border border-gray-200" />
+                      <button className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeMedia(index)}>
                         <X className="h-3 w-3" />
                       </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
               
               {/* Hidden file input */}
-              <input 
-                type="file" 
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-              />
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" multiple className="hidden" />
               
               <div className="flex justify-end mt-2 gap-2">
                 <DropdownMenu>
@@ -185,17 +148,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-[#689675]">
-                <Image className="h-4 w-4 mr-1" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-[#689675]">
-                <Smile className="h-4 w-4 mr-1" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-[#689675]">
-                <Code className="h-4 w-4 mr-1" />
-              </Button>
-            </div>
+            
 
             <div className="flex justify-between mt-16">
               <Button variant="outline" className="gap-2 hover:border-[#689675] hover:text-[#689675]">
@@ -276,27 +229,14 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
               
               <TabsContent value="preview" className="mt-0">
                 <div className="flex flex-col items-center justify-start p-4 border rounded-md h-[500px] overflow-y-auto">
-                  {postContent ? (
-                    <>
+                  {postContent ? <>
                       <div className="text-gray-700 whitespace-pre-wrap mb-4">{postContent}</div>
-                      {mediaPreviewUrls.length > 0 && (
-                        <div className="grid grid-cols-2 gap-2 w-full">
-                          {mediaPreviewUrls.map((url, index) => (
-                            <img 
-                              key={index}
-                              src={url} 
-                              alt={`Media ${index + 1}`}
-                              className="w-full h-auto rounded-md"
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-gray-500 flex items-center justify-center h-full">
+                      {mediaPreviewUrls.length > 0 && <div className="grid grid-cols-2 gap-2 w-full">
+                          {mediaPreviewUrls.map((url, index) => <img key={index} src={url} alt={`Media ${index + 1}`} className="w-full h-auto rounded-md" />)}
+                        </div>}
+                    </> : <div className="text-gray-500 flex items-center justify-center h-full">
                       Post preview will appear here
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </TabsContent>
               
@@ -311,5 +251,4 @@ const LaunchPad: React.FC<LaunchPadProps> = ({
       </DialogContent>
     </Dialog>;
 };
-
 export default LaunchPad;
