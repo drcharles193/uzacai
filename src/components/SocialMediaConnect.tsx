@@ -37,6 +37,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [connectionSuccess, setConnectionSuccess] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
     {
       id: 'twitter',
@@ -179,7 +180,97 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     };
     
     fetchConnectedAccounts();
+
+    // Set up message listener for Twitter OAuth popup callback
+    const handleTwitterCallback = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'twitter-oauth-callback') {
+        const { code, state } = event.data;
+        console.log('Received Twitter callback:', code, state);
+        
+        // Process the Twitter callback
+        completeTwitterConnection(code, state);
+      }
+    };
+
+    window.addEventListener('message', handleTwitterCallback);
+    
+    return () => {
+      window.removeEventListener('message', handleTwitterCallback);
+      // Close Twitter OAuth window if still open on component unmount
+      if (twitterWindow && !twitterWindow.closed) {
+        twitterWindow.close();
+      }
+    };
   }, []);
+
+  const completeTwitterConnection = async (code: string, state: string) => {
+    try {
+      setIsConnecting('twitter');
+      
+      // Get current user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to connect social accounts.",
+          variant: "destructive"
+        });
+        setIsConnecting(null);
+        setConnectionError('twitter');
+        return;
+      }
+      
+      // Call our edge function to complete the OAuth flow
+      const response = await supabase.functions.invoke('social-auth', {
+        body: JSON.stringify({
+          platform: 'twitter',
+          action: 'callback',
+          code: code,
+          userId: session.user.id
+        })
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to connect Twitter account");
+      }
+      
+      // Update platforms state with the connected account
+      setPlatforms(platforms.map(platform => {
+        if (platform.id === 'twitter') {
+          return { 
+            ...platform, 
+            connected: true,
+            accountName: response.data.accountName || 'Twitter Account'
+          };
+        }
+        return platform;
+      }));
+      
+      setConnectionSuccess('twitter');
+      
+      toast({
+        title: "Twitter Connected",
+        description: `Your Twitter account has been connected successfully.`
+      });
+      
+    } catch (error: any) {
+      console.error("Error connecting Twitter:", error);
+      setConnectionError('twitter');
+      toast({
+        title: "Twitter Connection Failed",
+        description: error.message || "Failed to connect Twitter account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsConnecting(null);
+      
+      // Auto-clear status indicators after a few seconds
+      setTimeout(() => {
+        setConnectionSuccess(null);
+        setConnectionError(null);
+      }, 3000);
+    }
+  };
 
   const connectPlatform = async (id: string) => {
     try {
@@ -200,8 +291,47 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      // In a real app, this would initiate OAuth flow
-      // For this demo, we'll simulate the OAuth flow by directly calling our edge function
+      // Special handling for Twitter
+      if (id === 'twitter') {
+        // Request Twitter auth URL from our edge function
+        const response = await supabase.functions.invoke('social-auth', {
+          body: JSON.stringify({
+            platform: 'twitter',
+            action: 'auth-url',
+            userId: session.user.id
+          })
+        });
+        
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to start Twitter connection");
+        }
+        
+        if (!response.data.authUrl) {
+          throw new Error("No Twitter auth URL returned");
+        }
+        
+        // Open a popup for Twitter auth
+        const width = 600, height = 600;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.innerHeight / 2 - height / 2;
+        
+        const twitterPopup = window.open(
+          response.data.authUrl,
+          'twitter-oauth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        if (!twitterPopup) {
+          throw new Error("Could not open Twitter auth popup. Please disable popup blocker.");
+        }
+        
+        setTwitterWindow(twitterPopup);
+        
+        // The rest will be handled by the message event listener
+        return;
+      } 
+      
+      // For other platforms, use the existing mock flow
       const response = await supabase.functions.invoke('social-auth', {
         body: JSON.stringify({
           platform: id,
@@ -241,13 +371,15 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         variant: "destructive"
       });
     } finally {
-      setIsConnecting(null);
-      
-      // Auto-clear status indicators after a few seconds
-      setTimeout(() => {
-        setConnectionSuccess(null);
-        setConnectionError(null);
-      }, 3000);
+      if (id !== 'twitter') {
+        setIsConnecting(null);
+        
+        // Auto-clear status indicators after a few seconds
+        setTimeout(() => {
+          setConnectionSuccess(null);
+          setConnectionError(null);
+        }, 3000);
+      }
     }
   };
 
