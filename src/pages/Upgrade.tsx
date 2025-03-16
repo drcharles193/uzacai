@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckIcon, ArrowLeft } from 'lucide-react';
@@ -69,13 +68,8 @@ const Upgrade = () => {
   ];
   
   const handlePayment = (planId: string) => {
-    // Here you would integrate with Stripe
     toast.success(`Processing payment for ${planId} plan. This would connect to Stripe in production.`);
     
-    // In a real implementation, you would redirect to a Stripe checkout page
-    // or open a Stripe modal here
-    
-    // For now, we'll just simulate a success after a delay
     setTimeout(() => {
       toast.success('Subscription activated successfully!');
       navigate('/dashin');
@@ -88,7 +82,7 @@ const Upgrade = () => {
       
       <div className="flex-1 flex flex-col">
         <div className="bg-white border-b px-6 py-4 flex items-center">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashin')}>
             <ArrowLeft size={20} />
           </Button>
           <h1 className="text-xl font-semibold ml-2">Upgrade Your Account</h1>
@@ -188,7 +182,7 @@ const Upgrade = () => {
               <p className="text-sm text-muted-foreground mb-2">
                 Need a custom plan for your enterprise?
               </p>
-              <Button variant="outline">Contact Sales</Button>
+              <Button variant="outline" onClick={() => navigate('/contact')}>Contact Sales</Button>
             </div>
           </div>
         </div>
