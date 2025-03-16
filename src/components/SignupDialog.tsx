@@ -53,7 +53,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md md:max-w-lg w-[90%]">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold">
             Try all of SocialAI's <span className="text-primary">Premium Capabilities!</span>
@@ -105,7 +105,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
             className="bg-yellow-50"
           />
           
-          <Button type="submit" className="w-full bg-orange-400 hover:bg-orange-500">
+          <Button type="submit" className="w-full bg-[#689675] hover:bg-[#85A88EA8]">
             Create My Account
           </Button>
           
