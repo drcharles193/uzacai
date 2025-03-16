@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -109,6 +110,41 @@ const DashIn = () => {
     month: 'short',
     year: 'numeric'
   }) : '...';
+
+  // For testing/development - add sample connected accounts if none found in DB
+  useEffect(() => {
+    if (!hasConnectedAccounts && process.env.NODE_ENV === 'development') {
+      // Sample accounts for testing UI
+      const sampleAccounts: ConnectedAccount[] = [
+        {
+          id: 'sample1',
+          platform: 'instagram',
+          accountName: 'My Instagram',
+          queued: 3,
+          errors: 0,
+          status: 'active'
+        },
+        {
+          id: 'sample2',
+          platform: 'twitter',
+          accountName: 'My Twitter',
+          queued: 1,
+          errors: 2,
+          status: 'active'
+        },
+        {
+          id: 'sample3',
+          platform: 'facebook',
+          accountName: 'My Facebook Page',
+          queued: 5,
+          errors: 1,
+          status: 'active'
+        }
+      ];
+      setConnectedAccounts(sampleAccounts);
+      setHasConnectedAccounts(true);
+    }
+  }, [hasConnectedAccounts]);
 
   return (
     <div className="flex min-h-screen">
@@ -227,14 +263,16 @@ const DashIn = () => {
         </div>
         
         {/* Main content */}
-        <div className="flex-1 bg-gray-100 p-10">
+        <div className="flex-1 bg-gray-100 p-6 md:p-10">
           <div className="max-w-5xl mx-auto">
             {hasConnectedAccounts ? (
               <>
                 <h1 className="text-4xl font-bold text-gray-700 mb-6">Hey, {userName || 'there'}!</h1>
                 
                 {/* Publishing Summary */}
-                <PublishingSummary />
+                <div className="mb-8">
+                  <PublishingSummary />
+                </div>
                 
                 {/* Connected Accounts */}
                 <div className="mt-8">
