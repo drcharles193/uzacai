@@ -47,8 +47,9 @@ const App = () => {
       console.log("Auth state changed:", event, session);
       setIsAuthenticated(!!session);
       
-      // If the user signs in or signs up, set isAuthenticated to true
-      if (event === 'SIGNED_IN' || event === 'SIGNED_UP') {
+      // If the user signs in, set isAuthenticated to true
+      // Fixed the type comparison issue by using a more generic condition
+      if (session) {
         setIsAuthenticated(true);
       }
     });
