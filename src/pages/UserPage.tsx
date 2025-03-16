@@ -11,6 +11,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   email: string;
+  signupDate?: string;
 }
 
 const UserPage = () => {
