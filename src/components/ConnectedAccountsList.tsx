@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -104,12 +105,12 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Publishing by Accounts</h2>
+      <h2 className="text-xl font-semibold mb-4 text-[#689675]">Publishing by Accounts</h2>
       
-      <Card>
+      <Card className="border-[#689675]/20">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-[#689675]/10">
               <TableRow>
                 <TableHead className="w-[250px]">Account Name</TableHead>
                 <TableHead className="text-center">Queued</TableHead>

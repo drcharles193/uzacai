@@ -162,11 +162,11 @@ const DashIn = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Top notification bar */}
-        <div className="bg-gradient-to-r from-[#5A7D64] to-[#85A88E] text-white p-2 text-center flex justify-between items-center px-6">
+        <div className="bg-[#689675] text-white p-2 text-center flex justify-between items-center px-6">
           <div className="flex items-center gap-2">
             <span>🛈 Your Ultimate Trial Expires On {formattedTrialEndDate}.</span>
           </div>
-          <Button variant="link" className="text-white hover:text-blue-200 p-0">
+          <Button variant="outline" className="text-white hover:text-[#689675] hover:bg-white border-white">
             Upgrade your account now
           </Button>
         </div>
@@ -181,7 +181,7 @@ const DashIn = () => {
           <div className="flex items-center gap-4">
             {/* Create Post button - only show when accounts are connected */}
             {hasConnectedAccounts && (
-              <Button className="bg-[#689675] hover:bg-[#85A88EA8] flex items-center gap-2">
+              <Button className="flex items-center gap-2">
                 <Plus size={18} />
                 <span>Create Post</span>
               </Button>
@@ -239,7 +239,7 @@ const DashIn = () => {
             <div className="max-w-5xl mx-auto">
               <div className="flex justify-between items-center mb-6">
                 <h1 className="text-4xl font-bold text-gray-700">Hey, {userName || 'there'}!</h1>
-                <Button variant="outline" className="text-gray-600" onClick={() => setShowConnectDialog(true)}>
+                <Button variant="outline" className="text-[#689675] border-[#689675] hover:bg-[#689675] hover:text-white" onClick={() => setShowConnectDialog(true)}>
                   Connect Account
                 </Button>
               </div>
@@ -269,7 +269,7 @@ const DashIn = () => {
                   Get started by connecting your first account.
                 </p>
                 
-                <Button className="bg-[#689675] hover:bg-[#85A88EA8] mt-4" onClick={() => setShowConnectDialog(true)}>
+                <Button className="mt-4" onClick={() => setShowConnectDialog(true)}>
                   <span>Connect Account</span>
                 </Button>
               </div>
