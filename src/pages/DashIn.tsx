@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Grid, CalendarDays, BarChart3, Users, FileText, Inbox, Settings, UserRound, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,13 +8,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SocialMediaConnect from '@/components/SocialMediaConnect';
-
 const DashIn = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
-
   useEffect(() => {
     // Fetch the current user data when component mounts
     const fetchUserData = async () => {
@@ -48,7 +45,6 @@ const DashIn = () => {
     };
     fetchUserData();
   }, [navigate]);
-
   const handleSignOut = async () => {
     try {
       const {
@@ -68,7 +64,6 @@ const DashIn = () => {
     month: 'short',
     year: 'numeric'
   }) : '...';
-
   return <div className="flex min-h-screen">
       {/* Left Sidebar */}
       <div className="bg-[#1A2238] w-[60px] flex flex-col items-center py-4">
@@ -129,9 +124,7 @@ const DashIn = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
-            </Button>
+            
             <Button variant="ghost" size="icon" className="text-gray-500">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><line x1="22" y1="6" x2="2" y2="6"></line></svg>
             </Button>
@@ -221,5 +214,4 @@ const DashIn = () => {
       </div>
     </div>;
 };
-
 export default DashIn;
