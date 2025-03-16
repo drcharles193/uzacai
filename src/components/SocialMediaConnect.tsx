@@ -12,16 +12,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, CheckCircle2, AlertCircle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface SocialPlatform {
   id: string;
@@ -159,9 +149,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       connected: false
     }
   ]);
-
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch user's connected accounts from Supabase
@@ -399,11 +386,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  const initiateDisconnect = (id: string) => {
-    setPlatformToDisconnect(id);
-    setConfirmDialogOpen(true);
-  };
-
   const disconnectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
@@ -491,8 +473,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${platform.connected ? `bg-[${platform.color}]/10 text-[${platform.color}]` : 'bg-secondary text-foreground/70'}`} style={{ 
-              color: platform.color ? platform.color : undefined,
-              backgroundColor: platform.color ? `${platform.color}10` : undefined
+              color: platform.connected ? platform.color : undefined,
+              backgroundColor: platform.connected ? `${platform.color}10` : undefined
             }}>
               {platform.icon}
             </div>
@@ -518,14 +500,14 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
               variant={platform.connected ? "outline" : "default"}
               size="sm"
               onClick={() => platform.connected 
-                ? initiateDisconnect(platform.id) 
+                ? disconnectPlatform(platform.id) 
                 : connectPlatform(platform.id)
               }
               disabled={isConnecting !== null}
               className={platform.connected ? 'border-primary/50 text-primary hover:bg-primary/5' : ''}
               style={{
-                borderColor: platform.color ? platform.color : undefined,
-                color: platform.color ? platform.color : undefined,
+                borderColor: platform.connected ? platform.color : undefined,
+                color: platform.connected ? platform.color : undefined,
               }}
             >
               {isConnecting === platform.id ? (
@@ -599,101 +581,72 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 
   // Full section component for landing page
   return (
-    <>
-      <section id="social-connect" className="py-16 md:py-24 bg-secondary/30">
-        <div className="container max-w-7xl mx-auto px-6 md:px-10">
-          <div className="flex flex-col md:flex-row gap-12 md:gap-16 items-center">
-            <div className="w-full md:w-1/2 order-2 md:order-1">
-              <div className="glass-card rounded-xl shadow-md overflow-hidden animate-scale">
-                <div className="p-6 md:p-8 space-y-6">
-                  <h3 className="text-xl font-semibold mb-4">Connect Your Accounts</h3>
-                  
-                  <PlatformList />
-                  
-                  <div className="pt-4 border-t border-border">
-                    <div className="text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        <span>Your account data is secure</span>
-                      </div>
-                      <p>We use official APIs and never store your passwords.</p>
+    <section id="social-connect" className="py-16 md:py-24 bg-secondary/30">
+      <div className="container max-w-7xl mx-auto px-6 md:px-10">
+        <div className="flex flex-col md:flex-row gap-12 md:gap-16 items-center">
+          <div className="w-full md:w-1/2 order-2 md:order-1">
+            <div className="glass-card rounded-xl shadow-md overflow-hidden animate-scale">
+              <div className="p-6 md:p-8 space-y-6">
+                <h3 className="text-xl font-semibold mb-4">Connect Your Accounts</h3>
+                
+                <PlatformList />
+                
+                <div className="pt-4 border-t border-border">
+                  <div className="text-sm text-muted-foreground mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                      <span>Your account data is secure</span>
                     </div>
+                    <p>We use official APIs and never store your passwords.</p>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <div className="w-full md:w-1/2 order-1 md:order-2">
-              <div className="mb-6 animate-slide-up">
-                <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-                  <span>Simple Integration</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Connect Once, Post Everywhere
-                </h2>
-                <p className="text-lg text-muted-foreground">
-                  Seamlessly connect all your social media accounts and manage them from a single dashboard. No more switching between apps.
-                </p>
-              </div>
-              
-              <div className="space-y-4 animate-slide-up">
-                {[
-                  {
-                    title: "Secure Authentication",
-                    description: "Connect securely using official APIs with full data protection."
-                  },
-                  {
-                    title: "Cross-Platform Posting",
-                    description: "Create once and publish to multiple platforms simultaneously."
-                  },
-                  {
-                    title: "Platform-Specific Formatting",
-                    description: "Content automatically optimized for each social network's requirements."
-                  }
-                ].map((feature, i) => (
-                  <div key={i} className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-1">{feature.title}</h3>
-                      <p className="text-muted-foreground text-sm">{feature.description}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
-        </div>
-      </section>
-      
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to disconnect your {platformToDisconnect && platforms.find(p => p.id === platformToDisconnect)?.name} account? 
-              This will remove all access and you'll need to reconnect it to publish content again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPlatformToDisconnect(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => {
-                if (platformToDisconnect) {
-                  disconnectPlatform(platformToDisconnect);
-                  setPlatformToDisconnect(null);
-                  setConfirmDialogOpen(false);
+          
+          <div className="w-full md:w-1/2 order-1 md:order-2">
+            <div className="mb-6 animate-slide-up">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+                <span>Simple Integration</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Connect Once, Post Everywhere
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Seamlessly connect all your social media accounts and manage them from a single dashboard. No more switching between apps.
+              </p>
+            </div>
+            
+            <div className="space-y-4 animate-slide-up">
+              {[
+                {
+                  title: "Secure Authentication",
+                  description: "Connect securely using official APIs with full data protection."
+                },
+                {
+                  title: "Cross-Platform Posting",
+                  description: "Create once and publish to multiple platforms simultaneously."
+                },
+                {
+                  title: "Platform-Specific Formatting",
+                  description: "Content automatically optimized for each social network's requirements."
                 }
-              }}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Disconnect
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              ].map((feature, i) => (
+                <div key={i} className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1">{feature.title}</h3>
+                    <p className="text-muted-foreground text-sm">{feature.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 };
 
