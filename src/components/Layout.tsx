@@ -1,14 +1,25 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
+import SignInDialog from './SignInDialog';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+
+  const openSignInDialog = () => {
+    setIsSignInOpen(true);
+  };
+
+  const closeSignInDialog = () => {
+    setIsSignInOpen(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="w-full py-4 px-6 md:px-10 border-b border-border/40 sticky top-0 backdrop-blur-md bg-background/80 z-50">
@@ -27,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </nav>
           
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="rounded-full">
+            <Button variant="outline" size="sm" className="rounded-full" onClick={openSignInDialog}>
               Sign in
             </Button>
             <Button size="sm" className="rounded-full" asChild>
@@ -99,6 +110,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
       </footer>
+
+      <SignInDialog isOpen={isSignInOpen} onClose={closeSignInDialog} />
     </div>
   );
 };
