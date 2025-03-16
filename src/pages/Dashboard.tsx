@@ -32,21 +32,19 @@ const Dashboard = () => {
           <div>
             <h1 className="text-3xl font-bold mb-4">Hey, {user.firstName}!</h1>
             <p className="text-gray-600 mb-2">Welcome to SocialPilot.</p>
-            <p className="text-gray-600 mb-1">
+            <p className="text-gray-600 mb-4">
               This is your dashboard, where you will see a summary of your queued and published posts.
             </p>
-            <p className="text-gray-600">
-              Get started by connecting your first account.
-            </p>
+            <p className="text-gray-600">Get started by connecting your first account.</p>
             
-            <Button className="mt-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-700">
+            <Button className="mt-6 flex items-center gap-2">
               <span>Connect Account</span>
             </Button>
           </div>
           
           <div className="flex-shrink-0">
             <img 
-              src="/lovable-uploads/4df2de78-9efe-4a28-b1c0-e1a6887e82ad.png" 
+              src="/lovable-uploads/097d9e14-2183-41d2-b36e-5a074bcc4471.png" 
               alt="Dashboard illustration" 
               className="w-64 h-auto"
             />

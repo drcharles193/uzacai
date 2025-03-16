@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -5,16 +6,12 @@ import {
   MessageSquare, 
   Calendar, 
   Users, 
+  UserPlus,
   BarChart3, 
   Inbox, 
   FileText, 
   Settings,
-  Library,
-  User,
-  Grid,
-  MessageCircle,
-  CalendarDays,
-  LineChart
+  Library
 } from 'lucide-react';
 import {
   Sidebar,
@@ -24,84 +21,106 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarProvider,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+
+const sidebarItems = [
+  { 
+    name: 'Dashboard', 
+    icon: LayoutDashboard, 
+    path: '/dashboard',
+    color: '#FFCB05'
+  },
+  { 
+    name: 'Posts', 
+    icon: MessageSquare, 
+    path: '/posts' 
+  },
+  { 
+    name: 'Calendar', 
+    icon: Calendar, 
+    path: '/calendar' 
+  },
+  { 
+    name: 'Accounts', 
+    icon: Users, 
+    path: '/accounts' 
+  },
+  { 
+    name: 'Groups', 
+    icon: UserPlus, 
+    path: '/groups' 
+  },
+  { 
+    name: 'Analytics', 
+    icon: BarChart3, 
+    path: '/analytics' 
+  },
+  { 
+    name: 'Inbox', 
+    icon: Inbox, 
+    path: '/inbox' 
+  },
+  { 
+    name: 'Content', 
+    icon: FileText, 
+    path: '/content' 
+  },
+  { 
+    name: 'Setup', 
+    icon: Settings, 
+    path: '/setup' 
+  },
+];
 
 const AppSidebar = () => {
   const location = useLocation();
-  console.log("Current location in AppSidebar:", location.pathname);
   
   return (
-    <Sidebar side="left" variant="sidebar" className="bg-[#1A1F2C] border-r-0 w-16">
-      <SidebarContent className="px-0">
+    <Sidebar side="left" variant="sidebar" className="bg-[#1A1F2C] border-r-0">
+      <SidebarHeader className="p-4">
+        <div className="flex items-center gap-2 text-white">
+          <div className="bg-blue-500 p-1.5 rounded-full">
+            <MessageSquare size={18} className="text-white" />
+          </div>
+          <span className="text-xl font-semibold">SocialPilot</span>
+        </div>
+      </SidebarHeader>
+      
+      <SidebarContent className="px-2">
         <SidebarMenu>
-          {/* Icon for Messages (shown as first icon in the image) */}
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild 
-              isActive={false}
-              className="flex justify-center text-white hover:bg-[#2A2F3C] py-4"
-            >
-              <Link to="#" className="flex flex-col items-center">
-                <div className="bg-blue-500 p-1.5 rounded-full">
-                  <MessageCircle size={20} className="text-white" />
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          {/* Dashboard icon */}
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild 
-              isActive={location.pathname === '/dashboard' || location.pathname === '/user'}
-              className="flex justify-center text-white hover:bg-[#2A2F3C] py-4"
-            >
-              <Link to="/dashboard" className="flex flex-col items-center">
-                <Grid size={20} className="text-white" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          {/* Calendar icon */}
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild 
-              isActive={false}
-              className="flex justify-center text-white hover:bg-[#2A2F3C] py-4"
-            >
-              <Link to="#" className="flex flex-col items-center">
-                <CalendarDays size={20} className="text-white" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          {/* Analytics icon */}
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild 
-              isActive={false}
-              className="flex justify-center text-white hover:bg-[#2A2F3C] py-4"
-            >
-              <Link to="#" className="flex flex-col items-center">
-                <LineChart size={20} className="text-white" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          {/* Other icons matching sidebar */}
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild 
-              isActive={false}
-              className="flex justify-center text-white hover:bg-[#2A2F3C] py-4"
-            >
-              <Link to="#" className="flex flex-col items-center">
-                <Users size={20} className="text-white" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {sidebarItems.map((item) => (
+            <SidebarMenuItem key={item.name}>
+              <SidebarMenuButton 
+                asChild 
+                isActive={location.pathname === item.path}
+                className="text-white hover:bg-[#2A2F3C] data-[active=true]:bg-[#2A2F3C]"
+              >
+                <Link to={item.path} className="flex items-center gap-3 py-2.5">
+                  <item.icon 
+                    className={item.color ? `text-[${item.color}]` : 'text-white'} 
+                    size={20} 
+                  />
+                  <span className="text-base">{item.name}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
         </SidebarMenu>
       </SidebarContent>
+      
+      <SidebarFooter className="mt-auto pb-6 px-4">
+        <SidebarMenuButton 
+          asChild 
+          className="text-white hover:bg-[#2A2F3C]"
+        >
+          <Link to="/resources" className="flex items-center gap-3 py-2.5">
+            <Library className="text-white" size={20} />
+            <span className="text-base">Resources</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarFooter>
     </Sidebar>
   );
 };
