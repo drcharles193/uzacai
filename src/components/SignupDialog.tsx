@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Dialog, 
   DialogContent, 
@@ -18,6 +19,7 @@ interface SignupDialogProps {
 }
 
 const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }) => {
+  const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,10 +47,20 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, planName }
       return;
     }
     
-    // Here you would normally handle account creation
-    // For demo purposes, just show success message
+    // Store user info in localStorage (in a real app, this would go to a backend)
+    localStorage.setItem('socialAI_user', JSON.stringify({
+      firstName,
+      lastName,
+      email,
+      signupDate: new Date().toISOString()
+    }));
+    
+    // Success message and navigation to dashboard
     toast.success(`Account created for ${firstName} ${lastName}!`);
     onClose();
+    
+    // Navigate to dashboard
+    navigate('/dashboard');
   };
   
   return (
