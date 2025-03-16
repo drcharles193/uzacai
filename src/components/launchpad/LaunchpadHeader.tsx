@@ -1,19 +1,15 @@
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { X } from 'lucide-react';
 
 interface LaunchpadHeaderProps {
   selectedTab: string;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
-  onClose: () => void;
 }
 
 const LaunchpadHeader: React.FC<LaunchpadHeaderProps> = ({
   selectedTab,
   setSelectedTab,
-  onClose
 }) => {
   return (
     <div className="flex border-b">
@@ -39,11 +35,6 @@ const LaunchpadHeader: React.FC<LaunchpadHeaderProps> = ({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <div className="flex items-center gap-2 px-4">
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
     </div>
   );
 };
