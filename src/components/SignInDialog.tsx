@@ -24,7 +24,6 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isSignupDialogOpen, setIsSignupDialogOpen] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,7 +94,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
         <DialogContent className="sm:max-w-md md:max-w-lg w-[90%]">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold">
-              {isSignUp ? 'Create an account' : 'Welcome back!'}
+              Welcome back!
             </DialogTitle>
             <button 
               onClick={onClose} 
@@ -124,7 +123,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
             />
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
+              {isLoading ? 'Processing...' : 'Sign In'}
             </Button>
             
             <div className="flex justify-center text-sm">
@@ -133,7 +132,7 @@ const SignInDialog: React.FC<SignInDialogProps> = ({ isOpen, onClose }) => {
                 onClick={openSignupDialog} 
                 className="text-primary hover:underline"
               >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                Don't have an account? Sign up
               </button>
             </div>
           </form>

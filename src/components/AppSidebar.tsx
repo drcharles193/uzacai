@@ -23,14 +23,14 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
 const sidebarItems = [
   { 
     name: 'Dashboard', 
     icon: LayoutDashboard, 
     path: '/dashboard',
-    color: '#FFCB05'
+    color: '#FFCB05',
+    isHighlighted: true
   },
   { 
     name: 'Posts', 
@@ -98,11 +98,14 @@ const AppSidebar = () => {
                 className="text-white hover:bg-[#2A2F3C] data-[active=true]:bg-[#2A2F3C]"
               >
                 <Link to={item.path} className="flex items-center gap-3 py-2.5">
-                  <item.icon 
-                    className={item.color ? `text-[${item.color}]` : 'text-white'} 
-                    size={20} 
-                  />
-                  <span className="text-base">{item.name}</span>
+                  {item.isHighlighted ? (
+                    <item.icon className="text-[#FFCB05]" size={20} />
+                  ) : (
+                    <item.icon className="text-white" size={20} />
+                  )}
+                  <span className={`text-base ${item.isHighlighted ? "font-bold text-[#FFCB05]" : ""}`}>
+                    {item.name}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
