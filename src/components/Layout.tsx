@@ -2,6 +2,7 @@
 import React from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,8 +30,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Button variant="outline" size="sm" className="rounded-full">
               Sign in
             </Button>
-            <Button size="sm" className="rounded-full">
-              Start Free Trial
+            <Button size="sm" className="rounded-full" asChild>
+              <Link to="/trial">Start Free Trial</Link>
             </Button>
           </div>
         </div>

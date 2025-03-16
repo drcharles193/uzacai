@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { CheckIcon, X, ArrowRight, HelpCircle } from 'lucide-react';
+import { CheckIcon } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -12,129 +11,116 @@ const Trial = () => {
   
   const plans = [
     {
-      name: "Basic",
-      description: "For individuals and small teams",
-      monthlyPrice: 25,
-      annualPrice: 20,
+      name: "Starter",
+      description: "Perfect for individuals and small businesses",
+      monthlyPrice: 29,
+      annualPrice: 24,
       features: [
-        "5 social accounts",
-        "50 scheduled posts",
-        "Content calendar",
-        "Analytics dashboard",
+        "5 social media accounts",
+        "50 AI-generated posts/month",
+        "Basic scheduling",
+        "Standard analytics",
+        "Email support",
       ],
       popular: false,
       color: "white"
     },
     {
-      name: "Standard",
-      description: "For growing businesses",
-      monthlyPrice: 42,
-      annualPrice: 35,
+      name: "Professional",
+      description: "Ideal for growing businesses and marketing teams",
+      monthlyPrice: 79,
+      annualPrice: 65,
       features: [
-        "15 social accounts",
-        "150 scheduled posts",
-        "Content calendar",
-        "Advanced analytics",
-        "Team collaboration",
-      ],
-      popular: false,
-      color: "white"
-    },
-    {
-      name: "Premium",
-      description: "For marketing teams",
-      monthlyPrice: 85,
-      annualPrice: 70,
-      features: [
-        "Unlimited social accounts",
-        "Unlimited scheduled posts",
-        "Content calendar",
-        "Advanced analytics",
-        "Team collaboration",
-        "Custom reporting",
+        "15 social media accounts",
+        "200 AI-generated posts/month",
+        "Advanced scheduling",
+        "Detailed analytics",
         "Priority support",
+        "Custom content templates",
+        "Team collaboration",
       ],
       popular: true,
       color: "#EBF5EE"
     },
     {
-      name: "Ultimate",
-      description: "For agencies and enterprises",
-      monthlyPrice: 170,
-      annualPrice: 140,
+      name: "Enterprise",
+      description: "For large organizations with complex needs",
+      monthlyPrice: 199,
+      annualPrice: 165,
       features: [
-        "Everything in Premium",
-        "White labeling",
-        "API access",
+        "Unlimited social accounts",
+        "Unlimited AI-generated posts",
+        "Advanced scheduling",
+        "Custom analytics & reporting",
+        "24/7 priority support",
+        "Custom API integrations",
         "Dedicated account manager",
-        "Custom integrations",
+        "White-label options",
       ],
       popular: false,
       color: "white"
     }
   ];
   
-  // Detailed feature comparison data
   const featureCategories = [
     {
       name: "Platforms",
       features: [
-        { name: "Instagram", basic: 1, standard: 1, premium: "✓", ultimate: "✓" },
-        { name: "Facebook", basic: 1, standard: 3, premium: "✓", ultimate: "✓" },
-        { name: "Twitter", basic: 1, standard: 3, premium: "✓", ultimate: "✓" },
-        { name: "LinkedIn", basic: 1, standard: 3, premium: "✓", ultimate: "✓" },
-        { name: "TikTok", basic: 1, standard: 3, premium: "✓", ultimate: "✓" },
-        { name: "Pinterest", basic: 0, standard: 1, premium: "✓", ultimate: "✓" },
+        { name: "Instagram", starter: 1, professional: "✓", enterprise: "✓" },
+        { name: "Facebook", starter: 1, professional: "✓", enterprise: "✓" },
+        { name: "Twitter", starter: 1, professional: "✓", enterprise: "✓" },
+        { name: "LinkedIn", starter: 1, professional: "✓", enterprise: "✓" },
+        { name: "TikTok", starter: 1, professional: "✓", enterprise: "✓" },
+        { name: "Pinterest", starter: 0, professional: "✓", enterprise: "✓" },
       ]
     },
     {
       name: "Content Creation",
       features: [
-        { name: "AI Post Generator", basic: "✓", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "AI Image Generator", basic: "✓", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Template Library", basic: 10, standard: 50, premium: "✓", ultimate: "✓" },
-        { name: "Hashtag Suggestions", basic: "✓", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Bulk Upload", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
+        { name: "AI Post Generator", starter: "✓", professional: "✓", enterprise: "✓" },
+        { name: "AI Image Generator", starter: "✓", professional: "✓", enterprise: "✓" },
+        { name: "Template Library", starter: 10, professional: 50, enterprise: "✓" },
+        { name: "Hashtag Suggestions", starter: "✓", professional: "✓", enterprise: "✓" },
+        { name: "Bulk Upload", starter: "", professional: "✓", enterprise: "✓" },
       ]
     },
     {
       name: "Publishing",
       features: [
-        { name: "Scheduled Posts", basic: 50, standard: 150, premium: "✓", ultimate: "✓" },
-        { name: "Content Calendar", basic: "✓", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Best Time to Post", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Auto-posting", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Post Approval Flow", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
+        { name: "Scheduled Posts", starter: 50, professional: 200, enterprise: "✓" },
+        { name: "Content Calendar", starter: "✓", professional: "✓", enterprise: "✓" },
+        { name: "Best Time to Post", starter: "", professional: "✓", enterprise: "✓" },
+        { name: "Auto-posting", starter: "", professional: "✓", enterprise: "✓" },
+        { name: "Post Approval Flow", starter: "", professional: "✓", enterprise: "✓" },
       ]
     },
     {
       name: "Analytics",
       features: [
-        { name: "Basic Analytics", basic: "✓", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Engagement Reports", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Custom Reports", basic: "", standard: "", premium: "✓", ultimate: "✓" },
-        { name: "Export Reports", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
+        { name: "Basic Analytics", starter: "✓", professional: "✓", enterprise: "✓" },
+        { name: "Engagement Reports", starter: "", professional: "✓", enterprise: "✓" },
+        { name: "Custom Reports", starter: "", professional: "", enterprise: "✓" },
+        { name: "Export Reports", starter: "", professional: "✓", enterprise: "✓" },
       ]
     },
     {
       name: "Team & Workflow",
       features: [
-        { name: "Team Members", basic: 1, standard: 3, premium: 10, ultimate: "✓" },
-        { name: "Role Management", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Approval Workflows", basic: "", standard: "✓", premium: "✓", ultimate: "✓" },
+        { name: "Team Members", starter: 1, professional: 5, enterprise: "✓" },
+        { name: "Role Management", starter: "", professional: "✓", enterprise: "✓" },
+        { name: "Approval Workflows", starter: "", professional: "✓", enterprise: "✓" },
       ]
     },
     {
       name: "Support",
       features: [
-        { name: "Email Support", basic: "✓", standard: "✓", premium: "✓", ultimate: "✓" },
-        { name: "Priority Support", basic: "", standard: "", premium: "✓", ultimate: "✓" },
-        { name: "Dedicated Manager", basic: "", standard: "", premium: "", ultimate: "✓" },
+        { name: "Email Support", starter: "✓", professional: "✓", enterprise: "✓" },
+        { name: "Priority Support", starter: "", professional: "✓", enterprise: "✓" },
+        { name: "Dedicated Manager", starter: "", professional: "", enterprise: "✓" },
       ]
     },
   ];
   
-  // FAQ Data
   const faqs = [
     {
       question: "How does the 14-day free trial work?",
@@ -158,7 +144,6 @@ const Trial = () => {
     }
   ];
   
-  // Trusted brands
   const brands = [
     { name: "Nike", logo: "placeholder.svg" },
     { name: "Google", logo: "placeholder.svg" },
@@ -179,7 +164,6 @@ const Trial = () => {
       </header>
 
       <main className="flex-1">
-        {/* Hero section */}
         <section className="py-12 text-center">
           <div className="container max-w-4xl mx-auto px-4">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">Start Your Free 14-Days Trial Now</h1>
@@ -209,10 +193,9 @@ const Trial = () => {
           </div>
         </section>
 
-        {/* Pricing cards */}
         <section className="py-6">
           <div className="container max-w-7xl mx-auto px-4">
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               {plans.map((plan) => (
                 <div 
                   key={plan.name}
@@ -266,7 +249,6 @@ const Trial = () => {
           </div>
         </section>
 
-        {/* Compare Features */}
         <section className="py-10 bg-muted/30">
           <div className="container max-w-7xl mx-auto px-4">
             <h2 className="text-2xl font-bold text-center mb-8">Compare Features Across Plans</h2>
@@ -276,27 +258,25 @@ const Trial = () => {
                 <TableHeader className="bg-muted/70">
                   <TableRow>
                     <TableHead className="w-[300px]">Features</TableHead>
-                    <TableHead className="text-center">Basic</TableHead>
-                    <TableHead className="text-center">Standard</TableHead>
-                    <TableHead className="text-center bg-primary/10">Premium</TableHead>
-                    <TableHead className="text-center">Ultimate</TableHead>
+                    <TableHead className="text-center">Starter</TableHead>
+                    <TableHead className="text-center bg-primary/10">Professional</TableHead>
+                    <TableHead className="text-center">Enterprise</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {featureCategories.map((category) => (
                     <React.Fragment key={category.name}>
                       <TableRow className="bg-muted/40">
-                        <TableCell colSpan={5} className="font-medium">
+                        <TableCell colSpan={4} className="font-medium">
                           {category.name}
                         </TableCell>
                       </TableRow>
                       {category.features.map((feature) => (
                         <TableRow key={feature.name}>
                           <TableCell>{feature.name}</TableCell>
-                          <TableCell className="text-center">{feature.basic}</TableCell>
-                          <TableCell className="text-center">{feature.standard}</TableCell>
-                          <TableCell className="text-center bg-primary/5">{feature.premium}</TableCell>
-                          <TableCell className="text-center">{feature.ultimate}</TableCell>
+                          <TableCell className="text-center">{feature.starter}</TableCell>
+                          <TableCell className="text-center bg-primary/5">{feature.professional}</TableCell>
+                          <TableCell className="text-center">{feature.enterprise}</TableCell>
                         </TableRow>
                       ))}
                     </React.Fragment>
@@ -305,7 +285,7 @@ const Trial = () => {
               </Table>
             </div>
             
-            <div className="mt-8 grid md:grid-cols-4 gap-4">
+            <div className="mt-8 grid md:grid-cols-3 gap-4">
               {plans.map((plan) => (
                 <div key={plan.name} className="text-center">
                   <div className="font-medium mb-2">{plan.name}</div>
@@ -325,7 +305,6 @@ const Trial = () => {
           </div>
         </section>
 
-        {/* Trusted by section */}
         <section className="py-10">
           <div className="container max-w-5xl mx-auto px-4 text-center">
             <h2 className="text-xl font-medium mb-6">Trusted by Agencies and Brands Worldwide</h2>
@@ -343,7 +322,6 @@ const Trial = () => {
           </div>
         </section>
 
-        {/* FAQ Section */}
         <section className="py-10 bg-muted/30">
           <div className="container max-w-3xl mx-auto px-4">
             <h2 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
