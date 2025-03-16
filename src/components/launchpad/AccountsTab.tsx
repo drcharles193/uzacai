@@ -6,6 +6,8 @@ interface AccountsTabProps {
   connectedAccounts: Array<{
     platform: string;
     account_name: string;
+    account_type?: string;
+    platform_account_id?: string;
   }>;
   selectedAccounts: string[];
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>;

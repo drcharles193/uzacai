@@ -26,6 +26,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [selectedTab, setSelectedTab] = useState('create');
   const [postContent, setPostContent] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
@@ -61,15 +63,20 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
               <div className="flex divide-x h-full">
                 <div className="w-2/3 p-4 overflow-auto">
                   <PostContentEditor
-                    content={postContent}
-                    onChange={handleContentChange}
+                    postContent={postContent}
+                    setPostContent={setPostContent}
+                    mediaFiles={mediaFiles}
+                    setMediaFiles={setMediaFiles}
+                    mediaPreviewUrls={mediaPreviewUrls}
+                    setMediaPreviewUrls={setMediaPreviewUrls}
+                    selectedAccounts={selectedAccounts}
                   />
                 </div>
                 <div className="w-1/3 overflow-auto">
                   <AccountsTab
-                    accounts={connectedAccounts}
+                    connectedAccounts={connectedAccounts}
                     selectedAccounts={selectedAccounts}
-                    onToggleAccount={handleToggleAccount}
+                    setSelectedAccounts={setSelectedAccounts}
                   />
                 </div>
               </div>
@@ -84,7 +91,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             {selectedTab === 'content' && (
               <div className="flex divide-x h-full">
                 <div className="w-1/2 p-4 overflow-auto">
-                  <PostPreviewTab content={postContent} />
+                  <PostPreviewTab postContent={postContent} mediaPreviewUrls={mediaPreviewUrls} />
                 </div>
                 <div className="w-1/2 overflow-auto">
                   <CommentsTab />
