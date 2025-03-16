@@ -60,12 +60,13 @@ const App = () => {
   // Initialize localStorage with mock user data for testing if it doesn't exist
   if (!localStorage.getItem('socialAI_user')) {
     const mockUser = {
-      firstName: "John",
+      firstName: "Charles", // Changed to match the image
       lastName: "Doe",
-      email: "john.doe@example.com",
+      email: "charles.doe@example.com",
       signupDate: new Date().toISOString()
     };
     localStorage.setItem('socialAI_user', JSON.stringify(mockUser));
+    console.log("Created mock user in localStorage");
   }
 
   return (
