@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 type PricingPeriod = 'monthly' | 'annual';
 
@@ -62,9 +63,9 @@ const Pricing: React.FC = () => {
   ];
 
   return (
-    <section id="pricing" className="py-16 md:py-24">
+    <section id="pricing" className="py-12 md:py-20">
       <div className="container max-w-7xl mx-auto px-6 md:px-10">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <span>Simple Pricing</span>
           </div>
@@ -134,8 +135,9 @@ const Pricing: React.FC = () => {
                 <Button 
                   className={`w-full mb-6 ${!plan.popular ? 'bg-primary/90 hover:bg-primary' : ''}`}
                   variant={plan.popular ? "default" : "outline"}
+                  asChild
                 >
-                  {plan.buttonText}
+                  <Link to="/trial">{plan.buttonText}</Link>
                 </Button>
                 
                 <ul className="space-y-3 text-sm">

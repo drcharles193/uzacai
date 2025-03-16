@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Hero: React.FC = () => {
   return (
@@ -27,9 +28,11 @@ const Hero: React.FC = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up">
-            <button className="px-8 py-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium shadow-md hover:shadow-lg focus-ring">
-              Get started for free
-            </button>
+            <Link to="/trial">
+              <button className="px-8 py-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium shadow-md hover:shadow-lg focus-ring">
+                Get started for free
+              </button>
+            </Link>
             <button className="px-8 py-3 rounded-full border border-border bg-background hover:bg-secondary/80 transition-colors duration-300 font-medium focus-ring">
               Watch demo
             </button>
