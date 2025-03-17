@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
+import PostPreviewTab from './launchpad/PostPreviewTab';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
 
