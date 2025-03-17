@@ -95,13 +95,13 @@ const CommentsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-16">
+    <div className="space-y-4">
       <div className="flex items-center mb-4">
         <MessageSquare className="h-5 w-5 mr-2 text-gray-600" />
         <h3 className="text-lg font-medium">Comments</h3>
       </div>
 
-      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+      <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
         {comments.map((comment) => (
           <Card key={comment.id} className="border border-gray-200">
             <CardContent className="p-4">
@@ -179,14 +179,14 @@ const CommentsTab: React.FC = () => {
         ))}
       </div>
 
-      <div className="mt-4 space-y-2 pb-12">
+      <div className="mt-4 space-y-2">
         <Textarea 
           placeholder="Write a comment..." 
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
         />
         <div className="flex justify-end">
-          <Button onClick={handleAddComment} className="flex items-center gap-1 mb-8">
+          <Button onClick={handleAddComment} className="flex items-center gap-1">
             <Send className="h-4 w-4" />
             Add Comment
           </Button>

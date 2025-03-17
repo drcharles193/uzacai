@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
@@ -35,6 +35,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh]">
+        <DialogTitle className="sr-only">Create Post</DialogTitle>
         <div className="flex flex-col h-full">
           <div className="flex justify-between items-center border-b py-2 px-4">
             <div>
@@ -74,8 +75,19 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             )}
             
             {selectedTab === 'drafts' && (
-              <div className="p-4 h-full">
-                <p className="text-center text-gray-500 p-8">No drafts saved yet.</p>
+              <div className="flex divide-x h-full">
+                <div className="w-1/2 p-4 overflow-auto">
+                  <p className="text-center text-gray-500 p-8">No drafts saved yet.</p>
+                </div>
+                <div className="w-1/2 overflow-auto p-4">
+                  <LaunchpadTabs
+                    postContent={postContent}
+                    mediaPreviewUrls={mediaPreviewUrls}
+                    connectedAccounts={connectedAccounts}
+                    selectedAccounts={selectedAccounts}
+                    setSelectedAccounts={setSelectedAccounts}
+                  />
+                </div>
               </div>
             )}
             
