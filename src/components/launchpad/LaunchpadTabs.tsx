@@ -26,22 +26,22 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
 }) => {
   return (
     <Tabs defaultValue="accounts" className="w-full">
-      <TabsList className="space-x-4 mb-6 w-full flex justify-center bg-muted/50 p-1">
-        <TabsTrigger value="accounts" className="flex-1 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center justify-center gap-2 py-2">
+      <TabsList className="space-x-4 mb-6">
+        <TabsTrigger value="accounts" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
           <Users className="h-4 w-4" />
           Accounts
         </TabsTrigger>
-        <TabsTrigger value="preview" className="flex-1 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center justify-center gap-2 py-2">
+        <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
           <MonitorSmartphone className="h-4 w-4" />
           Post Preview
         </TabsTrigger>
-        <TabsTrigger value="comments" className="flex-1 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center justify-center gap-2 py-2">
+        <TabsTrigger value="comments" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Comments
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="accounts" className="mt-0 bg-white rounded-lg p-4">
+      <TabsContent value="accounts" className="mt-0">
         <AccountsTab 
           connectedAccounts={connectedAccounts}
           selectedAccounts={selectedAccounts}
@@ -49,14 +49,14 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
         />
       </TabsContent>
       
-      <TabsContent value="preview" className="mt-0 bg-white rounded-lg p-4">
+      <TabsContent value="preview" className="mt-0">
         <PostPreviewTab 
           postContent={postContent}
           mediaPreviewUrls={mediaPreviewUrls}
         />
       </TabsContent>
       
-      <TabsContent value="comments" className="mt-0 bg-white rounded-lg p-4">
+      <TabsContent value="comments" className="mt-0">
         <CommentsTab />
       </TabsContent>
     </Tabs>
