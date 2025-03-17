@@ -179,14 +179,14 @@ const CommentsTab: React.FC = () => {
         ))}
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2 pb-8">
         <Textarea 
           placeholder="Write a comment..." 
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
         />
         <div className="flex justify-end">
-          <Button onClick={handleAddComment} className="flex items-center gap-1">
+          <Button onClick={handleAddComment} className="flex items-center gap-1 mb-4">
             <Send className="h-4 w-4" />
             Add Comment
           </Button>
