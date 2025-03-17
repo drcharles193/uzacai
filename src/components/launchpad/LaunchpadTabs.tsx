@@ -27,6 +27,10 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
   return (
     <Tabs defaultValue="accounts" className="w-full">
       <TabsList className="space-x-4 mb-6">
+        <TabsTrigger value="accounts" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Accounts
+        </TabsTrigger>
         <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
           <MonitorSmartphone className="h-4 w-4" />
           Post Preview
@@ -35,12 +39,16 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
           <MessageSquare className="h-4 w-4" />
           Comments
         </TabsTrigger>
-        <TabsTrigger value="accounts" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Accounts
-        </TabsTrigger>
       </TabsList>
 
+      <TabsContent value="accounts" className="mt-0">
+        <AccountsTab 
+          connectedAccounts={connectedAccounts}
+          selectedAccounts={selectedAccounts}
+          setSelectedAccounts={setSelectedAccounts}
+        />
+      </TabsContent>
+      
       <TabsContent value="preview" className="mt-0">
         <PostPreviewTab 
           postContent={postContent}
@@ -50,14 +58,6 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
       
       <TabsContent value="comments" className="mt-0">
         <CommentsTab />
-      </TabsContent>
-      
-      <TabsContent value="accounts" className="mt-0">
-        <AccountsTab 
-          connectedAccounts={connectedAccounts}
-          selectedAccounts={selectedAccounts}
-          setSelectedAccounts={setSelectedAccounts}
-        />
       </TabsContent>
     </Tabs>
   );
