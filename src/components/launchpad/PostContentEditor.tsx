@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, Clock, Calendar, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from '../AIPostGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -146,23 +146,6 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
         <AIPostGenerator onContentGenerated={handleContentGenerated} />
-      </div>
-
-      <div className="flex justify-between mt-16">
-        <Button 
-          variant="outline" 
-          className="gap-2 hover:border-[#689675] hover:text-[#689675]"
-        >
-          <Clock className="h-4 w-4" />
-          Save as Draft
-        </Button>
-        <Button 
-          className="gap-2 bg-[#689675] hover:bg-[#85A88EA8]" 
-          disabled={!postContent.trim() || selectedAccounts.length === 0}
-        >
-          <Calendar className="h-4 w-4" />
-          Schedule Post
-        </Button>
       </div>
     </div>
   );
