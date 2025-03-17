@@ -50,7 +50,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
           <div className="flex-1 overflow-auto">
             {selectedTab === 'create' && (
               <div className="flex divide-x h-full">
-                <div className="w-2/3 p-4 overflow-auto">
+                <div className="w-1/2 p-4 overflow-auto">
                   <PostContentEditor
                     postContent={postContent}
                     setPostContent={setPostContent}
@@ -61,7 +61,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                     selectedAccounts={selectedAccounts}
                   />
                 </div>
-                <div className="w-1/3 overflow-auto p-4">
+                <div className="w-1/2 overflow-auto p-4">
                   <LaunchpadTabs
                     postContent={postContent}
                     mediaPreviewUrls={mediaPreviewUrls}
