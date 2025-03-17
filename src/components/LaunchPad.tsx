@@ -1,11 +1,12 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
+import PostPreviewTab from './launchpad/PostPreviewTab';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
-import { toast } from "sonner";
 
 interface SocialAccount {
   platform: string;
@@ -29,23 +30,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
-  };
-
-  const handleSaveDraft = () => {
-    toast.success("Post saved as draft");
-  };
-
-  const handleSchedule = () => {
-    toast.success("Post scheduled successfully");
-  };
-
-  const handlePublish = () => {
-    if (postContent && selectedAccounts.length > 0) {
-      toast.success("Post published successfully");
-      onClose();
-    } else {
-      toast.error("Please add content and select at least one account");
-    }
   };
 
   return (
@@ -84,9 +68,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                     connectedAccounts={connectedAccounts}
                     selectedAccounts={selectedAccounts}
                     setSelectedAccounts={setSelectedAccounts}
-                    onSaveDraft={handleSaveDraft}
-                    onSchedule={handleSchedule}
-                    onPublish={handlePublish}
                   />
                 </div>
               </div>
@@ -101,15 +82,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             {selectedTab === 'content' && (
               <div className="flex divide-x h-full">
                 <div className="w-1/2 p-4 overflow-auto">
-                  <PostContentEditor
-                    postContent={postContent}
-                    setPostContent={setPostContent}
-                    mediaFiles={mediaFiles}
-                    setMediaFiles={setMediaFiles}
-                    mediaPreviewUrls={mediaPreviewUrls}
-                    setMediaPreviewUrls={setMediaPreviewUrls}
-                    selectedAccounts={selectedAccounts}
-                  />
+                  <PostPreviewTab postContent={postContent} mediaPreviewUrls={mediaPreviewUrls} />
                 </div>
                 <div className="w-1/2 overflow-auto p-4">
                   <LaunchpadTabs
@@ -118,16 +91,19 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                     connectedAccounts={connectedAccounts}
                     selectedAccounts={selectedAccounts}
                     setSelectedAccounts={setSelectedAccounts}
-                    onSaveDraft={handleSaveDraft}
-                    onSchedule={handleSchedule}
-                    onPublish={handlePublish}
                   />
                 </div>
               </div>
             )}
           </div>
           
-          {/* Remove these buttons since they're now part of the LaunchpadTabs component */}
+          <div className="border-t p-4 flex justify-between">
+            <Button variant="outline">Save as Draft</Button>
+            <div className="space-x-2">
+              <Button variant="outline">Schedule</Button>
+              <Button disabled={!postContent || selectedAccounts.length === 0}>Publish Now</Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

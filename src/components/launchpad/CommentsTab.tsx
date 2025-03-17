@@ -95,7 +95,7 @@ const CommentsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-16">
       <div className="flex items-center mb-4">
         <MessageSquare className="h-5 w-5 mr-2 text-gray-600" />
         <h3 className="text-lg font-medium">Comments</h3>
@@ -179,14 +179,14 @@ const CommentsTab: React.FC = () => {
         ))}
       </div>
 
-      <div className="mt-4 space-y-2 pb-16">
+      <div className="mt-4 space-y-2 pb-12">
         <Textarea 
           placeholder="Write a comment..." 
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
         />
         <div className="flex justify-end">
-          <Button onClick={handleAddComment} className="flex items-center gap-1 mb-12">
+          <Button onClick={handleAddComment} className="flex items-center gap-1 mb-8">
             <Send className="h-4 w-4" />
             Add Comment
           </Button>
