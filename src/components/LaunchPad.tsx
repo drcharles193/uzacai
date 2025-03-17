@@ -3,9 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
-import AccountsTab from './launchpad/AccountsTab';
-import PostPreviewTab from './launchpad/PostPreviewTab';
-import CommentsTab from './launchpad/CommentsTab';
+import LaunchpadTabs from './launchpad/LaunchpadTabs';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -31,16 +29,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
-  };
-
-  const handleToggleAccount = (accountId: string) => {
-    setSelectedAccounts((prev) => {
-      if (prev.includes(accountId)) {
-        return prev.filter(id => id !== accountId);
-      } else {
-        return [...prev, accountId];
-      }
-    });
   };
 
   return (
@@ -72,8 +60,10 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                     selectedAccounts={selectedAccounts}
                   />
                 </div>
-                <div className="w-1/3 overflow-auto">
-                  <AccountsTab
+                <div className="w-1/3 overflow-auto p-4">
+                  <LaunchpadTabs
+                    postContent={postContent}
+                    mediaPreviewUrls={mediaPreviewUrls}
                     connectedAccounts={connectedAccounts}
                     selectedAccounts={selectedAccounts}
                     setSelectedAccounts={setSelectedAccounts}
@@ -93,8 +83,14 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                 <div className="w-1/2 p-4 overflow-auto">
                   <PostPreviewTab postContent={postContent} mediaPreviewUrls={mediaPreviewUrls} />
                 </div>
-                <div className="w-1/2 overflow-auto">
-                  <CommentsTab />
+                <div className="w-1/2 overflow-auto p-4">
+                  <LaunchpadTabs
+                    postContent={postContent}
+                    mediaPreviewUrls={mediaPreviewUrls}
+                    connectedAccounts={connectedAccounts}
+                    selectedAccounts={selectedAccounts}
+                    setSelectedAccounts={setSelectedAccounts}
+                  />
                 </div>
               </div>
             )}
