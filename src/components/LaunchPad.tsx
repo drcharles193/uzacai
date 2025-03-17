@@ -51,15 +51,17 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             {selectedTab === 'create' && (
               <div className="flex divide-x h-full">
                 <div className="w-2/3 p-4 overflow-auto">
-                  <PostContentEditor
-                    postContent={postContent}
-                    setPostContent={setPostContent}
-                    mediaFiles={mediaFiles}
-                    setMediaFiles={setMediaFiles}
-                    mediaPreviewUrls={mediaPreviewUrls}
-                    setMediaPreviewUrls={setMediaPreviewUrls}
-                    selectedAccounts={selectedAccounts}
-                  />
+                  <div className="bg-white rounded-lg p-4">
+                    <PostContentEditor
+                      postContent={postContent}
+                      setPostContent={setPostContent}
+                      mediaFiles={mediaFiles}
+                      setMediaFiles={setMediaFiles}
+                      mediaPreviewUrls={mediaPreviewUrls}
+                      setMediaPreviewUrls={setMediaPreviewUrls}
+                      selectedAccounts={selectedAccounts}
+                    />
+                  </div>
                 </div>
                 <div className="w-1/3 overflow-auto p-4">
                   <LaunchpadTabs
@@ -75,14 +77,24 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             
             {selectedTab === 'drafts' && (
               <div className="p-4 h-full">
-                <p className="text-center text-gray-500 p-8">No drafts saved yet.</p>
+                <div className="bg-white rounded-lg p-6 h-full">
+                  <h3 className="text-lg font-medium mb-4">Saved Drafts</h3>
+                  <div className="flex flex-col items-center justify-center h-[70%]">
+                    <div className="text-center text-gray-500 p-8">
+                      <p className="mb-2 text-lg">No drafts saved yet.</p>
+                      <p className="text-sm text-gray-400">Your saved drafts will appear here.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             
             {selectedTab === 'content' && (
               <div className="flex divide-x h-full">
                 <div className="w-1/2 p-4 overflow-auto">
-                  <PostPreviewTab postContent={postContent} mediaPreviewUrls={mediaPreviewUrls} />
+                  <div className="bg-white rounded-lg p-4">
+                    <PostPreviewTab postContent={postContent} mediaPreviewUrls={mediaPreviewUrls} />
+                  </div>
                 </div>
                 <div className="w-1/2 overflow-auto p-4">
                   <LaunchpadTabs
