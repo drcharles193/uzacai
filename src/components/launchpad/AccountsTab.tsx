@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,7 +73,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
             <div 
               key={account.account_name} 
               className={`flex items-center p-2 hover:bg-gray-50 rounded ${isSelected ? 'bg-gray-50' : ''}`}
-              onClick={() => handleAccountToggle(account.account_name)}
             >
               <Checkbox 
                 id={account.account_name} 
@@ -83,6 +83,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
               <label 
                 htmlFor={account.account_name} 
                 className="flex items-center gap-2 cursor-pointer w-full"
+                onClick={() => handleAccountToggle(account.account_name)}
               >
                 {account.platform === 'instagram' && (
                   <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 flex items-center justify-center text-white text-xs">
