@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
 import PostPreviewTab from './launchpad/PostPreviewTab';
-import { X, Calendar, Trash2, FileText } from 'lucide-react';
+import { X, Calendar, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { 
@@ -65,7 +64,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Get current user ID when component mounts
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -75,19 +73,16 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     fetchCurrentUser();
   }, []);
 
-  // Load drafts from localStorage when component mounts or tab changes
   useEffect(() => {
     if (selectedTab === 'drafts') {
       const storedDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
       
-      // Filter drafts for current user if user is authenticated
       if (currentUserId) {
         const userDrafts = storedDrafts.filter(
           (draft: PostDraft) => !draft.userId || draft.userId === currentUserId
         );
         setDrafts(userDrafts);
       } else {
-        // If not authenticated, only show drafts without userId
         const nonUserDrafts = storedDrafts.filter((draft: PostDraft) => !draft.userId);
         setDrafts(nonUserDrafts);
       }
@@ -108,7 +103,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Save the draft in local storage with user ID
     const draft = {
       id: Date.now().toString(),
       content: postContent,
@@ -126,7 +120,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       description: "Your post has been saved as a draft.",
     });
     
-    // Refresh drafts if on drafts tab
     if (selectedTab === 'drafts') {
       setDrafts([...drafts, draft]);
     }
@@ -151,12 +144,10 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Combine date and time
     const scheduledDateTime = new Date(scheduleDate);
     const [hours, minutes] = scheduleTime.split(':').map(Number);
     scheduledDateTime.setHours(hours, minutes);
 
-    // Save the scheduled post in local storage with user ID
     const scheduledPost = {
       id: Date.now().toString(),
       content: postContent,
@@ -184,7 +175,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     const updatedDrafts = existingDrafts.filter((draft: PostDraft) => draft.id !== id);
     localStorage.setItem('postDrafts', JSON.stringify(updatedDrafts));
     
-    // Update local state
     setDrafts(drafts.filter(draft => draft.id !== id));
     
     toast({
@@ -262,16 +252,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                                 {' · '} 
                                 {draft.selectedAccounts.length} {draft.selectedAccounts.length === 1 ? 'account' : 'accounts'}
                               </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDeleteDraft(draft.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
                             </div>
                           </div>
                           <p className="line-clamp-3 text-sm mb-3">{draft.content}</p>
