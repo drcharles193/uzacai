@@ -17,6 +17,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PostDraft {
   id: string;
@@ -24,6 +25,7 @@ interface PostDraft {
   mediaUrls: string[];
   selectedAccounts: string[];
   createdAt: string;
+  userId?: string;
 }
 
 interface ScheduledPost {
@@ -34,6 +36,7 @@ interface ScheduledPost {
   scheduledFor: string;
   createdAt: string;
   status: 'scheduled';
+  userId?: string;
 }
 
 interface SocialAccount {
@@ -59,15 +62,37 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [scheduleTime, setScheduleTime] = useState<string>("12:00");
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const [drafts, setDrafts] = useState<PostDraft[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Get current user ID when component mounts
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setCurrentUserId(data.user?.id || null);
+    };
+    
+    fetchCurrentUser();
+  }, []);
 
   // Load drafts from localStorage when component mounts or tab changes
   useEffect(() => {
     if (selectedTab === 'drafts') {
       const storedDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
-      setDrafts(storedDrafts);
+      
+      // Filter drafts for current user if user is authenticated
+      if (currentUserId) {
+        const userDrafts = storedDrafts.filter(
+          (draft: PostDraft) => !draft.userId || draft.userId === currentUserId
+        );
+        setDrafts(userDrafts);
+      } else {
+        // If not authenticated, only show drafts without userId
+        const nonUserDrafts = storedDrafts.filter((draft: PostDraft) => !draft.userId);
+        setDrafts(nonUserDrafts);
+      }
     }
-  }, [selectedTab, isOpen]);
+  }, [selectedTab, isOpen, currentUserId]);
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
@@ -83,13 +108,14 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Save the draft in local storage
+    // Save the draft in local storage with user ID
     const draft = {
       id: Date.now().toString(),
       content: postContent,
       mediaUrls: mediaPreviewUrls,
       selectedAccounts,
       createdAt: new Date().toISOString(),
+      userId: currentUserId || undefined
     };
 
     const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
@@ -102,7 +128,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     
     // Refresh drafts if on drafts tab
     if (selectedTab === 'drafts') {
-      setDrafts([...existingDrafts, draft]);
+      setDrafts([...drafts, draft]);
     }
   };
 
@@ -130,7 +156,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     const [hours, minutes] = scheduleTime.split(':').map(Number);
     scheduledDateTime.setHours(hours, minutes);
 
-    // Save the scheduled post in local storage
+    // Save the scheduled post in local storage with user ID
     const scheduledPost = {
       id: Date.now().toString(),
       content: postContent,
@@ -138,7 +164,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       selectedAccounts,
       scheduledFor: scheduledDateTime.toISOString(),
       createdAt: new Date().toISOString(),
-      status: 'scheduled'
+      status: 'scheduled',
+      userId: currentUserId || undefined
     };
 
     const existingScheduled = JSON.parse(localStorage.getItem('scheduledPosts') || '[]');
@@ -156,7 +183,9 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
     const updatedDrafts = existingDrafts.filter((draft: PostDraft) => draft.id !== id);
     localStorage.setItem('postDrafts', JSON.stringify(updatedDrafts));
-    setDrafts(updatedDrafts);
+    
+    // Update local state
+    setDrafts(drafts.filter(draft => draft.id !== id));
     
     toast({
       title: "Draft Deleted",
@@ -234,14 +263,16 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                                 {draft.selectedAccounts.length} {draft.selectedAccounts.length === 1 ? 'account' : 'accounts'}
                               </p>
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleDeleteDraft(draft.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDeleteDraft(draft.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                           <p className="line-clamp-3 text-sm mb-3">{draft.content}</p>
                           {draft.mediaUrls.length > 0 && (
@@ -253,14 +284,23 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                               ))}
                             </div>
                           )}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full"
-                            onClick={() => handleLoadDraft(draft)}
-                          >
-                            Edit Draft
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex-1"
+                              onClick={() => handleLoadDraft(draft)}
+                            >
+                              Edit Draft
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDeleteDraft(draft.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
