@@ -42,14 +42,15 @@ export const useScheduledPosts = () => {
         return;
       }
       
-      const formattedPosts = data.map(post => ({
+      // Ensure the status is explicitly typed as "scheduled" to match the ScheduledPost interface
+      const formattedPosts: ScheduledPost[] = data.map(post => ({
         id: post.id,
         content: post.content,
         media_urls: post.media_urls as string[],
         selected_accounts: post.selected_accounts as string[],
         scheduled_for: post.scheduled_for,
         created_at: post.created_at,
-        status: post.status,
+        status: "scheduled" as const, // Cast to the literal type "scheduled"
         user_id: post.user_id
       }));
       
