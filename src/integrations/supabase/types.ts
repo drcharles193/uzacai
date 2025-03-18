@@ -9,6 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      post_drafts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          media_urls: Json | null
+          selected_accounts: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          media_urls?: Json | null
+          selected_accounts?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          media_urls?: Json | null
+          selected_accounts?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scheduled_posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          media_urls: Json | null
+          scheduled_for: string
+          selected_accounts: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          media_urls?: Json | null
+          scheduled_for: string
+          selected_accounts?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          media_urls?: Json | null
+          scheduled_for?: string
+          selected_accounts?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       social_accounts: {
         Row: {
           access_token: string | null

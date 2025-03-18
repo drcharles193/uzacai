@@ -22,21 +22,21 @@ import { supabase } from "@/integrations/supabase/client";
 interface PostDraft {
   id: string;
   content: string;
-  mediaUrls: string[];
-  selectedAccounts: string[];
-  createdAt: string;
-  userId: string; // Added userId to track which user created the draft
+  media_urls: string[];
+  selected_accounts: string[];
+  created_at: string;
+  user_id: string;
 }
 
 interface ScheduledPost {
   id: string;
   content: string;
-  mediaUrls: string[];
-  selectedAccounts: string[];
-  scheduledFor: string;
-  createdAt: string;
+  media_urls: string[];
+  selected_accounts: string[];
+  scheduled_for: string;
+  created_at: string;
   status: 'scheduled';
-  userId: string; // Added userId for scheduled posts too
+  user_id: string;
 }
 
 interface SocialAccount {
@@ -63,6 +63,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const [drafts, setDrafts] = useState<PostDraft[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   // Get the current user on mount
@@ -77,21 +78,62 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     getUserId();
   }, []);
 
-  // Load drafts from localStorage when component mounts or tab changes
+  // Load drafts from Supabase when component mounts or tab changes
   useEffect(() => {
-    if (selectedTab === 'drafts' && currentUser) {
-      const storedDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
-      // Filter drafts to only show those created by the current user
-      const userDrafts = storedDrafts.filter((draft: PostDraft) => draft.userId === currentUser);
-      setDrafts(userDrafts);
+    const fetchDrafts = async () => {
+      if (selectedTab === 'drafts' && currentUser) {
+        setIsLoading(true);
+        
+        try {
+          const { data, error } = await supabase
+            .from('post_drafts')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (error) {
+            console.error("Error fetching drafts:", error);
+            toast({
+              title: "Error fetching drafts",
+              description: error.message,
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          // Convert from database format to component format
+          const formattedDrafts = data.map(draft => ({
+            id: draft.id,
+            content: draft.content,
+            media_urls: draft.media_urls as string[],
+            selected_accounts: draft.selected_accounts as string[],
+            created_at: draft.created_at,
+            user_id: draft.user_id
+          }));
+          
+          setDrafts(formattedDrafts);
+        } catch (error) {
+          console.error("Error in draft fetching:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load drafts. Please try again.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    if (currentUser) {
+      fetchDrafts();
     }
-  }, [selectedTab, isOpen, currentUser]);
+  }, [selectedTab, isOpen, currentUser, toast]);
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
   };
 
-  const handleSaveAsDraft = () => {
+  const handleSaveAsDraft = async () => {
     if (!postContent.trim()) {
       toast({
         title: "Cannot save empty draft",
@@ -110,31 +152,63 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Save the draft in local storage with userId
-    const draft = {
-      id: Date.now().toString(),
-      content: postContent,
-      mediaUrls: mediaPreviewUrls,
-      selectedAccounts,
-      createdAt: new Date().toISOString(),
-      userId: currentUser, // Associate the draft with the current user
-    };
-
-    const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
-    localStorage.setItem('postDrafts', JSON.stringify([...existingDrafts, draft]));
-
-    toast({
-      title: "Draft Saved",
-      description: "Your post has been saved as a draft.",
-    });
+    setIsLoading(true);
     
-    // Refresh drafts if on drafts tab
-    if (selectedTab === 'drafts') {
-      setDrafts([...drafts, draft]);
+    try {
+      // Insert draft into Supabase
+      const { data, error } = await supabase
+        .from('post_drafts')
+        .insert({
+          content: postContent,
+          media_urls: mediaPreviewUrls,
+          selected_accounts: selectedAccounts,
+          user_id: currentUser
+        })
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Draft Saved",
+        description: "Your post has been saved as a draft.",
+      });
+
+      // If we're on the drafts tab, refresh the drafts list
+      if (selectedTab === 'drafts') {
+        const { data: updatedDrafts, error: fetchError } = await supabase
+          .from('post_drafts')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (!fetchError) {
+          // Convert from database format to component format
+          const formattedDrafts = updatedDrafts.map(draft => ({
+            id: draft.id,
+            content: draft.content,
+            media_urls: draft.media_urls as string[],
+            selected_accounts: draft.selected_accounts as string[],
+            created_at: draft.created_at,
+            user_id: draft.user_id
+          }));
+          
+          setDrafts(formattedDrafts);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error saving draft:", error);
+      toast({
+        title: "Error saving draft",
+        description: error.message || "Failed to save draft. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSchedulePost = () => {
+  const handleSchedulePost = async () => {
     if (!scheduleDate) {
       toast({
         title: "Schedule date required",
@@ -162,58 +236,86 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Combine date and time
-    const scheduledDateTime = new Date(scheduleDate);
-    const [hours, minutes] = scheduleTime.split(':').map(Number);
-    scheduledDateTime.setHours(hours, minutes);
-
-    // Save the scheduled post in local storage with userId
-    const scheduledPost = {
-      id: Date.now().toString(),
-      content: postContent,
-      mediaUrls: mediaPreviewUrls,
-      selectedAccounts,
-      scheduledFor: scheduledDateTime.toISOString(),
-      createdAt: new Date().toISOString(),
-      status: 'scheduled',
-      userId: currentUser, // Associate the scheduled post with the current user
-    };
-
-    const existingScheduled = JSON.parse(localStorage.getItem('scheduledPosts') || '[]');
-    localStorage.setItem('scheduledPosts', JSON.stringify([...existingScheduled, scheduledPost]));
-
-    setIsSchedulePopoverOpen(false);
+    setIsLoading(true);
     
-    toast({
-      title: "Post Scheduled",
-      description: `Your post has been scheduled for ${format(scheduledDateTime, 'PPP')} at ${format(scheduledDateTime, 'p')}.`,
-    });
+    try {
+      // Combine date and time
+      const scheduledDateTime = new Date(scheduleDate);
+      const [hours, minutes] = scheduleTime.split(':').map(Number);
+      scheduledDateTime.setHours(hours, minutes);
+      
+      // Insert scheduled post into Supabase
+      const { error } = await supabase
+        .from('scheduled_posts')
+        .insert({
+          content: postContent,
+          media_urls: mediaPreviewUrls,
+          selected_accounts: selectedAccounts,
+          scheduled_for: scheduledDateTime.toISOString(),
+          user_id: currentUser,
+          status: 'scheduled'
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      setIsSchedulePopoverOpen(false);
+      
+      toast({
+        title: "Post Scheduled",
+        description: `Your post has been scheduled for ${format(scheduledDateTime, 'PPP')} at ${format(scheduledDateTime, 'p')}.`,
+      });
+    } catch (error: any) {
+      console.error("Error scheduling post:", error);
+      toast({
+        title: "Error scheduling post",
+        description: error.message || "Failed to schedule post. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteDraft = (id: string) => {
+  const handleDeleteDraft = async (id: string) => {
     if (!currentUser) return;
     
-    const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
-    // Make sure we're only deleting the current user's drafts
-    const updatedDrafts = existingDrafts.filter((draft: PostDraft) => 
-      !(draft.id === id && draft.userId === currentUser)
-    );
+    setIsLoading(true);
     
-    localStorage.setItem('postDrafts', JSON.stringify(updatedDrafts));
-    
-    // Update the local state
-    setDrafts(drafts.filter(draft => draft.id !== id));
-    
-    toast({
-      title: "Draft Deleted",
-      description: "Your draft has been deleted.",
-    });
+    try {
+      const { error } = await supabase
+        .from('post_drafts')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update the local state
+      setDrafts(drafts.filter(draft => draft.id !== id));
+      
+      toast({
+        title: "Draft Deleted",
+        description: "Your draft has been deleted.",
+      });
+    } catch (error: any) {
+      console.error("Error deleting draft:", error);
+      toast({
+        title: "Error deleting draft",
+        description: error.message || "Failed to delete draft. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLoadDraft = (draft: PostDraft) => {
     setPostContent(draft.content);
-    setMediaPreviewUrls(draft.mediaUrls);
-    setSelectedAccounts(draft.selectedAccounts);
+    setMediaPreviewUrls(draft.media_urls);
+    setSelectedAccounts(draft.selected_accounts);
     setSelectedTab('create');
     
     toast({
@@ -267,7 +369,11 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             {selectedTab === 'drafts' && (
               <div className="flex divide-x h-full">
                 <div className="w-1/2 p-4 overflow-auto">
-                  {drafts.length > 0 ? (
+                  {isLoading ? (
+                    <div className="flex justify-center items-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : drafts.length > 0 ? (
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium">Your Drafts</h3>
                       {drafts.map((draft) => (
@@ -275,16 +381,16 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <p className="text-sm text-muted-foreground">
-                                Created {new Date(draft.createdAt).toLocaleDateString()} 
+                                Created {new Date(draft.created_at).toLocaleDateString()} 
                                 {' · '} 
-                                {draft.selectedAccounts.length} {draft.selectedAccounts.length === 1 ? 'account' : 'accounts'}
+                                {draft.selected_accounts.length} {draft.selected_accounts.length === 1 ? 'account' : 'accounts'}
                               </p>
                             </div>
                           </div>
                           <p className="line-clamp-3 text-sm mb-3">{draft.content}</p>
-                          {draft.mediaUrls.length > 0 && (
+                          {draft.media_urls.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-3">
-                              {draft.mediaUrls.map((url, idx) => (
+                              {draft.media_urls.map((url, idx) => (
                                 <div key={idx} className="w-16 h-16 rounded overflow-hidden bg-muted">
                                   <img src={url} alt="Preview" className="w-full h-full object-cover" />
                                 </div>
@@ -305,6 +411,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                               size="sm"
                               className="text-red-500 hover:text-white hover:bg-red-500"
                               onClick={() => handleDeleteDraft(draft.id)}
+                              disabled={isLoading}
                             >
                               Delete
                             </Button>
@@ -354,11 +461,17 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
           </div>
           
           <div className="border-t p-4 flex justify-between">
-            <Button variant="outline" onClick={handleSaveAsDraft}>Save as Draft</Button>
+            <Button 
+              variant="outline" 
+              onClick={handleSaveAsDraft}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Saving...' : 'Save as Draft'}
+            </Button>
             <div className="space-x-2">
               <Popover open={isSchedulePopoverOpen} onOpenChange={setIsSchedulePopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" disabled={isLoading}>
                     <Calendar className="h-4 w-4 mr-2" />
                     Schedule
                   </Button>
@@ -388,14 +501,14 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                     <Button 
                       className="w-full" 
                       onClick={handleSchedulePost}
-                      disabled={!scheduleDate || !postContent || selectedAccounts.length === 0}
+                      disabled={isLoading || !scheduleDate || !postContent || selectedAccounts.length === 0}
                     >
-                      Confirm Schedule
+                      {isLoading ? 'Scheduling...' : 'Confirm Schedule'}
                     </Button>
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button disabled={!postContent || selectedAccounts.length === 0}>Publish Now</Button>
+              <Button disabled={!postContent || selectedAccounts.length === 0 || isLoading}>Publish Now</Button>
             </div>
           </div>
         </div>

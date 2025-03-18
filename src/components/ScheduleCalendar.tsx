@@ -1,47 +1,96 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ScheduledPost {
   id: string;
   content: string;
-  mediaUrls: string[];
-  selectedAccounts: string[];
-  scheduledFor: string;
-  createdAt: string;
+  media_urls: string[];
+  selected_accounts: string[];
+  scheduled_for: string;
+  created_at: string;
   status: string;
+  user_id: string;
 }
 
 const ScheduleCalendar: React.FC = () => {
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
-  // Load scheduled posts from localStorage
   useEffect(() => {
-    const loadScheduledPosts = () => {
-      const storedPosts = JSON.parse(localStorage.getItem('scheduledPosts') || '[]');
-      setScheduledPosts(storedPosts);
+    const getUserId = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setCurrentUser(data.session.user.id);
+      }
     };
     
-    loadScheduledPosts();
+    getUserId();
+  }, []);
+
+  useEffect(() => {
+    const fetchScheduledPosts = async () => {
+      if (!currentUser) return;
+      
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('scheduled_posts')
+          .select('*')
+          .order('scheduled_for', { ascending: true });
+          
+        if (error) {
+          console.error("Error fetching scheduled posts:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load scheduled posts. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        const formattedPosts = data.map(post => ({
+          id: post.id,
+          content: post.content,
+          media_urls: post.media_urls as string[],
+          selected_accounts: post.selected_accounts as string[],
+          scheduled_for: post.scheduled_for,
+          created_at: post.created_at,
+          status: post.status,
+          user_id: post.user_id
+        }));
+        
+        setScheduledPosts(formattedPosts);
+      } catch (error) {
+        console.error("Error in scheduled posts fetching:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Set up an event listener to reload posts when storage changes
-    window.addEventListener('storage', loadScheduledPosts);
+    if (currentUser) {
+      fetchScheduledPosts();
+    }
+    
+    window.addEventListener('focus', fetchScheduledPosts);
     
     return () => {
-      window.removeEventListener('storage', loadScheduledPosts);
+      window.removeEventListener('focus', fetchScheduledPosts);
     };
-  }, []);
+  }, [currentUser, toast]);
 
   const filteredPosts = scheduledPosts.filter(post => {
     if (!date) return false;
     
-    const postDate = new Date(post.scheduledFor);
+    const postDate = new Date(post.scheduled_for);
     return (
       postDate.getDate() === date.getDate() && 
       postDate.getMonth() === date.getMonth() && 
@@ -49,10 +98,9 @@ const ScheduleCalendar: React.FC = () => {
     );
   });
 
-  // Function to determine which days have posts scheduled
   const hasPosts = (day: Date) => {
     return scheduledPosts.some(post => {
-      const postDate = new Date(post.scheduledFor);
+      const postDate = new Date(post.scheduled_for);
       return (
         postDate.getDate() === day.getDate() && 
         postDate.getMonth() === day.getMonth() && 
@@ -61,19 +109,40 @@ const ScheduleCalendar: React.FC = () => {
     });
   };
 
-  const handleDeletePost = (id: string) => {
-    const updatedPosts = scheduledPosts.filter(post => post.id !== id);
-    localStorage.setItem('scheduledPosts', JSON.stringify(updatedPosts));
-    setScheduledPosts(updatedPosts);
+  const handleDeletePost = async (id: string) => {
+    if (!currentUser) return;
     
-    toast({
-      title: "Post Deleted",
-      description: "The scheduled post has been removed."
-    });
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from('scheduled_posts')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setScheduledPosts(scheduledPosts.filter(post => post.id !== id));
+      
+      toast({
+        title: "Post Deleted",
+        description: "The scheduled post has been removed."
+      });
+    } catch (error: any) {
+      console.error("Error deleting scheduled post:", error);
+      toast({
+        title: "Error deleting post",
+        description: error.message || "Failed to delete post. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEditPost = () => {
-    // This would open the LaunchPad component with the post data
     window.dispatchEvent(new CustomEvent('open-launchpad'));
     toast({
       title: "Edit Post",
@@ -134,9 +203,13 @@ const ScheduleCalendar: React.FC = () => {
             </div>
             
             <div className="space-y-3">
-              {filteredPosts.length > 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredPosts.length > 0 ? (
                 filteredPosts.map((post) => {
-                  const postDate = new Date(post.scheduledFor);
+                  const postDate = new Date(post.scheduled_for);
                   return (
                     <Card key={post.id} className="overflow-hidden hover:shadow-md transition-shadow duration-300">
                       <div className="p-4 flex items-start gap-4">
@@ -147,7 +220,7 @@ const ScheduleCalendar: React.FC = () => {
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap gap-1 mb-2">
-                            {post.selectedAccounts.map((platform, index) => (
+                            {post.selected_accounts.map((platform, index) => (
                               <span key={index} className="px-1.5 py-0.5 bg-secondary text-xs rounded-md">
                                 {platform}
                               </span>
@@ -156,9 +229,9 @@ const ScheduleCalendar: React.FC = () => {
                           
                           <p className="text-sm mb-2 line-clamp-2">{post.content}</p>
                           
-                          {post.mediaUrls && post.mediaUrls.length > 0 && (
+                          {post.media_urls && post.media_urls.length > 0 && (
                             <div className="flex gap-2 mb-2 overflow-x-auto">
-                              {post.mediaUrls.map((url, idx) => (
+                              {post.media_urls.map((url, idx) => (
                                 <div key={idx} className="relative w-24 h-24 rounded-md overflow-hidden bg-muted flex-shrink-0">
                                   <img 
                                     src={url} 
@@ -181,6 +254,7 @@ const ScheduleCalendar: React.FC = () => {
                           <button 
                             className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-secondary transition-colors duration-200"
                             onClick={() => handleDeletePost(post.id)}
+                            disabled={isLoading}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
