@@ -1,34 +1,35 @@
 
-// OpenAI API service that uses localStorage for secure key storage
+// OpenAI API service with fixed API key
 
 const OPENAI_API_URL = "https://api.openai.com/v1";
-const API_KEY_STORAGE_KEY = "openai_api_key";
+
+// Your fixed API key - DO NOT share this code publicly
+const FIXED_API_KEY = "your-openai-api-key-here"; // Replace with your actual OpenAI API key
 
 // Helper function to check if API key is available
 export const hasApiKey = (): boolean => {
-  return !!localStorage.getItem(API_KEY_STORAGE_KEY);
+  return !!FIXED_API_KEY;
 };
 
-// Get the API key from localStorage
+// Get the API key - now returns your fixed key
 export const getApiKey = (): string => {
-  return localStorage.getItem(API_KEY_STORAGE_KEY) || "";
+  return FIXED_API_KEY;
 };
 
-// Set the API key in localStorage
+// These functions are kept but will no longer be used in the UI
 export const setApiKey = (key: string): void => {
-  localStorage.setItem(API_KEY_STORAGE_KEY, key);
+  // No-op as we're using a fixed key
+  console.log("Using fixed API key, ignoring user-provided key");
 };
 
-// Remove the API key from localStorage
 export const removeApiKey = (): void => {
-  localStorage.removeItem(API_KEY_STORAGE_KEY);
+  // No-op as we're using a fixed key
+  console.log("Using fixed API key, cannot remove");
 };
 
 // Generate text using OpenAI
 export const generateText = async (prompt: string): Promise<string> => {
-  const apiKey = getApiKey();
-  
-  if (!apiKey) {
+  if (!FIXED_API_KEY) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -37,7 +38,7 @@ export const generateText = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${FIXED_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
@@ -70,9 +71,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 
 // Generate image using OpenAI (DALL-E)
 export const generateImage = async (prompt: string): Promise<string> => {
-  const apiKey = getApiKey();
-  
-  if (!apiKey) {
+  if (!FIXED_API_KEY) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -81,7 +80,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${FIXED_API_KEY}`,
       },
       body: JSON.stringify({
         model: "dall-e-3",
