@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Select,
