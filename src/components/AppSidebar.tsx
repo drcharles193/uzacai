@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 import SidebarItem from './sidebar/SidebarItem';
 import SettingsLink from './sidebar/SettingsLink';
@@ -8,6 +8,7 @@ import { getSidebarItems } from './sidebar/sidebarData';
 
 const AppSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   
@@ -19,6 +20,15 @@ const AppSidebar = () => {
     e.preventDefault();
     // We'll use window.dispatchEvent to communicate with parent components
     window.dispatchEvent(new CustomEvent('open-launchpad'));
+  };
+
+  // Handle navigation to schedule page
+  const handleNavigation = (path: string) => {
+    if (path === '#create-post') {
+      handleCreatePost({ preventDefault: () => {} } as React.MouseEvent);
+    } else if (path !== '#') {
+      navigate(path);
+    }
   };
 
   // Determine if item is active
@@ -47,6 +57,7 @@ const AppSidebar = () => {
               postMenuOpen={postMenuOpen}
               togglePostMenu={() => setPostMenuOpen(!postMenuOpen)}
               handleCreatePost={handleCreatePost}
+              handleNavigation={handleNavigation}
             />
           </div>
         ))}

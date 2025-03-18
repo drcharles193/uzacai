@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
 import PostPreviewTab from './launchpad/PostPreviewTab';
-import { X, Calendar } from 'lucide-react';
+import { X, Calendar, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { 
@@ -16,6 +16,25 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+interface PostDraft {
+  id: string;
+  content: string;
+  mediaUrls: string[];
+  selectedAccounts: string[];
+  createdAt: string;
+}
+
+interface ScheduledPost {
+  id: string;
+  content: string;
+  mediaUrls: string[];
+  selectedAccounts: string[];
+  scheduledFor: string;
+  createdAt: string;
+  status: 'scheduled';
+}
 
 interface SocialAccount {
   platform: string;
@@ -39,7 +58,16 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = useState<string>("12:00");
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
+  const [drafts, setDrafts] = useState<PostDraft[]>([]);
   const { toast } = useToast();
+
+  // Load drafts from localStorage when component mounts or tab changes
+  useEffect(() => {
+    if (selectedTab === 'drafts') {
+      const storedDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
+      setDrafts(storedDrafts);
+    }
+  }, [selectedTab, isOpen]);
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
@@ -71,6 +99,11 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       title: "Draft Saved",
       description: "Your post has been saved as a draft.",
     });
+    
+    // Refresh drafts if on drafts tab
+    if (selectedTab === 'drafts') {
+      setDrafts([...existingDrafts, draft]);
+    }
   };
 
   const handleSchedulePost = () => {
@@ -119,6 +152,30 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     });
   };
 
+  const handleDeleteDraft = (id: string) => {
+    const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
+    const updatedDrafts = existingDrafts.filter((draft: PostDraft) => draft.id !== id);
+    localStorage.setItem('postDrafts', JSON.stringify(updatedDrafts));
+    setDrafts(updatedDrafts);
+    
+    toast({
+      title: "Draft Deleted",
+      description: "Your draft has been deleted.",
+    });
+  };
+
+  const handleLoadDraft = (draft: PostDraft) => {
+    setPostContent(draft.content);
+    setMediaPreviewUrls(draft.mediaUrls);
+    setSelectedAccounts(draft.selectedAccounts);
+    setSelectedTab('create');
+    
+    toast({
+      title: "Draft Loaded",
+      description: "Your draft has been loaded into the editor.",
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh]">
@@ -164,7 +221,59 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
             {selectedTab === 'drafts' && (
               <div className="flex divide-x h-full">
                 <div className="w-1/2 p-4 overflow-auto">
-                  <p className="text-center text-gray-500 p-8">No drafts saved yet.</p>
+                  {drafts.length > 0 ? (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Your Drafts</h3>
+                      {drafts.map((draft) => (
+                        <div key={draft.id} className="border rounded-md p-4 hover:border-primary transition-colors">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                Created {new Date(draft.createdAt).toLocaleDateString()} 
+                                {' · '} 
+                                {draft.selectedAccounts.length} {draft.selectedAccounts.length === 1 ? 'account' : 'accounts'}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteDraft(draft.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="line-clamp-3 text-sm mb-3">{draft.content}</p>
+                          {draft.mediaUrls.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {draft.mediaUrls.map((url, idx) => (
+                                <div key={idx} className="w-16 h-16 rounded overflow-hidden bg-muted">
+                                  <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleLoadDraft(draft)}
+                          >
+                            Edit Draft
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <FileText className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">No drafts saved yet</h3>
+                      <p className="text-muted-foreground mb-4">Start creating posts and save them as drafts</p>
+                      <Button onClick={() => setSelectedTab('create')}>Create a Post</Button>
+                    </div>
+                  )}
                 </div>
                 <div className="w-1/2 overflow-auto p-4">
                   <LaunchpadTabs
@@ -216,6 +325,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                         onSelect={setScheduleDate}
                         disabled={(date) => date < new Date()}
                         initialFocus
+                        className={cn("p-3 pointer-events-auto")}
                       />
                     </div>
                     <div>

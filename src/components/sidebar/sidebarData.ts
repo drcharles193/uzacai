@@ -7,7 +7,8 @@ import {
   FileText, 
   Plus,
   List,
-  User
+  User,
+  Calendar
 } from 'lucide-react';
 import { SidebarItemProps } from './SidebarItem';
 
@@ -30,6 +31,7 @@ export const getSidebarItems = (): SidebarItemData[] => [
     hasSubmenu: true,
     submenuItems: [
       { name: 'Create Post', icon: Plus, path: '#create-post' },
+      { name: 'Calendar', icon: Calendar, path: '/schedule' },
       { name: 'Manage Posts', icon: List, path: '#', comingSoon: true }
     ]
   },

@@ -27,6 +27,7 @@ export interface SidebarItemProps {
   postMenuOpen: boolean;
   togglePostMenu?: () => void;
   handleCreatePost?: (e: React.MouseEvent) => void;
+  handleNavigation?: (path: string) => void;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
@@ -42,7 +43,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   expanded,
   postMenuOpen,
   togglePostMenu,
-  handleCreatePost
+  handleCreatePost,
+  handleNavigation
 }) => {
   if (hasSubmenu) {
     return (
@@ -76,6 +78,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
           <SubmenuItems 
             submenuItems={submenuItems} 
             handleCreatePost={handleCreatePost}
+            handleNavigation={handleNavigation}
           />
         )}
       </div>
@@ -91,7 +94,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         "text-white hover:bg-[#2A2F3C]",
         comingSoon && "cursor-not-allowed text-gray-400"
       )}
-      onClick={e => comingSoon && e.preventDefault()}
+      onClick={e => {
+        if (comingSoon) {
+          e.preventDefault();
+        }
+      }}
     >
       <Icon 
         className={color ? `text-[${color}]` : comingSoon ? 'text-gray-400' : 'text-white'} 
