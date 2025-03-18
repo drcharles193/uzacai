@@ -1,18 +1,34 @@
 
-// OpenAI API service with fixed API key
+// OpenAI API service that uses localStorage for secure key storage
 
-// Fixed API key - replace with your actual API key
-const OPENAI_API_KEY = "your-openai-api-key-here";
 const OPENAI_API_URL = "https://api.openai.com/v1";
+const API_KEY_STORAGE_KEY = "openai_api_key";
 
 // Helper function to check if API key is available
 export const hasApiKey = (): boolean => {
-  return !!OPENAI_API_KEY;
+  return !!localStorage.getItem(API_KEY_STORAGE_KEY);
+};
+
+// Get the API key from localStorage
+export const getApiKey = (): string => {
+  return localStorage.getItem(API_KEY_STORAGE_KEY) || "";
+};
+
+// Set the API key in localStorage
+export const setApiKey = (key: string): void => {
+  localStorage.setItem(API_KEY_STORAGE_KEY, key);
+};
+
+// Remove the API key from localStorage
+export const removeApiKey = (): void => {
+  localStorage.removeItem(API_KEY_STORAGE_KEY);
 };
 
 // Generate text using OpenAI
 export const generateText = async (prompt: string): Promise<string> => {
-  if (!OPENAI_API_KEY) {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -21,7 +37,7 @@ export const generateText = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
@@ -54,7 +70,9 @@ export const generateText = async (prompt: string): Promise<string> => {
 
 // Generate image using OpenAI (DALL-E)
 export const generateImage = async (prompt: string): Promise<string> => {
-  if (!OPENAI_API_KEY) {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -63,7 +81,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "dall-e-3",
@@ -85,8 +103,3 @@ export const generateImage = async (prompt: string): Promise<string> => {
     throw error;
   }
 };
-
-// These functions are no longer needed but kept for backward compatibility
-export const getApiKey = (): string => OPENAI_API_KEY;
-export const setApiKey = (_key: string): void => {};
-export const removeApiKey = (): void => {};
