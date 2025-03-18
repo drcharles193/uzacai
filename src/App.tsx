@@ -13,6 +13,7 @@ import DashIn from "./pages/DashIn";
 import Settings from "./pages/Settings";
 import Upgrade from "./pages/Upgrade";
 import ContactPage from "./pages/ContactPage";
+import ScheduleCalendar from "./components/schedule/ScheduleCalendar";
 
 const queryClient = new QueryClient();
 
