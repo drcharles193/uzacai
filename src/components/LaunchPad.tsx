@@ -5,7 +5,7 @@ import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
 import PostPreviewTab from './launchpad/PostPreviewTab';
-import { X, Calendar, Trash2 } from 'lucide-react';
+import { X, Calendar, Trash2, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { 
