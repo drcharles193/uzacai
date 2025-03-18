@@ -4,7 +4,7 @@
 const OPENAI_API_URL = "https://api.openai.com/v1";
 
 // Your fixed API key - DO NOT share this code publicly
-const FIXED_API_KEY = "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";
+const FIXED_API_KEY = "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";
 
 // Helper function to check if API key is available
 export const hasApiKey = (): boolean => {
