@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
@@ -14,14 +15,8 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 
 interface PostDraft {
   id: string;
@@ -61,47 +56,18 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
-  const [selectedHour, setSelectedHour] = useState<string>("12");
-  const [selectedMinute, setSelectedMinute] = useState<string>("00");
-  const [selectedAmPm, setSelectedAmPm] = useState<string>("PM");
+  const [scheduleTime, setScheduleTime] = useState<string>("12:00");
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const [drafts, setDrafts] = useState<PostDraft[]>([]);
   const { toast } = useToast();
 
+  // Load drafts from localStorage when component mounts or tab changes
   useEffect(() => {
     if (selectedTab === 'drafts') {
       const storedDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
       setDrafts(storedDrafts);
     }
   }, [selectedTab, isOpen]);
-
-  useEffect(() => {
-    const handleOpenWithTime = (event: CustomEvent) => {
-      if (event.detail?.scheduledDate) {
-        const date = new Date(event.detail.scheduledDate);
-        setScheduleDate(date);
-        
-        let hours = date.getHours();
-        const isPM = hours >= 12;
-        
-        if (hours > 12) {
-          hours -= 12;
-        } else if (hours === 0) {
-          hours = 12;
-        }
-        
-        setSelectedHour(hours.toString());
-        setSelectedMinute(date.getMinutes().toString().padStart(2, '0'));
-        setSelectedAmPm(isPM ? "PM" : "AM");
-      }
-    };
-
-    window.addEventListener('open-launchpad-with-time', handleOpenWithTime as EventListener);
-    
-    return () => {
-      window.removeEventListener('open-launchpad-with-time', handleOpenWithTime as EventListener);
-    };
-  }, []);
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
@@ -117,6 +83,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
+    // Save the draft in local storage
     const draft = {
       id: Date.now().toString(),
       content: postContent,
@@ -133,6 +100,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       description: "Your post has been saved as a draft.",
     });
     
+    // Refresh drafts if on drafts tab
     if (selectedTab === 'drafts') {
       setDrafts([...existingDrafts, draft]);
     }
@@ -157,17 +125,12 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
+    // Combine date and time
     const scheduledDateTime = new Date(scheduleDate);
-    let hours = parseInt(selectedHour);
-    
-    if (selectedAmPm === "PM" && hours < 12) {
-      hours += 12;
-    } else if (selectedAmPm === "AM" && hours === 12) {
-      hours = 0;
-    }
-    
-    scheduledDateTime.setHours(hours, parseInt(selectedMinute));
+    const [hours, minutes] = scheduleTime.split(':').map(Number);
+    scheduledDateTime.setHours(hours, minutes);
 
+    // Save the scheduled post in local storage
     const scheduledPost = {
       id: Date.now().toString(),
       content: postContent,
@@ -187,8 +150,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       title: "Post Scheduled",
       description: `Your post has been scheduled for ${format(scheduledDateTime, 'PPP')} at ${format(scheduledDateTime, 'p')}.`,
     });
-    
-    window.dispatchEvent(new StorageEvent('storage'));
   };
 
   const handleDeleteDraft = (id: string) => {
@@ -214,9 +175,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       description: "Your draft has been loaded into the editor.",
     });
   };
-
-  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minutes = Array.from({ length: 12 }, (_, i) => i * 5).map(min => min.toString().padStart(2, '0'));
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -372,43 +330,12 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                     </div>
                     <div>
                       <h4 className="font-medium mb-2">Schedule Time</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <Select value={selectedHour} onValueChange={setSelectedHour}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Hour" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {hours.map(hour => (
-                              <SelectItem key={`hour-${hour}`} value={hour.toString()}>
-                                {hour}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <Select value={selectedMinute} onValueChange={setSelectedMinute}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Minute" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {minutes.map(minute => (
-                              <SelectItem key={`minute-${minute}`} value={minute}>
-                                {minute}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <Select value={selectedAmPm} onValueChange={setSelectedAmPm}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="AM/PM" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="w-full"
+                      />
                     </div>
                     <Button 
                       className="w-full" 
