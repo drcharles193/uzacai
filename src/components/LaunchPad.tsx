@@ -5,8 +5,17 @@ import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import PostContentEditor from './launchpad/PostContentEditor';
 import LaunchpadTabs from './launchpad/LaunchpadTabs';
 import PostPreviewTab from './launchpad/PostPreviewTab';
-import { X } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 interface SocialAccount {
   platform: string;
@@ -27,9 +36,87 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
+  const [scheduleTime, setScheduleTime] = useState<string>("12:00");
+  const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
+  };
+
+  const handleSaveAsDraft = () => {
+    if (!postContent.trim()) {
+      toast({
+        title: "Cannot save empty draft",
+        description: "Please add some content before saving as a draft.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Save the draft in local storage
+    const draft = {
+      id: Date.now().toString(),
+      content: postContent,
+      mediaUrls: mediaPreviewUrls,
+      selectedAccounts,
+      createdAt: new Date().toISOString(),
+    };
+
+    const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
+    localStorage.setItem('postDrafts', JSON.stringify([...existingDrafts, draft]));
+
+    toast({
+      title: "Draft Saved",
+      description: "Your post has been saved as a draft.",
+    });
+  };
+
+  const handleSchedulePost = () => {
+    if (!scheduleDate) {
+      toast({
+        title: "Schedule date required",
+        description: "Please select a date to schedule your post.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!postContent.trim() || selectedAccounts.length === 0) {
+      toast({
+        title: "Incomplete post",
+        description: "Please add content and select at least one account to post to.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Combine date and time
+    const scheduledDateTime = new Date(scheduleDate);
+    const [hours, minutes] = scheduleTime.split(':').map(Number);
+    scheduledDateTime.setHours(hours, minutes);
+
+    // Save the scheduled post in local storage
+    const scheduledPost = {
+      id: Date.now().toString(),
+      content: postContent,
+      mediaUrls: mediaPreviewUrls,
+      selectedAccounts,
+      scheduledFor: scheduledDateTime.toISOString(),
+      createdAt: new Date().toISOString(),
+      status: 'scheduled'
+    };
+
+    const existingScheduled = JSON.parse(localStorage.getItem('scheduledPosts') || '[]');
+    localStorage.setItem('scheduledPosts', JSON.stringify([...existingScheduled, scheduledPost]));
+
+    setIsSchedulePopoverOpen(false);
+    
+    toast({
+      title: "Post Scheduled",
+      description: `Your post has been scheduled for ${format(scheduledDateTime, 'PPP')} at ${format(scheduledDateTime, 'p')}.`,
+    });
   };
 
   return (
@@ -110,9 +197,46 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
           </div>
           
           <div className="border-t p-4 flex justify-between">
-            <Button variant="outline">Save as Draft</Button>
+            <Button variant="outline" onClick={handleSaveAsDraft}>Save as Draft</Button>
             <div className="space-x-2">
-              <Button variant="outline">Schedule</Button>
+              <Popover open={isSchedulePopoverOpen} onOpenChange={setIsSchedulePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="end">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Schedule Date</h4>
+                      <CalendarComponent
+                        mode="single"
+                        selected={scheduleDate}
+                        onSelect={setScheduleDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Schedule Time</h4>
+                      <Input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSchedulePost}
+                      disabled={!scheduleDate || !postContent || selectedAccounts.length === 0}
+                    >
+                      Confirm Schedule
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button disabled={!postContent || selectedAccounts.length === 0}>Publish Now</Button>
             </div>
           </div>
