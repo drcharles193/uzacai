@@ -17,6 +17,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PostDraft {
   id: string;
@@ -24,6 +25,7 @@ interface PostDraft {
   mediaUrls: string[];
   selectedAccounts: string[];
   createdAt: string;
+  userId: string; // Added userId to track which user created the draft
 }
 
 interface ScheduledPost {
@@ -34,6 +36,7 @@ interface ScheduledPost {
   scheduledFor: string;
   createdAt: string;
   status: 'scheduled';
+  userId: string; // Added userId for scheduled posts too
 }
 
 interface SocialAccount {
@@ -59,15 +62,30 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [scheduleTime, setScheduleTime] = useState<string>("12:00");
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const [drafts, setDrafts] = useState<PostDraft[]>([]);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Get the current user on mount
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setCurrentUser(data.session.user.id);
+      }
+    };
+    
+    getUserId();
+  }, []);
 
   // Load drafts from localStorage when component mounts or tab changes
   useEffect(() => {
-    if (selectedTab === 'drafts') {
+    if (selectedTab === 'drafts' && currentUser) {
       const storedDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
-      setDrafts(storedDrafts);
+      // Filter drafts to only show those created by the current user
+      const userDrafts = storedDrafts.filter((draft: PostDraft) => draft.userId === currentUser);
+      setDrafts(userDrafts);
     }
-  }, [selectedTab, isOpen]);
+  }, [selectedTab, isOpen, currentUser]);
 
   const handleContentChange = (content: string) => {
     setPostContent(content);
@@ -83,13 +101,23 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Save the draft in local storage
+    if (!currentUser) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save drafts.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Save the draft in local storage with userId
     const draft = {
       id: Date.now().toString(),
       content: postContent,
       mediaUrls: mediaPreviewUrls,
       selectedAccounts,
       createdAt: new Date().toISOString(),
+      userId: currentUser, // Associate the draft with the current user
     };
 
     const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
@@ -102,7 +130,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     
     // Refresh drafts if on drafts tab
     if (selectedTab === 'drafts') {
-      setDrafts([...existingDrafts, draft]);
+      setDrafts([...drafts, draft]);
     }
   };
 
@@ -125,12 +153,21 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
+    if (!currentUser) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to schedule posts.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Combine date and time
     const scheduledDateTime = new Date(scheduleDate);
     const [hours, minutes] = scheduleTime.split(':').map(Number);
     scheduledDateTime.setHours(hours, minutes);
 
-    // Save the scheduled post in local storage
+    // Save the scheduled post in local storage with userId
     const scheduledPost = {
       id: Date.now().toString(),
       content: postContent,
@@ -138,7 +175,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       selectedAccounts,
       scheduledFor: scheduledDateTime.toISOString(),
       createdAt: new Date().toISOString(),
-      status: 'scheduled'
+      status: 'scheduled',
+      userId: currentUser, // Associate the scheduled post with the current user
     };
 
     const existingScheduled = JSON.parse(localStorage.getItem('scheduledPosts') || '[]');
@@ -153,10 +191,18 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   };
 
   const handleDeleteDraft = (id: string) => {
+    if (!currentUser) return;
+    
     const existingDrafts = JSON.parse(localStorage.getItem('postDrafts') || '[]');
-    const updatedDrafts = existingDrafts.filter((draft: PostDraft) => draft.id !== id);
+    // Make sure we're only deleting the current user's drafts
+    const updatedDrafts = existingDrafts.filter((draft: PostDraft) => 
+      !(draft.id === id && draft.userId === currentUser)
+    );
+    
     localStorage.setItem('postDrafts', JSON.stringify(updatedDrafts));
-    setDrafts(updatedDrafts);
+    
+    // Update the local state
+    setDrafts(drafts.filter(draft => draft.id !== id));
     
     toast({
       title: "Draft Deleted",
@@ -234,14 +280,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                                 {draft.selectedAccounts.length} {draft.selectedAccounts.length === 1 ? 'account' : 'accounts'}
                               </p>
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleDeleteDraft(draft.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
                           </div>
                           <p className="line-clamp-3 text-sm mb-3">{draft.content}</p>
                           {draft.mediaUrls.length > 0 && (
@@ -253,14 +291,24 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                               ))}
                             </div>
                           )}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full"
-                            onClick={() => handleLoadDraft(draft)}
-                          >
-                            Edit Draft
-                          </Button>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleLoadDraft(draft)}
+                            >
+                              Edit Draft
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-red-500 hover:text-white hover:bg-red-500"
+                              onClick={() => handleDeleteDraft(draft.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
