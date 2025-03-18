@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 import { PostDraft } from './types';
 
 interface DraftsListProps {
@@ -54,6 +54,15 @@ const DraftsList: React.FC<DraftsListProps> = ({
                 {draft.selected_accounts.length} {draft.selected_accounts.length === 1 ? 'account' : 'accounts'}
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50"
+              onClick={() => onDeleteDraft(draft.id)}
+              title="Delete draft"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
           <p className="line-clamp-3 text-sm mb-3">{draft.content}</p>
           {draft.media_urls.length > 0 && (
@@ -73,14 +82,6 @@ const DraftsList: React.FC<DraftsListProps> = ({
               onClick={() => onLoadDraft(draft)}
             >
               Edit Draft
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="text-red-500 hover:text-white hover:bg-red-500"
-              onClick={() => onDeleteDraft(draft.id)}
-            >
-              Delete
             </Button>
           </div>
         </div>
