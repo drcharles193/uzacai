@@ -57,13 +57,6 @@ const AIPostGenerator: React.FC<AIPostGeneratorProps> = ({ onContentGenerated })
     });
   };
   
-  const promptIdeas = [
-    "Write an engaging post about a new product launch",
-    "Create content that highlights customer success stories",
-    "Generate a motivational Monday post for social media",
-    "Write a post announcing a special promotion or discount"
-  ];
-  
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -91,21 +84,6 @@ const AIPostGenerator: React.FC<AIPostGeneratorProps> = ({ onContentGenerated })
             className="w-full min-h-[120px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-[#689675]"
             placeholder="E.g., Write a post announcing our new eco-friendly product line with relevant hashtags"
           ></textarea>
-          
-          <div className="mt-2 text-sm text-gray-500">
-            <p>Need inspiration? Try one of these:</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {promptIdeas.map((idea, index) => (
-                <button
-                  key={index}
-                  onClick={() => setPrompt(idea)}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-full text-left"
-                >
-                  {idea}
-                </button>
-              ))}
-            </div>
-          </div>
           
           <Button 
             onClick={handleGenerate} 
