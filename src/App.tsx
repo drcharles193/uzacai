@@ -13,6 +13,7 @@ import DashIn from "./pages/DashIn";
 import Settings from "./pages/Settings";
 import Upgrade from "./pages/Upgrade";
 import ContactPage from "./pages/ContactPage";
+import Schedule from "./pages/Schedule";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/upgrade" element={<Upgrade />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/schedule" element={<Schedule />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
