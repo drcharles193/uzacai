@@ -95,7 +95,7 @@ const Layout: React.FC<LayoutProps> = ({
                 <FooterLink href="#">About</FooterLink>
                 <FooterLink href="#">Blog</FooterLink>
                 <FooterLink href="#">Careers</FooterLink>
-                <FooterLink href="#">Contact</FooterLink>
+                <FooterLink href="/contact">Contact</FooterLink>
               </ul>
             </div>
           </div>
@@ -105,8 +105,8 @@ const Layout: React.FC<LayoutProps> = ({
               © {new Date().getFullYear()} SocialAI. All rights reserved.
             </p>
             <div className="flex gap-4 order-1 md:order-2">
-              <FooterLink href="#">Privacy Policy</FooterLink>
-              <FooterLink href="#">Terms of Service</FooterLink>
+              <FooterLink href="/privacy-policy">Privacy Policy</FooterLink>
+              <FooterLink href="/terms-of-service">Terms of Service</FooterLink>
             </div>
           </div>
         </div>
