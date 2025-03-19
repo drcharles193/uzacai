@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { Button } from './ui/button';
 import { supabase } from "@/integrations/supabase/client";
 import { SocialAccount } from './launchpad/types';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Import refactored components
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
@@ -31,6 +32,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Custom hooks
   const { drafts, isLoading: isDraftsLoading, saveDraft, deleteDraft } = useDrafts(currentUser, selectedTab);
@@ -85,7 +87,9 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh]">
+      <DialogContent 
+        className={`${isMobile ? 'w-full h-full max-w-full m-0 rounded-none p-0' : 'sm:max-w-[1000px]'} p-0 gap-0 overflow-hidden max-h-[90vh] translate-y-[-10%]`}
+      >
         <DialogTitle className="sr-only">Create Post</DialogTitle>
         <div className="flex flex-col h-full">
           <div className="flex justify-between items-center border-b py-2 px-4">
