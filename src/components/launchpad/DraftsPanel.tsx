@@ -3,7 +3,6 @@ import React from 'react';
 import DraftsList from './DraftsList';
 import LaunchpadTabs from './LaunchpadTabs';
 import { PostDraft } from './types';
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DraftsPanelProps {
   drafts: PostDraft[];
@@ -33,11 +32,9 @@ const DraftsPanel: React.FC<DraftsPanelProps> = ({
   onDeleteDraft,
   onCreatePost
 }) => {
-  const isMobile = useIsMobile();
-
   return (
-    <div className={`flex ${isMobile ? 'flex-col' : 'divide-x'} h-full`}>
-      <div className={`${isMobile ? 'w-full' : 'w-1/2'} p-4 overflow-auto`}>
+    <div className="flex divide-x h-full">
+      <div className="w-1/2 p-4 overflow-auto">
         <DraftsList 
           drafts={drafts}
           isLoading={isLoading}
@@ -46,7 +43,7 @@ const DraftsPanel: React.FC<DraftsPanelProps> = ({
           onCreatePost={onCreatePost}
         />
       </div>
-      <div className={`${isMobile ? 'w-full' : 'w-1/2'} overflow-auto p-4`}>
+      <div className="w-1/2 overflow-auto p-4">
         <LaunchpadTabs
           postContent={postContent}
           mediaPreviewUrls={mediaPreviewUrls}
