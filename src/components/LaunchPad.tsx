@@ -85,7 +85,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh] translate-y-[-5%]">
+      <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh] translate-y-[-10%]">
         <DialogTitle className="sr-only">Create Post</DialogTitle>
         <div className="flex flex-col h-full">
           <div className="flex justify-between items-center border-b py-2 px-4">
