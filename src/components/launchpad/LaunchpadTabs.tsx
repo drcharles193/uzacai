@@ -12,6 +12,8 @@ interface LaunchpadTabsProps {
   connectedAccounts: Array<{
     platform: string;
     account_name: string;
+    account_type?: string;
+    platform_account_id?: string;
   }>;
   selectedAccounts: string[];
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>;
@@ -53,11 +55,16 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
         <PostPreviewTab 
           postContent={postContent}
           mediaPreviewUrls={mediaPreviewUrls}
+          selectedAccounts={selectedAccounts}
+          connectedAccounts={connectedAccounts}
         />
       </TabsContent>
       
       <TabsContent value="comments" className="mt-0">
-        <CommentsTab />
+        <CommentsTab 
+          selectedAccounts={selectedAccounts}
+          connectedAccounts={connectedAccounts}
+        />
       </TabsContent>
     </Tabs>
   );
