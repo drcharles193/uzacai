@@ -38,22 +38,25 @@ export const getSidebarItems = (): SidebarItemData[] => [
   { 
     name: 'Users', 
     icon: User, 
-    path: '#',
+    path: '/users',
     comingSoon: true
   },
   { 
     name: 'Analytics', 
     icon: BarChart3, 
-    path: '/analytics' 
+    path: '/analytics',
+    comingSoon: true
   },
   { 
     name: 'Content', 
     icon: FileText, 
-    path: '/content' 
+    path: '/content',
+    comingSoon: true
   },
   { 
     name: 'Inbox', 
     icon: Inbox, 
-    path: '/inbox' 
+    path: '/inbox',
+    comingSoon: true
   },
 ];
