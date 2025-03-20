@@ -29,15 +29,15 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
   return (
     <Tabs defaultValue="accounts" className="w-full">
       <TabsList className="space-x-4 mb-6">
-        <TabsTrigger value="accounts" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
+        <TabsTrigger value="accounts" className="rounded-full data-[state=active]:bg-[#689675]/10 data-[state=active]:text-[#689675] flex items-center gap-2">
           <Users className="h-4 w-4" />
           Accounts
         </TabsTrigger>
-        <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
+        <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-[#689675]/10 data-[state=active]:text-[#689675] flex items-center gap-2">
           <MonitorSmartphone className="h-4 w-4" />
           Post Preview
         </TabsTrigger>
-        <TabsTrigger value="comments" className="rounded-full data-[state=active]:bg-gray-100 flex items-center gap-2">
+        <TabsTrigger value="comments" className="rounded-full data-[state=active]:bg-[#689675]/10 data-[state=active]:text-[#689675] flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Comments
         </TabsTrigger>
