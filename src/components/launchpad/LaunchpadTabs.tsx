@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Users, MonitorSmartphone } from 'lucide-react';
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import PostPreviewTab from './PostPreviewTab';
 import AccountsTab from './AccountsTab';
 import CommentsTab from './CommentsTab';
@@ -17,6 +16,7 @@ interface LaunchpadTabsProps {
   }>;
   selectedAccounts: string[];
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>;
+  activeTab: string;
 }
 
 const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
@@ -24,49 +24,37 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
   mediaPreviewUrls,
   connectedAccounts,
   selectedAccounts,
-  setSelectedAccounts
+  setSelectedAccounts,
+  activeTab
 }) => {
   return (
-    <Tabs defaultValue="accounts" className="w-full">
-      <TabsList className="space-x-4 mb-6">
-        <TabsTrigger value="accounts" className="rounded-full data-[state=active]:bg-[#689675]/10 data-[state=active]:text-[#689675] flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Accounts
-        </TabsTrigger>
-        <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-[#689675]/10 data-[state=active]:text-[#689675] flex items-center gap-2">
-          <MonitorSmartphone className="h-4 w-4" />
-          Post Preview
-        </TabsTrigger>
-        <TabsTrigger value="comments" className="rounded-full data-[state=active]:bg-[#689675]/10 data-[state=active]:text-[#689675] flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" />
-          Comments
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="accounts" className="mt-0">
-        <AccountsTab 
-          connectedAccounts={connectedAccounts}
-          selectedAccounts={selectedAccounts}
-          setSelectedAccounts={setSelectedAccounts}
-        />
-      </TabsContent>
-      
-      <TabsContent value="preview" className="mt-0">
-        <PostPreviewTab 
-          postContent={postContent}
-          mediaPreviewUrls={mediaPreviewUrls}
-          selectedAccounts={selectedAccounts}
-          connectedAccounts={connectedAccounts}
-        />
-      </TabsContent>
-      
-      <TabsContent value="comments" className="mt-0">
-        <CommentsTab 
-          selectedAccounts={selectedAccounts}
-          connectedAccounts={connectedAccounts}
-        />
-      </TabsContent>
-    </Tabs>
+    <div className="w-full">
+      <div className="mt-0">
+        {activeTab === 'accounts' && (
+          <AccountsTab 
+            connectedAccounts={connectedAccounts}
+            selectedAccounts={selectedAccounts}
+            setSelectedAccounts={setSelectedAccounts}
+          />
+        )}
+        
+        {activeTab === 'preview' && (
+          <PostPreviewTab 
+            postContent={postContent}
+            mediaPreviewUrls={mediaPreviewUrls}
+            selectedAccounts={selectedAccounts}
+            connectedAccounts={connectedAccounts}
+          />
+        )}
+        
+        {activeTab === 'comments' && (
+          <CommentsTab 
+            selectedAccounts={selectedAccounts}
+            connectedAccounts={connectedAccounts}
+          />
+        )}
+      </div>
+    </div>
   );
 };
 

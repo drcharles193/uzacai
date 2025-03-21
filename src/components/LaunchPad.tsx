@@ -10,8 +10,8 @@ import { SocialAccount } from './launchpad/types';
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import CreatePostPanel from './launchpad/CreatePostPanel';
 import DraftsPanel from './launchpad/DraftsPanel';
-import ContentPanel from './launchpad/ContentPanel';
 import LaunchpadFooter from './launchpad/LaunchpadFooter';
+import LaunchpadTabs from './launchpad/LaunchpadTabs';
 
 // Import custom hooks
 import { useDrafts } from './launchpad/hooks/useDrafts';
@@ -25,7 +25,7 @@ interface LaunchPadProps {
 
 const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccounts }) => {
   // State management
-  const [selectedTab, setSelectedTab] = useState('create');
+  const [selectedTab, setSelectedTab] = useState('accounts');
   const [postContent, setPostContent] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
@@ -100,7 +100,16 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
           <LaunchpadHeader selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
           
           <div className="flex-1 overflow-auto">
-            {selectedTab === 'create' && (
+            {selectedTab === 'accounts' || selectedTab === 'preview' || selectedTab === 'comments' ? (
+              <LaunchpadTabs
+                postContent={postContent}
+                mediaPreviewUrls={mediaPreviewUrls}
+                connectedAccounts={connectedAccounts}
+                selectedAccounts={selectedAccounts}
+                setSelectedAccounts={setSelectedAccounts}
+                activeTab={selectedTab}
+              />
+            ) : selectedTab === 'create' ? (
               <CreatePostPanel
                 postContent={postContent}
                 setPostContent={setPostContent}
@@ -112,9 +121,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                 setSelectedAccounts={setSelectedAccounts}
                 connectedAccounts={connectedAccounts}
               />
-            )}
-            
-            {selectedTab === 'drafts' && (
+            ) : selectedTab === 'drafts' && (
               <DraftsPanel
                 drafts={drafts}
                 isLoading={isLoading}
@@ -126,16 +133,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
                 onLoadDraft={handleLoadDraft}
                 onDeleteDraft={deleteDraft}
                 onCreatePost={handleCreatePost}
-              />
-            )}
-            
-            {selectedTab === 'content' && (
-              <ContentPanel
-                postContent={postContent}
-                mediaPreviewUrls={mediaPreviewUrls}
-                connectedAccounts={connectedAccounts}
-                selectedAccounts={selectedAccounts}
-                setSelectedAccounts={setSelectedAccounts}
               />
             )}
           </div>
