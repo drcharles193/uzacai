@@ -1,6 +1,13 @@
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Users, 
+  Edit3, 
+  Eye, 
+  MessageCircle, 
+  Archive 
+} from 'lucide-react';
 
 interface LaunchpadHeaderProps {
   selectedTab: string;
@@ -12,38 +19,43 @@ const LaunchpadHeader: React.FC<LaunchpadHeaderProps> = ({
   setSelectedTab,
 }) => {
   return (
-    <div className="flex border-b">
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex-1 flex border-r">
-        <TabsList className="h-auto bg-transparent border-b-0 p-0">
+    <div className="border-b bg-white">
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+        <TabsList className="h-auto bg-transparent border-b-0 p-0 w-full justify-start">
           <TabsTrigger 
             value="accounts" 
-            className="rounded-none py-3 px-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium"
+            className="flex items-center gap-2 rounded-none py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium transition-all duration-200"
           >
-            Accounts
+            <Users className="h-4 w-4" />
+            <span>Accounts</span>
           </TabsTrigger>
           <TabsTrigger 
             value="create" 
-            className="rounded-none py-3 px-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium"
+            className="flex items-center gap-2 rounded-none py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium transition-all duration-200"
           >
-            Create Post
+            <Edit3 className="h-4 w-4" />
+            <span>Create Post</span>
           </TabsTrigger>
           <TabsTrigger 
             value="preview" 
-            className="rounded-none py-3 px-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium"
+            className="flex items-center gap-2 rounded-none py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium transition-all duration-200"
           >
-            Post Preview
+            <Eye className="h-4 w-4" />
+            <span>Post Preview</span>
           </TabsTrigger>
           <TabsTrigger 
             value="comments" 
-            className="rounded-none py-3 px-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium"
+            className="flex items-center gap-2 rounded-none py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium transition-all duration-200"
           >
-            Comments
+            <MessageCircle className="h-4 w-4" />
+            <span>Comments</span>
           </TabsTrigger>
           <TabsTrigger 
             value="drafts" 
-            className="rounded-none py-3 px-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium"
+            className="flex items-center gap-2 rounded-none py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#689675] data-[state=active]:font-medium transition-all duration-200"
           >
-            Drafts
+            <Archive className="h-4 w-4" />
+            <span>Drafts</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>

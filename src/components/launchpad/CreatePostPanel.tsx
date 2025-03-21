@@ -30,8 +30,8 @@ const CreatePostPanel: React.FC<CreatePostPanelProps> = ({
   connectedAccounts
 }) => {
   return (
-    <div className="flex divide-x h-full">
-      <div className="w-1/2 p-4 overflow-auto">
+    <div className="flex divide-x h-full bg-gray-50">
+      <div className="w-1/2 overflow-auto">
         <PostContentEditor
           postContent={postContent}
           setPostContent={setPostContent}
@@ -42,7 +42,7 @@ const CreatePostPanel: React.FC<CreatePostPanelProps> = ({
           selectedAccounts={selectedAccounts}
         />
       </div>
-      <div className="w-1/2 overflow-auto p-4">
+      <div className="w-1/2 overflow-auto">
         <LaunchpadTabs
           postContent={postContent}
           mediaPreviewUrls={mediaPreviewUrls}

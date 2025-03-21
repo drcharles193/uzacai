@@ -33,8 +33,8 @@ const DraftsPanel: React.FC<DraftsPanelProps> = ({
   onCreatePost
 }) => {
   return (
-    <div className="flex divide-x h-full">
-      <div className="w-1/2 p-4 overflow-auto">
+    <div className="flex divide-x h-full bg-gray-50">
+      <div className="w-1/2 overflow-auto">
         <DraftsList 
           drafts={drafts}
           isLoading={isLoading}
@@ -43,7 +43,7 @@ const DraftsPanel: React.FC<DraftsPanelProps> = ({
           onCreatePost={onCreatePost}
         />
       </div>
-      <div className="w-1/2 overflow-auto p-4">
+      <div className="w-1/2 overflow-auto">
         <LaunchpadTabs
           postContent={postContent}
           mediaPreviewUrls={mediaPreviewUrls}

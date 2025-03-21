@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Save, Calendar, Send } from 'lucide-react';
 import SchedulePopover from './SchedulePopover';
 
 interface LaunchpadFooterProps {
@@ -33,27 +34,37 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
   const isPostValid = !!postContent && selectedAccounts.length > 0;
   
   return (
-    <div className="border-t p-4 flex justify-between">
-      <Button 
-        variant="outline" 
-        onClick={onSaveAsDraft}
-        disabled={isLoading}
-      >
-        {isLoading ? 'Saving...' : 'Save as Draft'}
-      </Button>
-      <div className="space-x-2">
-        <SchedulePopover
-          isOpen={isSchedulePopoverOpen}
-          setIsOpen={setIsSchedulePopoverOpen}
-          scheduleDate={scheduleDate}
-          setScheduleDate={setScheduleDate}
-          scheduleTime={scheduleTime}
-          setScheduleTime={setScheduleTime}
-          onSchedulePost={onSchedulePost}
-          isLoading={isLoading}
-          isValid={isPostValid}
-        />
-        <Button disabled={!isPostValid || isLoading}>Publish Now</Button>
+    <div className="border-t py-4 px-6 bg-white">
+      <div className="max-w-3xl mx-auto flex justify-between">
+        <Button 
+          variant="outline" 
+          onClick={onSaveAsDraft}
+          disabled={isLoading}
+          className="border-gray-200 shadow-sm hover:bg-gray-50 hover:text-gray-900"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {isLoading ? 'Saving...' : 'Save as Draft'}
+        </Button>
+        <div className="space-x-3">
+          <SchedulePopover
+            isOpen={isSchedulePopoverOpen}
+            setIsOpen={setIsSchedulePopoverOpen}
+            scheduleDate={scheduleDate}
+            setScheduleDate={setScheduleDate}
+            scheduleTime={scheduleTime}
+            setScheduleTime={setScheduleTime}
+            onSchedulePost={onSchedulePost}
+            isLoading={isLoading}
+            isValid={isPostValid}
+          />
+          <Button 
+            disabled={!isPostValid || isLoading}
+            className="shadow-sm"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Publish Now
+          </Button>
+        </div>
       </div>
     </div>
   );
