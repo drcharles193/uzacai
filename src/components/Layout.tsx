@@ -1,27 +1,21 @@
-
 import React, { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
 import SignInDialog from './SignInDialog';
-
 interface LayoutProps {
   children: React.ReactNode;
 }
-
 const Layout: React.FC<LayoutProps> = ({
   children
 }) => {
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-  
   const openSignInDialog = () => {
     setIsSignInOpen(true);
   };
-  
   const closeSignInDialog = () => {
     setIsSignInOpen(false);
   };
-  
   return <div className="min-h-screen flex flex-col bg-background">
       <header className="w-full py-4 px-6 md:px-10 border-b border-border/40 sticky top-0 backdrop-blur-md bg-background/80 z-50">
         <div className="container max-w-7xl mx-auto flex justify-between items-center animate-fade-in">
@@ -63,9 +57,7 @@ const Layout: React.FC<LayoutProps> = ({
                 </div>
                 <span className="font-display font-semibold">SocialAI</span>
               </div>
-              <p className="text-muted-foreground text-sm max-w-md mb-6">
-                Automate your social media presence with AI-generated content that engages your audience and saves you time.
-              </p>
+              <p className="text-muted-foreground text-sm max-w-md mb-6">Automate your social media presence with AI-generated content that engage your audience and saves you time.</p>
               <div className="flex gap-4">
                 <FooterIconLink href="#" ariaLabel="Twitter">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>
@@ -115,7 +107,6 @@ const Layout: React.FC<LayoutProps> = ({
       <SignInDialog isOpen={isSignInOpen} onClose={closeSignInDialog} />
     </div>;
 };
-
 const NavLink: React.FC<{
   href: string;
   children: React.ReactNode;
@@ -125,7 +116,6 @@ const NavLink: React.FC<{
 }) => <a href={href} className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors duration-200 focus-ring rounded-md">
     {children}
   </a>;
-
 const FooterLink: React.FC<{
   href: string;
   children: React.ReactNode;
@@ -137,7 +127,6 @@ const FooterLink: React.FC<{
       {children}
     </a>
   </li>;
-
 const FooterIconLink: React.FC<{
   href: string;
   ariaLabel: string;
@@ -149,5 +138,4 @@ const FooterIconLink: React.FC<{
 }) => <a href={href} aria-label={ariaLabel} className="text-muted-foreground hover:text-foreground transition-colors duration-200 focus-ring p-2 rounded-full bg-muted/50 hover:bg-muted">
     {children}
   </a>;
-
 export default Layout;
