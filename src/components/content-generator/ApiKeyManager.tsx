@@ -13,9 +13,6 @@ interface ApiKeyManagerProps {
 const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ hasKey, setHasKey, onOpenDialog }) => {
   const { toast } = useToast();
 
-  // We're now using Edge Functions with securely stored API key
-  // This component is kept for backward compatibility but its functionality is minimal
-
   return (
     <div className="mt-4 flex justify-center">
       <div className="text-sm text-center text-muted-foreground">

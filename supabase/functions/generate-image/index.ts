@@ -20,6 +20,10 @@ serve(async (req) => {
     
     console.log("Generating image with prompt:", prompt);
 
+    if (!openAIApiKey) {
+      throw new Error("OpenAI API key is not configured");
+    }
+
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {

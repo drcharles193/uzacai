@@ -20,6 +20,10 @@ serve(async (req) => {
     
     console.log("Generating text with prompt:", prompt);
 
+    if (!openAIApiKey) {
+      throw new Error("OpenAI API key is not configured");
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -27,7 +31,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 

@@ -1,8 +1,6 @@
 
 // OpenAI API service using Supabase Edge Function
 
-const OPENAI_API_URL = "https://api.openai.com/v1";
-
 // Helper function to check if API key is available (always returns true now, as we're using edge functions)
 export const hasApiKey = (): boolean => {
   return true;
