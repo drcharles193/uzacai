@@ -6,6 +6,7 @@ import SettingsHeader from '@/components/settings/SettingsHeader';
 import ProfileSettings from '@/components/settings/ProfileSettings';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import SubscriptionSettings from '@/components/settings/SubscriptionSettings';
+import SecuritySettings from '@/components/settings/SecuritySettings';
 import ComingSoonTab from '@/components/settings/ComingSoonTab';
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { tabs } from '@/components/settings/SettingsTabs';
@@ -53,11 +54,12 @@ const Settings = () => {
             handleRadioChange={handleRadioChange}
           />
         );
+      case 'security':
+        return <SecuritySettings />;
       case 'notifications':
         return <NotificationSettings />;
       case 'subscriptions':
         return <SubscriptionSettings />;
-      case 'security':
       case 'organization':
       case 'users':
         const currentTab = tabs.find(tab => tab.id === activeTab);
