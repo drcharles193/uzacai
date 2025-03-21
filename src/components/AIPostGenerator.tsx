@@ -28,7 +28,7 @@ const AIPostGenerator: React.FC<AIPostGeneratorProps> = ({ onContentGenerated })
     setIsGenerating(true);
     
     try {
-      // Use the OpenAI service
+      // Use the OpenAI service with server-side key
       const content = await generateText(prompt);
       // Split content into multiple options
       const options = content.split('\n\n').filter(option => option.trim().length > 0);
@@ -42,7 +42,7 @@ const AIPostGenerator: React.FC<AIPostGeneratorProps> = ({ onContentGenerated })
       
       toast({
         title: "Error generating content",
-        description: error instanceof Error ? error.message : "Failed to connect to OpenAI API",
+        description: error instanceof Error ? error.message : "Failed to generate content",
         variant: "destructive"
       });
     } finally {
