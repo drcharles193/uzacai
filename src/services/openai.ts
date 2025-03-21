@@ -1,30 +1,26 @@
 
 // OpenAI API service
 
-// We'll use the server-side API
-const SERVER_API_ENDPOINT_TEXT = import.meta.env.VITE_SUPABASE_URL 
-  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-text`
-  : '/api/generate-text'; // Fallback for environments without Supabase URL
+import { supabase } from "@/integrations/supabase/client";
 
-const SERVER_API_ENDPOINT_IMAGE = import.meta.env.VITE_SUPABASE_URL
-  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`
-  : '/api/generate-image'; // Fallback for environments without Supabase URL
+// Constants for API endpoints - using the configured Supabase URL from the client
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://gvmiaosmypgxrkjwvtbx.supabase.co";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4";
+
+// Define function endpoints
+const SERVER_API_ENDPOINT_TEXT = `${SUPABASE_URL}/functions/v1/generate-text`;
+const SERVER_API_ENDPOINT_IMAGE = `${SUPABASE_URL}/functions/v1/generate-image`;
 
 // Generate text using OpenAI through our server-side function
 export const generateText = async (prompt: string): Promise<string> => {
   try {
-    // Check if we have a Supabase URL
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      throw new Error("Supabase URL is not configured. Unable to generate content.");
-    }
-    
     console.log("Generating text using server-side API:", SERVER_API_ENDPOINT_TEXT);
     
     const response = await fetch(SERVER_API_ENDPOINT_TEXT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         prompt
@@ -48,18 +44,13 @@ export const generateText = async (prompt: string): Promise<string> => {
 // Generate image using OpenAI (DALL-E) through our server-side function
 export const generateImage = async (prompt: string): Promise<string> => {
   try {
-    // Check if we have a Supabase URL
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      throw new Error("Supabase URL is not configured. Unable to generate images.");
-    }
-    
     console.log("Generating image using server-side API:", SERVER_API_ENDPOINT_IMAGE);
     
     const response = await fetch(SERVER_API_ENDPOINT_IMAGE, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         prompt
