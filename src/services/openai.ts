@@ -1,102 +1,71 @@
 
-// OpenAI API service with fixed API key
+// OpenAI API service using Supabase Edge Function
 
 const OPENAI_API_URL = "https://api.openai.com/v1";
 
-// Your fixed API key - DO NOT share this code publicly
-const FIXED_API_KEY = "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";
-
-// Helper function to check if API key is available
+// Helper function to check if API key is available (always returns true now, as we're using edge functions)
 export const hasApiKey = (): boolean => {
-  return !!FIXED_API_KEY;
+  return true;
 };
 
-// Get the API key - now returns your fixed key
+// Get the API key - not needed anymore as we use edge functions
 export const getApiKey = (): string => {
-  return FIXED_API_KEY;
+  return ""; // No longer needed as we use edge functions
 };
 
 // These functions are kept but will no longer be used in the UI
 export const setApiKey = (key: string): void => {
-  // No-op as we're using a fixed key
-  console.log("Using fixed API key, ignoring user-provided key");
+  // No-op as we're using edge functions
+  console.log("Using Edge Functions, ignoring user-provided key");
 };
 
 export const removeApiKey = (): void => {
-  // No-op as we're using a fixed key
-  console.log("Using fixed API key, cannot remove");
+  // No-op as we're using edge functions
+  console.log("Using Edge Functions, cannot remove");
 };
 
-// Generate text using OpenAI
+// Generate text using OpenAI via Supabase Edge Function
 export const generateText = async (prompt: string): Promise<string> => {
-  if (!FIXED_API_KEY) {
-    throw new Error("OpenAI API key is not configured");
-  }
-
   try {
-    const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
+    const response = await fetch("https://gvmiaosmypgxrkjwvtbx.supabase.co/functions/v1/generate-text", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${FIXED_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { 
-            role: "system", 
-            content: "You are a social media content assistant. Create engaging, professional content for social media posts. Keep responses concise and ready to use." 
-          },
-          { 
-            role: "user", 
-            content: prompt 
-          }
-        ],
-        max_tokens: 200,
-      }),
+      body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || "Error generating text");
+      throw new Error(error.error || "Error generating text");
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content?.trim() || "No content generated";
+    return data.generatedText || "No content generated";
   } catch (error) {
     console.error("Error generating text:", error);
     throw error;
   }
 };
 
-// Generate image using OpenAI (DALL-E)
+// Generate image using OpenAI (DALL-E) via Supabase Edge Function
 export const generateImage = async (prompt: string): Promise<string> => {
-  if (!FIXED_API_KEY) {
-    throw new Error("OpenAI API key is not configured");
-  }
-
   try {
-    const response = await fetch(`${OPENAI_API_URL}/images/generations`, {
+    const response = await fetch("https://gvmiaosmypgxrkjwvtbx.supabase.co/functions/v1/generate-image", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${FIXED_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024",
-      }),
+      body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || "Error generating image");
+      throw new Error(error.error || "Error generating image");
     }
 
     const data = await response.json();
-    return data.data[0]?.url || "";
+    return data.imageUrl || "";
   } catch (error) {
     console.error("Error generating image:", error);
     throw error;

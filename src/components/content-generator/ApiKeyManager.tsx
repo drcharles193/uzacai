@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { hasApiKey, removeApiKey } from "@/services/openai";
+import { hasApiKey } from "@/services/openai";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ApiKeyManagerProps {
@@ -13,33 +13,14 @@ interface ApiKeyManagerProps {
 const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ hasKey, setHasKey, onOpenDialog }) => {
   const { toast } = useToast();
 
-  const handleRemoveApiKey = () => {
-    removeApiKey();
-    setHasKey(false);
-    toast({
-      title: "API Key Removed",
-      description: "Your OpenAI API key has been removed.",
-    });
-  };
+  // We're now using Edge Functions with securely stored API key
+  // This component is kept for backward compatibility but its functionality is minimal
 
   return (
-    <div className="mt-4 flex justify-center gap-2">
-      <Button 
-        variant="outline" 
-        onClick={onOpenDialog}
-        className="mt-2"
-      >
-        {hasKey ? "Change API Key" : "Set OpenAI API Key"}
-      </Button>
-      {hasKey && (
-        <Button 
-          variant="outline" 
-          onClick={handleRemoveApiKey}
-          className="mt-2"
-        >
-          Remove API Key
-        </Button>
-      )}
+    <div className="mt-4 flex justify-center">
+      <div className="text-sm text-center text-muted-foreground">
+        Using secure API key via Supabase Edge Functions
+      </div>
     </div>
   );
 };
