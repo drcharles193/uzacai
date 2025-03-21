@@ -24,8 +24,8 @@ const ContentPanel: React.FC<ContentPanelProps> = ({
   setSelectedAccounts
 }) => {
   return (
-    <div className="flex divide-x h-full bg-gray-50">
-      <div className="w-1/2 overflow-auto">
+    <div className="flex divide-x h-full">
+      <div className="w-1/2 p-4 overflow-auto">
         <PostPreviewTab 
           postContent={postContent} 
           mediaPreviewUrls={mediaPreviewUrls}
@@ -33,14 +33,13 @@ const ContentPanel: React.FC<ContentPanelProps> = ({
           connectedAccounts={connectedAccounts}
         />
       </div>
-      <div className="w-1/2 overflow-auto">
+      <div className="w-1/2 overflow-auto p-4">
         <LaunchpadTabs
           postContent={postContent}
           mediaPreviewUrls={mediaPreviewUrls}
           connectedAccounts={connectedAccounts}
           selectedAccounts={selectedAccounts}
           setSelectedAccounts={setSelectedAccounts}
-          activeTab="preview"
         />
       </div>
     </div>

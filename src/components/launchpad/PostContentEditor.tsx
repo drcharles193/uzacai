@@ -1,10 +1,11 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, X, Image, FileImage, FileVideo, PlusCircle } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from '../AIPostGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FileImage, FileVideo } from 'lucide-react';
 
 interface PostContentEditorProps {
   postContent: string;
@@ -70,38 +71,34 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <div className="font-medium text-lg mb-4 text-gray-800">Create Your Post</div>
-      
-      <div className="relative mt-2 mb-4">
+    <div className="mb-4">
+      <div className="font-medium text-lg">Original Draft</div>
+      <div className="relative mt-2">
         <textarea 
-          className="w-full min-h-[300px] p-5 rounded-lg border border-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-[#689675]/30 focus:border-[#689675] shadow-sm transition-all" 
-          placeholder="Start writing your post caption here..." 
+          className="w-full min-h-[300px] p-4 rounded-md border border-border resize-none focus:outline-none focus:ring-1 focus:ring-[#689675]" 
+          placeholder="Start writing post caption or..." 
           value={postContent} 
           onChange={e => setPostContent(e.target.value)} 
         />
       </div>
       
       {mediaPreviewUrls.length > 0 && (
-        <div className="mt-6 mb-4">
-          <h3 className="text-sm font-medium mb-3 text-gray-700">Media Files ({mediaPreviewUrls.length})</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {mediaPreviewUrls.map((url, index) => (
-              <div key={index} className="relative group rounded-lg overflow-hidden">
-                <img 
-                  src={url} 
-                  alt={`Media preview ${index + 1}`} 
-                  className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm" 
-                />
-                <button 
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" 
-                  onClick={() => removeMedia(index)}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {mediaPreviewUrls.map((url, index) => (
+            <div key={index} className="relative group">
+              <img 
+                src={url} 
+                alt={`Media preview ${index + 1}`} 
+                className="w-full h-24 object-cover rounded-md border border-gray-200" 
+              />
+              <button 
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" 
+                onClick={() => removeMedia(index)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
       
@@ -114,45 +111,42 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
         className="hidden" 
       />
       
-      <div className="flex justify-between mt-6">
+      <div className="flex justify-end mt-2 gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
               size="sm" 
-              className="text-gray-700 hover:text-[#689675] hover:border-[#689675] border-gray-200 shadow-sm"
+              className="text-gray-500 hover:text-[#689675] hover:border-[#689675] tooltip-wrapper"
             >
-              <PlusCircle className="h-4 w-4 mr-2" />
+              <Upload className="h-4 w-4 mr-1" />
               Add Media
+              <span className="tooltip absolute bg-black text-white text-xs py-1 px-2 rounded opacity-0 transition-opacity -top-8 left-1/2 transform -translate-x-1/2 pointer-events-none group-hover:opacity-100">
+                Add Media
+              </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="bg-white border border-gray-200 shadow-md rounded-md">
-            <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-gray-50 cursor-pointer">
-              <FileImage className="h-4 w-4 mr-2 text-blue-500" />
+          <DropdownMenuContent align="end" className="bg-white border border-[#689675]/20">
+            <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
+              <FileImage className="h-4 w-4 mr-2" />
               <span>My Device</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExternalUpload('Dropbox')} className="hover:bg-gray-50 cursor-pointer">
-              <FileVideo className="h-4 w-4 mr-2 text-blue-600" />
+            <DropdownMenuItem onClick={() => handleExternalUpload('Dropbox')} className="hover:bg-[#689675]/10">
+              <FileVideo className="h-4 w-4 mr-2" />
               <span>Dropbox</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExternalUpload('Google Drive')} className="hover:bg-gray-50 cursor-pointer">
-              <FileImage className="h-4 w-4 mr-2 text-green-500" />
+            <DropdownMenuItem onClick={() => handleExternalUpload('Google Drive')} className="hover:bg-[#689675]/10">
+              <FileImage className="h-4 w-4 mr-2" />
               <span>Google Drive</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExternalUpload('Box')} className="hover:bg-gray-50 cursor-pointer">
-              <FileVideo className="h-4 w-4 mr-2 text-indigo-500" />
+            <DropdownMenuItem onClick={() => handleExternalUpload('Box')} className="hover:bg-[#689675]/10">
+              <FileVideo className="h-4 w-4 mr-2" />
               <span>Box</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <AIPostGenerator onContentGenerated={handleContentGenerated} />
       </div>
-      
-      {selectedAccounts.length === 0 && (
-        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-          <strong>Tip:</strong> Select one or more accounts from the "Accounts" tab to publish this post.
-        </div>
-      )}
     </div>
   );
 };
