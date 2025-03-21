@@ -1,14 +1,12 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { generateText, generateImage, hasApiKey } from "@/services/openai";
+import { generateText, generateImage } from "@/services/openai";
 
 // Import our components
 import ContentPrompt from "@/components/content-generator/ContentPrompt";
 import GeneratedContent from "@/components/content-generator/GeneratedContent";
 import ApiKeyManager from "@/components/content-generator/ApiKeyManager";
-import ApiKeyDialog from "@/components/content-generator/ApiKeyDialog";
 
 type ContentType = 'text' | 'image' | 'both';
 
@@ -18,18 +16,10 @@ const AIContentGenerator: React.FC = () => {
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [hasKey, setHasKey] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
   const [generatedContent, setGeneratedContent] = useState<{
     text?: string;
     imageUrl?: string;
   }>({});
-
-  // Check if API key exists on component mount
-  useEffect(() => {
-    setHasKey(hasApiKey());
-  }, []);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -113,11 +103,7 @@ const AIContentGenerator: React.FC = () => {
                 <GeneratedContent content={generatedContent} />
               </Tabs>
               
-              <ApiKeyManager 
-                hasKey={hasKey} 
-                setHasKey={setHasKey} 
-                onOpenDialog={() => setDialogOpen(true)} 
-              />
+              <ApiKeyManager />
             </div>
           </div>
           
@@ -148,14 +134,6 @@ const AIContentGenerator: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <ApiKeyDialog 
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        apiKeyInput={apiKeyInput}
-        setApiKeyInput={setApiKeyInput}
-        onSave={() => setHasKey(true)}
-      />
     </section>
   );
 };
