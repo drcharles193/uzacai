@@ -17,11 +17,13 @@ const ApiKeyManager: React.FC = () => {
 
   const handleSaveComplete = () => {
     setKeyStatus('present');
+    window.location.reload(); // Reload the page to apply the new API key
   };
 
   const handleRemoveKey = () => {
     removeApiKey();
     setKeyStatus('absent');
+    window.location.reload(); // Reload the page after removing the key
   };
 
   return (
