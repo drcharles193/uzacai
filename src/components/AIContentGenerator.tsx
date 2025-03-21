@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { generateText, generateImage } from "@/services/openai";
+import { generateText, generateImage, hasApiKey } from "@/services/openai";
 
 // Import our components
 import ContentPrompt from "@/components/content-generator/ContentPrompt";
@@ -16,16 +16,43 @@ const AIContentGenerator: React.FC = () => {
   const [contentType, setContentType] = useState<ContentType>('both');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [hasKey, setHasKey] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<{
     text?: string;
     imageUrl?: string;
   }>({});
+
+  // Check for API key on component mount and when local storage changes
+  useEffect(() => {
+    const checkApiKey = () => {
+      setHasKey(hasApiKey());
+    };
+    
+    // Check initially
+    checkApiKey();
+    
+    // Listen for storage events (in case API key is added/removed in another tab)
+    window.addEventListener('storage', checkApiKey);
+    
+    return () => {
+      window.removeEventListener('storage', checkApiKey);
+    };
+  }, []);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast({
         title: "Empty Prompt",
         description: "Please enter a prompt to generate content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!hasKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please add your OpenAI API key before generating content.",
         variant: "destructive",
       });
       return;
