@@ -8,7 +8,7 @@ const ApiKeyManager: React.FC = () => {
       <div className="flex items-center gap-2 text-sm text-center text-muted-foreground mb-2">
         <KeyIcon className="h-4 w-4 text-green-500" />
         <span>
-          Using our secure OpenAI API connection for content generation
+          Using secure server-side OpenAI API connection
         </span>
       </div>
     </div>

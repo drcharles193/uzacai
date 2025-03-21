@@ -1,24 +1,25 @@
 
 // OpenAI API service
 
-// We'll use the server-side API instead of client-side keys
+// We'll use the server-side API
 const SERVER_API_ENDPOINT_TEXT = import.meta.env.VITE_SUPABASE_URL 
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-text`
-  : 'http://localhost:54321/functions/v1/generate-text';
+  : '/api/generate-text'; // Fallback for environments without Supabase URL
 
 const SERVER_API_ENDPOINT_IMAGE = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`
-  : 'http://localhost:54321/functions/v1/generate-image';
+  : '/api/generate-image'; // Fallback for environments without Supabase URL
 
 // Generate text using OpenAI through our server-side function
 export const generateText = async (prompt: string): Promise<string> => {
   try {
-    console.log("Generating text using server-side API");
+    console.log("Generating text using server-side API:", SERVER_API_ENDPOINT_TEXT);
     
     const response = await fetch(SERVER_API_ENDPOINT_TEXT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
       },
       body: JSON.stringify({
         prompt
@@ -42,12 +43,13 @@ export const generateText = async (prompt: string): Promise<string> => {
 // Generate image using OpenAI (DALL-E) through our server-side function
 export const generateImage = async (prompt: string): Promise<string> => {
   try {
-    console.log("Generating image using server-side API");
+    console.log("Generating image using server-side API:", SERVER_API_ENDPOINT_IMAGE);
     
     const response = await fetch(SERVER_API_ENDPOINT_IMAGE, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
       },
       body: JSON.stringify({
         prompt
