@@ -57,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({
                 </div>
                 <span className="font-display font-semibold">SocialAI</span>
               </div>
-              <p className="text-muted-foreground text-sm max-w-md mb-6">Automate your social media presence with AI-generated content that engage your audience and saves you time.</p>
+              <p className="text-muted-foreground text-sm max-w-md mb-6">Automate your social media presence with AI-generated content that engages your audience and saves you time.</p>
               <div className="flex gap-4">
                 <FooterIconLink href="#" ariaLabel="Twitter">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>
