@@ -13,6 +13,11 @@ const SERVER_API_ENDPOINT_IMAGE = import.meta.env.VITE_SUPABASE_URL
 // Generate text using OpenAI through our server-side function
 export const generateText = async (prompt: string): Promise<string> => {
   try {
+    // Check if we have a Supabase URL
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      throw new Error("Supabase URL is not configured. Unable to generate content.");
+    }
+    
     console.log("Generating text using server-side API:", SERVER_API_ENDPOINT_TEXT);
     
     const response = await fetch(SERVER_API_ENDPOINT_TEXT, {
@@ -43,6 +48,11 @@ export const generateText = async (prompt: string): Promise<string> => {
 // Generate image using OpenAI (DALL-E) through our server-side function
 export const generateImage = async (prompt: string): Promise<string> => {
   try {
+    // Check if we have a Supabase URL
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      throw new Error("Supabase URL is not configured. Unable to generate images.");
+    }
+    
     console.log("Generating image using server-side API:", SERVER_API_ENDPOINT_IMAGE);
     
     const response = await fetch(SERVER_API_ENDPOINT_IMAGE, {
