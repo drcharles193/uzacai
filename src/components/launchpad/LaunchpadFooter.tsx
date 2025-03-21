@@ -15,6 +15,7 @@ interface LaunchpadFooterProps {
   isLoading: boolean;
   postContent: string;
   selectedAccounts: string[];
+  onPublishNow?: () => void;
 }
 
 const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
@@ -28,7 +29,8 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
   onSchedulePost,
   isLoading,
   postContent,
-  selectedAccounts
+  selectedAccounts,
+  onPublishNow
 }) => {
   const isPostValid = !!postContent && selectedAccounts.length > 0;
   
@@ -53,7 +55,12 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
           isLoading={isLoading}
           isValid={isPostValid}
         />
-        <Button disabled={!isPostValid || isLoading}>Publish Now</Button>
+        <Button 
+          disabled={!isPostValid || isLoading}
+          onClick={onPublishNow}
+        >
+          Publish Now
+        </Button>
       </div>
     </div>
   );
