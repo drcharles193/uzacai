@@ -40,6 +40,7 @@ const ContentPanel: React.FC<ContentPanelProps> = ({
           connectedAccounts={connectedAccounts}
           selectedAccounts={selectedAccounts}
           setSelectedAccounts={setSelectedAccounts}
+          activeTab="preview"
         />
       </div>
     </div>

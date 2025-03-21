@@ -49,6 +49,7 @@ const CreatePostPanel: React.FC<CreatePostPanelProps> = ({
           connectedAccounts={connectedAccounts}
           selectedAccounts={selectedAccounts}
           setSelectedAccounts={setSelectedAccounts}
+          activeTab="preview"
         />
       </div>
     </div>
