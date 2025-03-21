@@ -21,8 +21,11 @@ serve(async (req) => {
     console.log("Generating image with prompt:", prompt);
 
     if (!openAIApiKey) {
+      console.error("OpenAI API key is not configured in environment variables");
       throw new Error("OpenAI API key is not configured");
     }
+
+    console.log("API Key is available, sending request to OpenAI");
 
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -39,9 +42,9 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error("OpenAI API error:", error);
-      throw new Error(error.error?.message || "Error generating image");
+      const errorData = await response.json();
+      console.error("OpenAI API error:", errorData);
+      throw new Error(errorData.error?.message || `Error generating image: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();

@@ -25,6 +25,8 @@ export const removeApiKey = (): void => {
 // Generate text using OpenAI via Supabase Edge Function
 export const generateText = async (prompt: string): Promise<string> => {
   try {
+    console.log("Calling generate-text edge function with prompt:", prompt);
+    
     const response = await fetch("https://gvmiaosmypgxrkjwvtbx.supabase.co/functions/v1/generate-text", {
       method: "POST",
       headers: {
@@ -35,10 +37,12 @@ export const generateText = async (prompt: string): Promise<string> => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || "Error generating text");
+      console.error("Error response from edge function:", error);
+      throw new Error(error.error || `Error generating text: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log("Received response from generate-text edge function:", data);
     return data.generatedText || "No content generated";
   } catch (error) {
     console.error("Error generating text:", error);
@@ -49,6 +53,8 @@ export const generateText = async (prompt: string): Promise<string> => {
 // Generate image using OpenAI (DALL-E) via Supabase Edge Function
 export const generateImage = async (prompt: string): Promise<string> => {
   try {
+    console.log("Calling generate-image edge function with prompt:", prompt);
+    
     const response = await fetch("https://gvmiaosmypgxrkjwvtbx.supabase.co/functions/v1/generate-image", {
       method: "POST",
       headers: {
@@ -59,10 +65,12 @@ export const generateImage = async (prompt: string): Promise<string> => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || "Error generating image");
+      console.error("Error response from edge function:", error);
+      throw new Error(error.error || `Error generating image: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log("Received response from generate-image edge function:", data);
     return data.imageUrl || "";
   } catch (error) {
     console.error("Error generating image:", error);
