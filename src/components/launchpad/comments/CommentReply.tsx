@@ -15,11 +15,11 @@ interface CommentReplyProps {
 
 const CommentReply: React.FC<CommentReplyProps> = ({ reply }) => {
   return (
-    <div key={reply.id} className="flex items-start">
+    <div key={reply.id} className="flex items-start group hover:bg-gray-50 p-2 rounded-md transition-colors">
       <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center mr-2">
         <User className="h-3 w-3 text-gray-600" />
       </div>
-      <div>
+      <div className="flex-1">
         <div className="flex items-center">
           <div className="font-medium text-sm">{reply.author}</div>
           <div className="text-xs text-gray-500 ml-2">{reply.timestamp}</div>

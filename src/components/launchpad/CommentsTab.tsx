@@ -4,6 +4,7 @@ import { MessageSquare } from 'lucide-react';
 import CommentItem from './comments/CommentItem';
 import CommentForm from './comments/CommentForm';
 import AccountSelector from './comments/AccountSelector';
+import CommentFilters from './comments/CommentFilters';
 
 interface Comment {
   id: string;
@@ -62,6 +63,8 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
   const [selectedCommentAccount, setSelectedCommentAccount] = useState<string>(
     selectedAccounts.length > 0 ? selectedAccounts[0] : ''
   );
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [filterType, setFilterType] = useState<'all' | 'withReplies' | 'withoutReplies'>('all');
 
   // Filter accounts that are selected in the Accounts tab
   const filteredConnectedAccounts = connectedAccounts.filter(account => 
@@ -107,14 +110,47 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
     ));
   };
 
+  // Filter and sort comments based on user selections
+  const getFilteredAndSortedComments = () => {
+    // First filter comments
+    let filteredComments = [...comments];
+    
+    if (filterType === 'withReplies') {
+      filteredComments = filteredComments.filter(comment => comment.replies.length > 0);
+    } else if (filterType === 'withoutReplies') {
+      filteredComments = filteredComments.filter(comment => comment.replies.length === 0);
+    }
+    
+    // Then sort comments
+    return filteredComments.sort((a, b) => {
+      // Simple sorting based on ID (assuming higher ID = newer)
+      if (sortOrder === 'newest') {
+        return parseInt(b.id) - parseInt(a.id);
+      } else {
+        return parseInt(a.id) - parseInt(b.id);
+      }
+    });
+  };
+
+  const filteredAndSortedComments = getFilteredAndSortedComments();
+
   return (
     <div className="space-y-4 p-4">
       {selectedAccounts.length > 0 ? (
-        <AccountSelector 
-          selectedCommentAccount={selectedCommentAccount}
-          setSelectedCommentAccount={setSelectedCommentAccount}
-          filteredConnectedAccounts={filteredConnectedAccounts}
-        />
+        <>
+          <AccountSelector 
+            selectedCommentAccount={selectedCommentAccount}
+            setSelectedCommentAccount={setSelectedCommentAccount}
+            filteredConnectedAccounts={filteredConnectedAccounts}
+          />
+          
+          <CommentFilters 
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+            filterType={filterType}
+            setFilterType={setFilterType}
+          />
+        </>
       ) : (
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare className="h-5 w-5 mr-2 text-gray-600" />
@@ -127,8 +163,12 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
           <div className="flex items-center justify-center h-32 border rounded-md">
             <p className="text-gray-500">Please select one or more accounts to view comments</p>
           </div>
+        ) : filteredAndSortedComments.length === 0 ? (
+          <div className="flex items-center justify-center h-32 border rounded-md">
+            <p className="text-gray-500">No comments match your current filters</p>
+          </div>
         ) : (
-          comments.map((comment) => (
+          filteredAndSortedComments.map((comment) => (
             <CommentItem 
               key={comment.id} 
               comment={comment} 
