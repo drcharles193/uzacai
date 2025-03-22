@@ -8,47 +8,11 @@ export const usePublishing = (currentUserId: string | null) => {
   const [isPublishing, setIsPublishing] = useState(false);
   const { toast } = useToast();
 
-  const processMediaForPublishing = async (mediaFiles: File[], mediaPreviewUrls: string[]) => {
-    console.log("Processing media for publishing", mediaFiles, mediaPreviewUrls);
-    
-    // For real media uploads we would:
-    // 1. Upload files to Supabase storage
-    // 2. Return the full URLs of the uploaded files
-    
-    // But for now, we'll just use any non-blob URLs from mediaPreviewUrls
-    // and convert blob URLs to absolute URLs that the edge function can access
-    const processedUrls: string[] = [];
-    
-    // Add any non-blob URLs from mediaPreviewUrls
-    mediaPreviewUrls.forEach(url => {
-      if (!url.startsWith('blob:')) {
-        processedUrls.push(url);
-      }
-    });
-    
-    // For demo purposes, we'll use placeholder images for blob URLs
-    // In a real app, you would upload these files to storage
-    const blobUrls = mediaPreviewUrls.filter(url => url.startsWith('blob:'));
-    if (blobUrls.length > 0) {
-      // For each blob URL, we'll use a placeholder image
-      blobUrls.forEach((_, index) => {
-        // Use a public placeholder image service with a random ID
-        const placeholderId = Math.floor(Math.random() * 1000);
-        processedUrls.push(`https://picsum.photos/seed/${placeholderId}/800/600`);
-      });
-      
-      console.log("Using placeholder images for blob URLs:", processedUrls);
-    }
-    
-    return processedUrls;
-  };
-
   const publishNow = async (
     postContent: string,
     mediaPreviewUrls: string[],
     selectedAccounts: string[],
-    connectedAccounts: SocialAccount[],
-    mediaFiles: File[] = []
+    connectedAccounts: SocialAccount[]
   ) => {
     if (!postContent.trim() || selectedAccounts.length === 0) {
       toast({
@@ -81,18 +45,17 @@ export const usePublishing = (currentUserId: string | null) => {
       
       console.log("Selected accounts:", selectedAccounts);
       console.log("Publishing to platforms:", platforms);
-      console.log("Media files:", mediaFiles.length, "Media URLs:", mediaPreviewUrls.length);
       
-      // Process media files for publishing
-      const processedMediaUrls = await processMediaForPublishing(mediaFiles, mediaPreviewUrls);
-      console.log("Processed media URLs:", processedMediaUrls);
+      // Process media URLs - for now, we'll handle this later with proper file uploads
+      // For the MVP, let's just skip blob URLs
+      const validMediaUrls = mediaPreviewUrls.filter(url => !url.startsWith('blob:'));
       
       // Call our edge function to handle the publishing
       const { data, error } = await supabase.functions.invoke('social-publish', {
         body: {
           userId: currentUserId,
           content: postContent,
-          mediaUrls: processedMediaUrls,
+          mediaUrls: validMediaUrls,
           selectedAccounts,
           platforms
         }
