@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
@@ -10,10 +9,13 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const twitterApiKey = Deno.env.get("TWITTER_API_KEY")!;
+const twitterApiSecret = Deno.env.get("TWITTER_API_SECRET")!;
+const twitterAccessToken = Deno.env.get("TWITTER_ACCESS_TOKEN")!;
+const twitterAccessTokenSecret = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Twitter OAuth implementation
 function generateOAuthSignature(
   method: string,
   url: string,
@@ -21,19 +23,15 @@ function generateOAuthSignature(
   consumerSecret: string,
   tokenSecret: string
 ): string {
-  // Sort parameters alphabetically and encode them properly
   const parameterString = Object.entries(oauthParams)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
   
-  // Create signature base string
   const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(parameterString)}`;
   
-  // Create signing key
   const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
   
-  // Generate HMAC-SHA1 signature
   const hmac = createHmac("sha1", signingKey);
   const signature = hmac.update(signatureBaseString).digest("base64");
   
@@ -50,115 +48,60 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
   try {
     console.log(`Publishing to Twitter for user ${userId}`);
     
-    // Get the Twitter API credentials from the secrets table
-    const { data: apiKey, error: keyError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', 'TWITTER_API_KEY')
-      .single();
-    
-    if (keyError) {
-      console.error(`Error fetching Twitter API key: ${keyError.message}`);
-      throw new Error(`Failed to get Twitter API key: ${keyError.message}`);
-    }
-    
-    const { data: apiSecret, error: secretError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', 'TWITTER_API_SECRET')
-      .single();
-    
-    if (secretError) {
-      console.error(`Error fetching Twitter API secret: ${secretError.message}`);
-      throw new Error(`Failed to get Twitter API secret: ${secretError.message}`);
-    }
-    
-    // Get the access token and secret from the secrets table
-    const { data: accessToken, error: accessTokenError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', 'TWITTER_ACCESS_TOKEN')
-      .single();
-      
-    const { data: accessTokenSecret, error: accessTokenSecretError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', 'TWITTER_ACCESS_TOKEN_SECRET')
-      .single();
-    
-    if (!accessToken?.value || !accessTokenSecret?.value) {
-      console.error('Missing Twitter access tokens in secrets table');
-      console.log('Access Token exists:', Boolean(accessToken?.value));
-      console.log('Access Token Secret exists:', Boolean(accessTokenSecret?.value));
-      throw new Error('Twitter access tokens are missing. Please add TWITTER_ACCESS_TOKEN and TWITTER_ACCESS_TOKEN_SECRET to your Supabase secrets.');
-    }
-    
-    // Check if we have account info for this user (if not, we'll use the global tokens)
     const { data: account, error: accountError } = await supabase
       .from('social_accounts')
       .select('*')
       .eq('user_id', userId)
       .eq('platform', 'twitter')
-      .maybeSingle(); // Use maybeSingle instead of single to avoid error if no record exists
+      .maybeSingle();
     
-    if (accountError) {
-      console.error(`Error fetching Twitter account: ${accountError.message}`);
-      // We'll continue with the global tokens
+    const apiKey = twitterApiKey;
+    const apiSecret = twitterApiSecret;
+    const accessToken = account?.access_token || twitterAccessToken;
+    const accessTokenSecret = account?.access_token_secret || twitterAccessTokenSecret;
+    
+    if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
+      console.error("Missing Twitter API credentials");
+      throw new Error("Twitter API credentials are missing. Please check your environment variables.");
     }
     
-    // Use either the account credentials or the global credentials
-    const userToken = account?.access_token || accessToken.value;
-    const userTokenSecret = account?.access_token_secret || accessTokenSecret.value;
+    console.log("Using Twitter API credentials:");
+    console.log(`API Key exists: ${Boolean(apiKey)}, length: ${apiKey.length}`);
+    console.log(`API Secret exists: ${Boolean(apiSecret)}, length: ${apiSecret.length}`);
+    console.log(`Access Token exists: ${Boolean(accessToken)}, length: ${accessToken.length}`);
+    console.log(`Access Token Secret exists: ${Boolean(accessTokenSecret)}, length: ${accessTokenSecret.length}`);
     
-    if (!userToken || !userTokenSecret) {
-      console.error('No valid Twitter tokens available');
-      throw new Error('Twitter authentication failed. No valid tokens available.');
-    }
-    
-    // Log API key existence without exposing the actual key
-    console.log(`API Key exists: ${Boolean(apiKey?.value)}, length: ${apiKey?.value.length || 0}`);
-    console.log(`API Secret exists: ${Boolean(apiSecret?.value)}, length: ${apiSecret?.value.length || 0}`);
-    console.log(`Access Token exists: ${Boolean(userToken)}, length: ${userToken?.length || 0}`);
-    console.log(`Access Token Secret exists: ${Boolean(userTokenSecret)}, length: ${userTokenSecret?.length || 0}`);
-    
-    // Twitter API v2 endpoint for creating tweets
     const tweetUrl = 'https://api.twitter.com/2/tweets';
     const method = 'POST';
     
-    // Create OAuth timestamp and nonce
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
     
-    // Create OAuth parameters - CRITICAL: Do not include the tweet text in the parameters for signature
     const oauthParams: Record<string, string> = {
-      oauth_consumer_key: apiKey.value,
+      oauth_consumer_key: apiKey,
       oauth_nonce: nonce,
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: timestamp,
-      oauth_token: userToken,
+      oauth_token: accessToken,
       oauth_version: '1.0'
     };
     
-    // Generate the OAuth signature
     const signature = generateOAuthSignature(
       method,
       tweetUrl,
       oauthParams,
-      apiSecret.value,
-      userTokenSecret
+      apiSecret,
+      accessTokenSecret
     );
     
-    // Add signature to OAuth parameters
     oauthParams.oauth_signature = signature;
     
-    // Create the Authorization header - IMPORTANT: Format exactly as Twitter expects
     const authHeader = 'OAuth ' + Object.entries(oauthParams)
       .map(([key, value]) => `${encodeURIComponent(key)}="${encodeURIComponent(value)}"`)
       .join(', ');
     
     console.log("Final Authorization header:", authHeader);
     
-    // Make the API request
     const response = await fetch(tweetUrl, {
       method: method,
       headers: {
@@ -185,7 +128,6 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Error parsing Twitter API response: ${responseText}`);
     }
     
-    // Update the last_used_at timestamp for this account if it exists
     if (account) {
       await supabase
         .from('social_accounts')
@@ -200,7 +142,6 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
   }
 }
 
-// Mock function for other platforms
 function mockPublishToOtherPlatform(platform: string, content: string): any {
   console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
   return {
@@ -212,7 +153,6 @@ function mockPublishToOtherPlatform(platform: string, content: string): any {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -235,7 +175,6 @@ serve(async (req) => {
     const results = [];
     const errors = [];
     
-    // Publish to each platform
     for (const platform of platforms) {
       try {
         console.log(`Attempting to publish to ${platform}`);
@@ -262,8 +201,6 @@ serve(async (req) => {
       }
     }
     
-    // If we have any successful posts but some errors, we'll still return a 200
-    // but include the errors in the response
     const hasSuccesses = results.length > 0;
     const hasErrors = errors.length > 0;
     

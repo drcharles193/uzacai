@@ -34,7 +34,7 @@ export const usePublishing = (currentUserId: string | null) => {
 
     try {
       setIsPublishing(true);
-      console.log("Attempting to publish now...");
+      console.log("Publishing post...");
       
       // Map selected account names to their platforms
       const selectedAccountDetails = connectedAccounts.filter(account => 
@@ -43,19 +43,14 @@ export const usePublishing = (currentUserId: string | null) => {
       
       const platforms = selectedAccountDetails.map(account => account.platform);
       
-      console.log("Publishing to platforms:", platforms);
-      console.log("With content:", postContent.substring(0, 30) + "...");
       console.log("Selected accounts:", selectedAccounts);
+      console.log("Publishing to platforms:", platforms);
       
-      // Process media URLs - convert blob URLs to actual image data or server URLs
-      // For now we'll just filter out blob URLs since they can't be sent to an edge function
+      // Process media URLs - for now, we'll handle this later with proper file uploads
+      // For the MVP, let's just skip blob URLs
       const validMediaUrls = mediaPreviewUrls.filter(url => !url.startsWith('blob:'));
       
-      if (mediaPreviewUrls.length > 0 && validMediaUrls.length === 0) {
-        console.warn("Media URLs were provided but they're all blob URLs which can't be sent to the edge function");
-      }
-      
-      // Make the publish request to our edge function
+      // Call our edge function to handle the publishing
       const { data, error } = await supabase.functions.invoke('social-publish', {
         body: {
           userId: currentUserId,
