@@ -160,11 +160,38 @@ async function updateLastUsedTimestamp(userId: string, platform: string) {
 }
 
 /**
- * Publish content to Twitter
+ * Fetch an image from URL and convert to base64 for upload
  */
-async function publishToTwitter(userId: string, content: string): Promise<any> {
+async function getMediaAsBase64(mediaUrl: string): Promise<string> {
   try {
-    console.log(`Publishing to Twitter for user ${userId}`);
+    console.log(`Fetching media from URL: ${mediaUrl}`);
+    const response = await fetch(mediaUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    console.log(`Media content type: ${contentType}`);
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    return base64;
+  } catch (error) {
+    console.error('Error fetching media:', error);
+    throw error;
+  }
+}
+
+/**
+ * Upload media to Twitter
+ */
+async function uploadMediaToTwitter(
+  userId: string,
+  mediaUrl: string
+): Promise<string> {
+  try {
+    console.log(`Uploading media to Twitter: ${mediaUrl}`);
     
     // Get credentials
     const { apiKey, apiSecret, accessToken, accessTokenSecret } = await getTwitterCredentials(userId);
@@ -173,7 +200,108 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error("Twitter API credentials are missing. Please check your environment variables.");
     }
     
-    // Set up Twitter API request
+    // Convert media to base64
+    const base64Media = await getMediaAsBase64(mediaUrl);
+    
+    // Set up Twitter API request for media upload
+    const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
+    const method = 'POST';
+    
+    // Create form data for the media upload
+    const formData = new FormData();
+    // Convert base64 to blob
+    const byteCharacters = atob(base64Media);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+      const slice = byteCharacters.slice(offset, offset + 1024);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    const blob = new Blob(byteArrays);
+    
+    formData.append('media', blob);
+    
+    // Create Authorization header
+    const authHeader = createTwitterAuthHeader(
+      method,
+      uploadUrl,
+      apiKey,
+      apiSecret,
+      accessToken,
+      accessTokenSecret
+    );
+    
+    // Make API request to Twitter for media upload
+    const uploadResponse = await fetch(uploadUrl, {
+      method: method,
+      headers: {
+        'Authorization': authHeader,
+      },
+      body: formData
+    });
+    
+    const uploadResponseText = await uploadResponse.text();
+    console.log(`Twitter media upload API response status: ${uploadResponse.status}`);
+    console.log(`Twitter media upload API response body: ${uploadResponseText}`);
+    
+    if (!uploadResponse.ok) {
+      throw new Error(`Twitter media upload API error: ${uploadResponse.status} - ${uploadResponseText}`);
+    }
+    
+    // Parse response data to get media id
+    const uploadResponseData = JSON.parse(uploadResponseText);
+    const mediaId = uploadResponseData.media_id_string;
+    
+    if (!mediaId) {
+      throw new Error("Failed to retrieve media_id from Twitter API response");
+    }
+    
+    console.log(`Successfully uploaded media to Twitter with ID: ${mediaId}`);
+    return mediaId;
+  } catch (error: any) {
+    console.error('Error uploading media to Twitter:', error);
+    throw error;
+  }
+}
+
+/**
+ * Publish content and media to Twitter
+ */
+async function publishToTwitter(
+  userId: string, 
+  content: string, 
+  mediaUrls: string[] = []
+): Promise<any> {
+  try {
+    console.log(`Publishing to Twitter for user ${userId} with ${mediaUrls.length} media items`);
+    
+    // Get credentials
+    const { apiKey, apiSecret, accessToken, accessTokenSecret } = await getTwitterCredentials(userId);
+    
+    if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
+      throw new Error("Twitter API credentials are missing. Please check your environment variables.");
+    }
+    
+    // Upload media if provided
+    let mediaIds: string[] = [];
+    if (mediaUrls.length > 0) {
+      // Twitter allows up to 4 media items per tweet
+      const maxMediaItems = Math.min(mediaUrls.length, 4);
+      
+      // Upload each media item
+      const uploadPromises = mediaUrls.slice(0, maxMediaItems).map(url => 
+        uploadMediaToTwitter(userId, url)
+      );
+      
+      mediaIds = await Promise.all(uploadPromises);
+      console.log(`Successfully uploaded ${mediaIds.length} media items with IDs:`, mediaIds);
+    }
+    
+    // Set up Twitter API request for tweet creation
     const tweetUrl = 'https://api.twitter.com/2/tweets';
     const method = 'POST';
     
@@ -187,6 +315,16 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       accessTokenSecret
     );
     
+    // Prepare request body
+    const requestBody: any = { text: content };
+    
+    // Add media IDs if available
+    if (mediaIds.length > 0) {
+      requestBody.media = { media_ids: mediaIds };
+    }
+    
+    console.log("Twitter API request body:", JSON.stringify(requestBody));
+    
     // Make API request to Twitter
     const response = await fetch(tweetUrl, {
       method: method,
@@ -194,7 +332,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
         'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text: content })
+      body: JSON.stringify(requestBody)
     });
     
     const responseText = await response.text();
@@ -237,14 +375,15 @@ function mockPublishToOtherPlatform(platform: string, content: string): any {
 async function publishToPlatform(
   platform: string, 
   userId: string, 
-  content: string
+  content: string,
+  mediaUrls: string[] = []
 ): Promise<{ platform: string; success: boolean; result?: any; error?: string }> {
   try {
-    console.log(`Attempting to publish to ${platform}`);
+    console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media items`);
     let result;
     
     if (platform === 'twitter') {
-      result = await publishToTwitter(userId, content);
+      result = await publishToTwitter(userId, content, mediaUrls);
     } else {
       result = mockPublishToOtherPlatform(platform, content);
     }
@@ -295,6 +434,7 @@ serve(async (req) => {
     const { userId, content, mediaUrls, selectedAccounts, platforms } = await req.json();
     console.log(`Publishing post for user ${userId} to platforms:`, platforms);
     console.log(`Content to publish: ${content.substring(0, 30)}...`);
+    console.log(`Media URLs:`, mediaUrls);
     
     // Validate request parameters
     if (!validateRequest(userId, content, selectedAccounts)) {
@@ -314,7 +454,7 @@ serve(async (req) => {
     
     // Process publishing for each platform
     const publishingPromises = platforms.map(platform => 
-      publishToPlatform(platform, userId, content)
+      publishToPlatform(platform, userId, content, mediaUrls)
     );
     
     const publishingResults = await Promise.all(publishingPromises);
