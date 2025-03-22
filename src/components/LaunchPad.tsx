@@ -32,6 +32,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
   const { toast } = useToast();
 
   // Custom hooks
@@ -48,7 +49,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   } = useScheduling(currentUser);
 
   // Determine if any operation is currently loading
-  const isLoading = isDraftsLoading || isSchedulingLoading;
+  const isLoading = isDraftsLoading || isSchedulingLoading || isPublishing;
 
   // Get the current user on mount
   useEffect(() => {
@@ -73,7 +74,7 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   };
 
   // Handle publishing a post now
-  const handlePublishNow = () => {
+  const handlePublishNow = async () => {
     if (!postContent.trim() || selectedAccounts.length === 0) {
       toast({
         title: "Incomplete post",
@@ -83,12 +84,55 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       return;
     }
 
-    // Here we could implement actual publishing logic
-    // For now, just show a success toast
-    toast({
-      title: "Post Published",
-      description: "Your post has been published successfully!"
-    });
+    try {
+      setIsPublishing(true);
+      
+      const platformAccountMap = connectedAccounts.reduce((acc, account) => {
+        acc[account.account_name] = account.platform;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Map selected account names to their platforms
+      const platforms = selectedAccounts.map(accountName => platformAccountMap[accountName]).filter(Boolean);
+      
+      // Make the publish request to our edge function
+      const { data, error } = await supabase.functions.invoke('social-publish', {
+        body: {
+          userId: currentUser,
+          content: postContent,
+          mediaUrls: mediaPreviewUrls,
+          selectedAccounts,
+          platforms
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Reset the form
+      setPostContent('');
+      setMediaFiles([]);
+      setMediaPreviewUrls([]);
+      setSelectedAccounts([]);
+      
+      toast({
+        title: "Post Published",
+        description: "Your post has been published successfully!"
+      });
+      
+      // Close the dialog
+      onClose();
+    } catch (error: any) {
+      console.error("Error publishing post:", error);
+      toast({
+        title: "Publishing Failed",
+        description: error.message || "There was an error publishing your post. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   // Handle loading a draft

@@ -59,7 +59,7 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
           disabled={!isPostValid || isLoading}
           onClick={onPublishNow}
         >
-          Publish Now
+          {isLoading ? 'Publishing...' : 'Publish Now'}
         </Button>
       </div>
     </div>
