@@ -13,7 +13,7 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Twitter OAuth 1.0a implementation
+// Twitter OAuth implementation
 function generateOAuthSignature(
   method: string,
   url: string,
@@ -50,8 +50,8 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
   try {
     console.log(`Publishing to Twitter for user ${userId}`);
     
-    // Get the Twitter API credentials
-    const { data: twitterAPIKey, error: keyError } = await supabase
+    // Get the Twitter API credentials from the secrets table
+    const { data: apiKey, error: keyError } = await supabase
       .from('secrets')
       .select('value')
       .eq('name', 'TWITTER_API_KEY')
@@ -62,7 +62,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Failed to get Twitter API key: ${keyError.message}`);
     }
     
-    const { data: twitterAPISecret, error: secretError } = await supabase
+    const { data: apiSecret, error: secretError } = await supabase
       .from('secrets')
       .select('value')
       .eq('name', 'TWITTER_API_SECRET')
@@ -98,6 +98,12 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error('Twitter account is missing required credentials. Please reconnect your account.');
     }
     
+    // Log API key existence without exposing the actual key
+    console.log(`API Key exists: ${Boolean(apiKey?.value)}, length: ${apiKey?.value.length || 0}`);
+    console.log(`API Secret exists: ${Boolean(apiSecret?.value)}, length: ${apiSecret?.value.length || 0}`);
+    console.log(`Access Token exists: ${Boolean(account.access_token)}, length: ${account.access_token?.length || 0}`);
+    console.log(`Access Token Secret exists: ${Boolean(account.access_token_secret)}, length: ${account.access_token_secret?.length || 0}`);
+    
     // Twitter API v2 endpoint for creating tweets
     const tweetUrl = 'https://api.twitter.com/2/tweets';
     const method = 'POST';
@@ -108,7 +114,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     
     // Create OAuth parameters - CRITICAL: Do not include the tweet text in the parameters for signature
     const oauthParams: Record<string, string> = {
-      oauth_consumer_key: twitterAPIKey.value,
+      oauth_consumer_key: apiKey.value,
       oauth_nonce: nonce,
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: timestamp,
@@ -121,7 +127,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       method,
       tweetUrl,
       oauthParams,
-      twitterAPISecret.value,
+      apiSecret.value,
       account.access_token_secret
     );
     
