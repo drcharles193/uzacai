@@ -34,6 +34,21 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
 }) => {
   const isPostValid = !!postContent && selectedAccounts.length > 0;
   
+  // Determine if scheduled date/time is valid
+  const isScheduleValid = () => {
+    if (!scheduleDate || !scheduleTime) return false;
+    
+    const [hours, minutes] = scheduleTime.split(':').map(Number);
+    const scheduledDateTime = new Date(scheduleDate);
+    scheduledDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Must be at least 5 minutes in the future
+    const minScheduleTime = new Date();
+    minScheduleTime.setMinutes(minScheduleTime.getMinutes() + 5);
+    
+    return scheduledDateTime > minScheduleTime;
+  };
+  
   return (
     <div className="border-t p-4 flex justify-between">
       <Button 
@@ -53,7 +68,7 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
           setScheduleTime={setScheduleTime}
           onSchedulePost={onSchedulePost}
           isLoading={isLoading}
-          isValid={isPostValid}
+          isValid={isPostValid && isScheduleValid()}
         />
         <Button 
           disabled={!isPostValid || isLoading}

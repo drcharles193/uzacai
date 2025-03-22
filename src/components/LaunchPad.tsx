@@ -74,7 +74,16 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   // Handle publishing a post now
   const handlePublishNow = async () => {
     console.log("Attempting to publish now...");
-    const success = await publishNow(postContent, mediaPreviewUrls, selectedAccounts, connectedAccounts);
+    console.log("Media files:", mediaFiles);
+    console.log("Media URLs:", mediaPreviewUrls);
+    
+    const success = await publishNow(
+      postContent, 
+      mediaPreviewUrls, 
+      selectedAccounts, 
+      connectedAccounts,
+      mediaFiles
+    );
     
     if (success) {
       console.log("Publish successful, resetting form");

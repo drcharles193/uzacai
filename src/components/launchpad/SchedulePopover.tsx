@@ -35,6 +35,12 @@ const SchedulePopover: React.FC<SchedulePopoverProps> = ({
   isLoading,
   isValid
 }) => {
+  const isPastDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+  };
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -51,7 +57,7 @@ const SchedulePopover: React.FC<SchedulePopoverProps> = ({
               mode="single"
               selected={scheduleDate}
               onSelect={setScheduleDate}
-              disabled={(date) => date < new Date()}
+              disabled={(date) => isPastDate(date)}
               initialFocus
               className={cn("p-3 pointer-events-auto")}
             />
@@ -64,6 +70,9 @@ const SchedulePopover: React.FC<SchedulePopoverProps> = ({
               onChange={(e) => setScheduleTime(e.target.value)}
               className="w-full"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {scheduleDate ? `Scheduling for: ${format(scheduleDate, 'EEEE, MMMM d, yyyy')} at ${scheduleTime}` : 'Select a date first'}
+            </p>
           </div>
           <Button 
             className="w-full" 
@@ -72,6 +81,11 @@ const SchedulePopover: React.FC<SchedulePopoverProps> = ({
           >
             {isLoading ? 'Scheduling...' : 'Confirm Schedule'}
           </Button>
+          {!isValid && scheduleDate && (
+            <p className="text-xs text-destructive mt-1">
+              Please schedule your post at least 5 minutes in the future.
+            </p>
+          )}
         </div>
       </PopoverContent>
     </Popover>

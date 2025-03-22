@@ -8,11 +8,23 @@ export const usePublishing = (currentUserId: string | null) => {
   const [isPublishing, setIsPublishing] = useState(false);
   const { toast } = useToast();
 
+  const processMediaForPublishing = async (mediaFiles: File[], mediaPreviewUrls: string[]) => {
+    console.log("Processing media for publishing", mediaFiles, mediaPreviewUrls);
+    
+    // For real media uploads we would:
+    // 1. Upload files to Supabase storage
+    // 2. Return the full URLs of the uploaded files
+    
+    // But for now, we'll just use any non-blob URLs from mediaPreviewUrls
+    return mediaPreviewUrls.filter(url => !url.startsWith('blob:'));
+  };
+
   const publishNow = async (
     postContent: string,
     mediaPreviewUrls: string[],
     selectedAccounts: string[],
-    connectedAccounts: SocialAccount[]
+    connectedAccounts: SocialAccount[],
+    mediaFiles: File[] = []
   ) => {
     if (!postContent.trim() || selectedAccounts.length === 0) {
       toast({
@@ -45,17 +57,18 @@ export const usePublishing = (currentUserId: string | null) => {
       
       console.log("Selected accounts:", selectedAccounts);
       console.log("Publishing to platforms:", platforms);
+      console.log("Media files:", mediaFiles.length, "Media URLs:", mediaPreviewUrls.length);
       
-      // Process media URLs - for now, we'll handle this later with proper file uploads
-      // For the MVP, let's just skip blob URLs
-      const validMediaUrls = mediaPreviewUrls.filter(url => !url.startsWith('blob:'));
+      // Process media files for publishing
+      const processedMediaUrls = await processMediaForPublishing(mediaFiles, mediaPreviewUrls);
+      console.log("Processed media URLs:", processedMediaUrls);
       
       // Call our edge function to handle the publishing
       const { data, error } = await supabase.functions.invoke('social-publish', {
         body: {
           userId: currentUserId,
           content: postContent,
-          mediaUrls: validMediaUrls,
+          mediaUrls: processedMediaUrls,
           selectedAccounts,
           platforms
         }
