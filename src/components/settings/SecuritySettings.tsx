@@ -30,18 +30,25 @@ const SecuritySettings = () => {
   const connectGoogle = async () => {
     try {
       setIsConnecting(true);
+      
+      // Get the current URL to use in the redirect
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/settings?tab=security`;
+      
+      console.log("Starting Google OAuth flow with redirect to:", redirectTo);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/settings?tab=security`,
-          skipBrowserRedirect: false,
+          redirectTo: redirectTo,
+          scopes: 'email profile',
         }
       });
       
       if (error) throw error;
       
-      // No need to set isConnecting to false here as we're redirecting the user
-      // It will be reset when the component remounts after redirection
+      // User will be redirected to Google for authentication
+      // No need to set isConnecting to false as the page will reload after redirect
       
     } catch (error: any) {
       console.error("Error connecting Google account:", error);
@@ -59,6 +66,8 @@ const SecuritySettings = () => {
       if (!user) {
         throw new Error("No user found. Please sign in again.");
       }
+      
+      console.log(`Attempting to disconnect ${provider} account for user ${user.id}`);
       
       // Call the edge function to disconnect the account
       const { data, error } = await supabase.functions.invoke('disconnect-social', {
