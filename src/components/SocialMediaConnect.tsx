@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -24,21 +23,22 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
-
-interface SocialPlatform {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  color: string;
-  connected: boolean;
-  accountName?: string;
-}
+import { SocialAccount } from "@/components/launchpad/types";
 
 interface SocialMediaConnectProps {
   isDialog?: boolean;
   onClose?: () => void;
   onDone?: () => void;
   onAccountDisconnected?: (platformId: string) => void;
+}
+
+interface Platform {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  connected: boolean;
+  accountName?: string;
 }
 
 const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({ 
@@ -52,10 +52,10 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [connectionSuccess, setConnectionSuccess] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
+  const [oauthWindow, setOauthWindow] = useState<Window | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
-  const [platforms, setPlatforms] = useState<SocialPlatform[]>([
+  const [platforms, setPlatforms] = useState<Platform[]>([
     {
       id: 'twitter',
       name: 'Twitter / X',
@@ -66,20 +66,20 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       connected: false
     },
     {
-      id: 'instagram',
-      name: 'Instagram',
-      color: '#E1306C',
-      icon: (
-        <Instagram className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
       id: 'facebook',
       name: 'Facebook',
       color: '#4267B2',
       icon: (
         <Facebook className="w-5 h-5" />
+      ),
+      connected: false
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      color: '#E1306C',
+      icon: (
+        <Instagram className="w-5 h-5" />
       ),
       connected: false
     },
@@ -197,21 +197,28 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     
     fetchConnectedAccounts();
 
-    const handleTwitterCallback = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'twitter-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('Received Twitter callback:', code, state);
+    const handleOAuthCallback = (event: MessageEvent) => {
+      if (event.data && (
+        event.data.type === 'twitter-oauth-callback' || 
+        event.data.type === 'facebook-oauth-callback'
+      )) {
+        const { code, state, platform } = event.data;
+        console.log(`Received ${platform} callback:`, code, state);
         
-        completeTwitterConnection(code, state);
+        if (platform === 'twitter') {
+          completeTwitterConnection(code, state);
+        } else if (platform === 'facebook') {
+          completeFacebookConnection(code, state);
+        }
       }
     };
 
-    window.addEventListener('message', handleTwitterCallback);
+    window.addEventListener('message', handleOAuthCallback);
     
     return () => {
-      window.removeEventListener('message', handleTwitterCallback);
-      if (twitterWindow && !twitterWindow.closed) {
-        twitterWindow.close();
+      window.removeEventListener('message', handleOAuthCallback);
+      if (oauthWindow && !oauthWindow.closed) {
+        oauthWindow.close();
       }
     };
   }, []);
@@ -281,6 +288,72 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
+  const completeFacebookConnection = async (code: string, state: string) => {
+    try {
+      setIsConnecting('facebook');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to connect social accounts.",
+          variant: "destructive"
+        });
+        setIsConnecting(null);
+        setConnectionError('facebook');
+        return;
+      }
+      
+      const response = await supabase.functions.invoke('social-auth', {
+        body: JSON.stringify({
+          platform: 'facebook',
+          action: 'callback',
+          code: code,
+          state: state,
+          userId: session.user.id
+        })
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to connect Facebook account");
+      }
+      
+      setPlatforms(platforms.map(platform => {
+        if (platform.id === 'facebook') {
+          return { 
+            ...platform, 
+            connected: true,
+            accountName: response.data.accountName || 'Facebook Account'
+          };
+        }
+        return platform;
+      }));
+      
+      setConnectionSuccess('facebook');
+      
+      toast({
+        title: "Facebook Connected",
+        description: `Your Facebook account has been connected successfully. ${response.data.pagesCount > 0 ? `${response.data.pagesCount} page(s) connected.` : ''}`
+      });
+      
+    } catch (error: any) {
+      console.error("Error connecting Facebook:", error);
+      setConnectionError('facebook');
+      toast({
+        title: "Facebook Connection Failed",
+        description: error.message || "Failed to connect Facebook account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsConnecting(null);
+      
+      setTimeout(() => {
+        setConnectionSuccess(null);
+        setConnectionError(null);
+      }, 3000);
+    }
+  };
+
   const connectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
@@ -320,20 +393,55 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         const left = window.innerWidth / 2 - width / 2;
         const top = window.innerHeight / 2 - height / 2;
         
-        const twitterPopup = window.open(
+        const popup = window.open(
           response.data.authUrl,
           'twitter-oauth',
           `width=${width},height=${height},left=${left},top=${top}`
         );
         
-        if (!twitterPopup) {
+        if (!popup) {
           throw new Error("Could not open Twitter auth popup. Please disable popup blocker.");
         }
         
-        setTwitterWindow(twitterPopup);
+        setOauthWindow(popup);
         
         return;
-      } 
+      }
+      else if (id === 'facebook') {
+        const response = await supabase.functions.invoke('social-auth', {
+          body: JSON.stringify({
+            platform: 'facebook',
+            action: 'auth-url',
+            userId: session.user.id
+          })
+        });
+        
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to start Facebook connection");
+        }
+        
+        if (!response.data.authUrl) {
+          throw new Error("No Facebook auth URL returned");
+        }
+        
+        const width = 800, height = 700;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.innerHeight / 2 - height / 2;
+        
+        const popup = window.open(
+          response.data.authUrl,
+          'facebook-oauth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        if (!popup) {
+          throw new Error("Could not open Facebook auth popup. Please disable popup blocker.");
+        }
+        
+        setOauthWindow(popup);
+        
+        return;
+      }
       
       const response = await supabase.functions.invoke('social-auth', {
         body: JSON.stringify({
@@ -373,7 +481,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         variant: "destructive"
       });
     } finally {
-      if (id !== 'twitter') {
+      if (id !== 'twitter' && id !== 'facebook') {
         setIsConnecting(null);
         
         setTimeout(() => {
@@ -580,7 +688,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           </DialogContent>
         </Dialog>
         
-        {/* Dialog component alert dialog for disconnection confirmation */}
         <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -675,7 +782,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         </div>
       </div>
       
-      {/* Add the disconnect confirmation dialog */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
