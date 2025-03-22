@@ -73,7 +73,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Failed to get Twitter API secret: ${secretError.message}`);
     }
     
-    // Get the access token and secret from the secrets table if available
+    // Get the access token and secret from the secrets table
     const { data: accessToken, error: accessTokenError } = await supabase
       .from('secrets')
       .select('value')
@@ -90,35 +90,29 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       console.error('Missing Twitter access tokens in secrets table');
       console.log('Access Token exists:', Boolean(accessToken?.value));
       console.log('Access Token Secret exists:', Boolean(accessTokenSecret?.value));
+      throw new Error('Twitter access tokens are missing. Please add TWITTER_ACCESS_TOKEN and TWITTER_ACCESS_TOKEN_SECRET to your Supabase secrets.');
     }
     
-    // Get the Twitter account credentials for this user
+    // Check if we have account info for this user (if not, we'll use the global tokens)
     const { data: account, error: accountError } = await supabase
       .from('social_accounts')
       .select('*')
       .eq('user_id', userId)
       .eq('platform', 'twitter')
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to avoid error if no record exists
     
     if (accountError) {
       console.error(`Error fetching Twitter account: ${accountError.message}`);
-      throw new Error(`Failed to get Twitter account: ${accountError.message}`);
+      // We'll continue with the global tokens
     }
-    
-    if (!account) {
-      console.error('No Twitter account found for this user');
-      throw new Error('No Twitter account found for this user');
-    }
-    
-    console.log(`Found Twitter account: ${account.account_name}`);
     
     // Use either the account credentials or the global credentials
-    const userToken = account.access_token || accessToken?.value;
-    const userTokenSecret = account.access_token_secret || accessTokenSecret?.value;
+    const userToken = account?.access_token || accessToken.value;
+    const userTokenSecret = account?.access_token_secret || accessTokenSecret.value;
     
     if (!userToken || !userTokenSecret) {
-      console.error('Twitter account is missing access token or secret');
-      throw new Error('Twitter account is missing required credentials. Please reconnect your account.');
+      console.error('No valid Twitter tokens available');
+      throw new Error('Twitter authentication failed. No valid tokens available.');
     }
     
     // Log API key existence without exposing the actual key
@@ -191,11 +185,13 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Error parsing Twitter API response: ${responseText}`);
     }
     
-    // Update the last_used_at timestamp for this account
-    await supabase
-      .from('social_accounts')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', account.id);
+    // Update the last_used_at timestamp for this account if it exists
+    if (account) {
+      await supabase
+        .from('social_accounts')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('id', account.id);
+    }
     
     return responseData;
   } catch (error: any) {

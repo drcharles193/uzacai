@@ -34,6 +34,7 @@ export const usePublishing = (currentUserId: string | null) => {
 
     try {
       setIsPublishing(true);
+      console.log("Attempting to publish now...");
       
       // Map selected account names to their platforms
       const selectedAccountDetails = connectedAccounts.filter(account => 
