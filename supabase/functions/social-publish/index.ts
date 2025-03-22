@@ -73,6 +73,19 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Failed to get Twitter API secret: ${secretError.message}`);
     }
     
+    // Get the access token and secret from the secrets table if available
+    const { data: accessToken, error: accessTokenError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', 'TWITTER_ACCESS_TOKEN')
+      .single();
+      
+    const { data: accessTokenSecret, error: accessTokenSecretError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', 'TWITTER_ACCESS_TOKEN_SECRET')
+      .single();
+    
     // Get the Twitter account credentials for this user
     const { data: account, error: accountError } = await supabase
       .from('social_accounts')
@@ -93,7 +106,11 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     
     console.log(`Found Twitter account: ${account.account_name}`);
     
-    if (!account.access_token || !account.access_token_secret) {
+    // Use either the account credentials or the global credentials
+    const userToken = account.access_token || accessToken?.value;
+    const userTokenSecret = account.access_token_secret || accessTokenSecret?.value;
+    
+    if (!userToken || !userTokenSecret) {
       console.error('Twitter account is missing access token or secret');
       throw new Error('Twitter account is missing required credentials. Please reconnect your account.');
     }
@@ -101,8 +118,8 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     // Log API key existence without exposing the actual key
     console.log(`API Key exists: ${Boolean(apiKey?.value)}, length: ${apiKey?.value.length || 0}`);
     console.log(`API Secret exists: ${Boolean(apiSecret?.value)}, length: ${apiSecret?.value.length || 0}`);
-    console.log(`Access Token exists: ${Boolean(account.access_token)}, length: ${account.access_token?.length || 0}`);
-    console.log(`Access Token Secret exists: ${Boolean(account.access_token_secret)}, length: ${account.access_token_secret?.length || 0}`);
+    console.log(`Access Token exists: ${Boolean(userToken)}, length: ${userToken?.length || 0}`);
+    console.log(`Access Token Secret exists: ${Boolean(userTokenSecret)}, length: ${userTokenSecret?.length || 0}`);
     
     // Twitter API v2 endpoint for creating tweets
     const tweetUrl = 'https://api.twitter.com/2/tweets';
@@ -118,7 +135,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       oauth_nonce: nonce,
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: timestamp,
-      oauth_token: account.access_token,
+      oauth_token: userToken,
       oauth_version: '1.0'
     };
     
@@ -128,7 +145,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       tweetUrl,
       oauthParams,
       apiSecret.value,
-      account.access_token_secret
+      userTokenSecret
     );
     
     // Add signature to OAuth parameters

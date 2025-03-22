@@ -35,16 +35,16 @@ export const usePublishing = (currentUserId: string | null) => {
     try {
       setIsPublishing(true);
       
-      const platformAccountMap = connectedAccounts.reduce((acc, account) => {
-        acc[account.account_name] = account.platform;
-        return acc;
-      }, {} as Record<string, string>);
-
       // Map selected account names to their platforms
-      const platforms = selectedAccounts.map(accountName => platformAccountMap[accountName]).filter(Boolean);
+      const selectedAccountDetails = connectedAccounts.filter(account => 
+        selectedAccounts.includes(account.account_name)
+      );
+      
+      const platforms = selectedAccountDetails.map(account => account.platform);
       
       console.log("Publishing to platforms:", platforms);
       console.log("With content:", postContent.substring(0, 30) + "...");
+      console.log("Selected accounts:", selectedAccounts);
       
       // Make the publish request to our edge function
       const { data, error } = await supabase.functions.invoke('social-publish', {
