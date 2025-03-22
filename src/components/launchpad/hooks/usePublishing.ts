@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { SocialAccount } from '../types';
 
 export const usePublishing = (currentUserId: string | null) => {
@@ -79,7 +79,8 @@ export const usePublishing = (currentUserId: string | null) => {
           });
         } else {
           // All posts failed
-          throw new Error(`Failed to publish: ${data.errors[0].error || 'Unknown error'}`);
+          const errorMessage = data.errors[0].error || 'Missing API credentials';
+          throw new Error(`Failed to publish: ${errorMessage}`);
         }
       } else {
         // All posts were successful

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
@@ -9,10 +10,17 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const twitterApiKey = Deno.env.get("TWITTER_API_KEY")!;
-const twitterApiSecret = Deno.env.get("TWITTER_API_SECRET")!;
-const twitterAccessToken = Deno.env.get("TWITTER_ACCESS_TOKEN")!;
-const twitterAccessTokenSecret = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET")!;
+
+// Twitter API credentials
+const twitterApiKey = Deno.env.get("TWITTER_API_KEY");
+const twitterApiSecret = Deno.env.get("TWITTER_API_SECRET");
+const twitterAccessToken = Deno.env.get("TWITTER_ACCESS_TOKEN");
+const twitterAccessTokenSecret = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET");
+
+// Check if Twitter credentials are available
+if (!twitterApiKey || !twitterApiSecret || !twitterAccessToken || !twitterAccessTokenSecret) {
+  console.error("Missing Twitter API credentials. Please check your environment variables.");
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -23,23 +31,27 @@ function generateOAuthSignature(
   consumerSecret: string,
   tokenSecret: string
 ): string {
+  // Sort and encode parameters
   const parameterString = Object.entries(oauthParams)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
   
+  // Create signature base string
   const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(parameterString)}`;
   
+  // Create signing key
   const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
   
+  // Generate HMAC-SHA1 signature
   const hmac = createHmac("sha1", signingKey);
   const signature = hmac.update(signatureBaseString).digest("base64");
   
   console.log("OAuth Parameters:", JSON.stringify(oauthParams));
-  console.log("OAuth Parameter String:", parameterString);
-  console.log("OAuth Signature Base String:", signatureBaseString);
-  console.log("OAuth Signing Key (first 5 chars):", signingKey.substring(0, 5) + "...");
-  console.log("OAuth Signature:", signature);
+  console.log("Parameter String:", parameterString);
+  console.log("Signature Base String:", signatureBaseString);
+  console.log("Signing Key (first 5 chars):", signingKey.substring(0, 5) + "...");
+  console.log("Signature:", signature);
   
   return signature;
 }
@@ -48,20 +60,25 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
   try {
     console.log(`Publishing to Twitter for user ${userId}`);
     
+    // Get user-specific tokens if available
     const { data: account, error: accountError } = await supabase
       .from('social_accounts')
-      .select('*')
+      .select('access_token, access_token_secret')
       .eq('user_id', userId)
       .eq('platform', 'twitter')
       .maybeSingle();
     
+    if (accountError) {
+      console.error("Error fetching user account:", accountError);
+    }
+    
+    // Use user tokens if available, otherwise fall back to environment variables
     const apiKey = twitterApiKey;
     const apiSecret = twitterApiSecret;
     const accessToken = account?.access_token || twitterAccessToken;
     const accessTokenSecret = account?.access_token_secret || twitterAccessTokenSecret;
     
     if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
-      console.error("Missing Twitter API credentials");
       throw new Error("Twitter API credentials are missing. Please check your environment variables.");
     }
     
@@ -71,9 +88,11 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     console.log(`Access Token exists: ${Boolean(accessToken)}, length: ${accessToken.length}`);
     console.log(`Access Token Secret exists: ${Boolean(accessTokenSecret)}, length: ${accessTokenSecret.length}`);
     
+    // Set up Twitter API request
     const tweetUrl = 'https://api.twitter.com/2/tweets';
     const method = 'POST';
     
+    // Generate OAuth parameters
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
     
@@ -86,6 +105,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       oauth_version: '1.0'
     };
     
+    // Generate OAuth signature
     const signature = generateOAuthSignature(
       method,
       tweetUrl,
@@ -96,12 +116,14 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     
     oauthParams.oauth_signature = signature;
     
+    // Create Authorization header
     const authHeader = 'OAuth ' + Object.entries(oauthParams)
       .map(([key, value]) => `${encodeURIComponent(key)}="${encodeURIComponent(value)}"`)
       .join(', ');
     
     console.log("Final Authorization header:", authHeader);
     
+    // Make API request to Twitter
     const response = await fetch(tweetUrl, {
       method: method,
       headers: {
@@ -116,23 +138,19 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     console.log(`Twitter API response body: ${responseText}`);
     
     if (!response.ok) {
-      console.error(`Twitter API error: ${response.status} - ${responseText}`);
       throw new Error(`Twitter API error: ${response.status} - ${responseText}`);
     }
     
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      console.error("Error parsing Twitter API response:", e);
-      throw new Error(`Error parsing Twitter API response: ${responseText}`);
-    }
+    // Parse and return response
+    const responseData = JSON.parse(responseText);
     
+    // Update last_used_at timestamp for the account
     if (account) {
       await supabase
         .from('social_accounts')
         .update({ last_used_at: new Date().toISOString() })
-        .eq('id', account.id);
+        .eq('user_id', userId)
+        .eq('platform', 'twitter');
     }
     
     return responseData;
@@ -142,6 +160,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
   }
 }
 
+// Mock function for other platforms
 function mockPublishToOtherPlatform(platform: string, content: string): any {
   console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
   return {
@@ -152,7 +171,9 @@ function mockPublishToOtherPlatform(platform: string, content: string): any {
   };
 }
 
+// Main function to handle requests
 serve(async (req) => {
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
