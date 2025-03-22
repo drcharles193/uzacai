@@ -86,6 +86,12 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       .eq('name', 'TWITTER_ACCESS_TOKEN_SECRET')
       .single();
     
+    if (!accessToken?.value || !accessTokenSecret?.value) {
+      console.error('Missing Twitter access tokens in secrets table');
+      console.log('Access Token exists:', Boolean(accessToken?.value));
+      console.log('Access Token Secret exists:', Boolean(accessTokenSecret?.value));
+    }
+    
     // Get the Twitter account credentials for this user
     const { data: account, error: accountError } = await supabase
       .from('social_accounts')
@@ -264,9 +270,8 @@ serve(async (req) => {
     // but include the errors in the response
     const hasSuccesses = results.length > 0;
     const hasErrors = errors.length > 0;
-    const status = hasSuccesses ? 200 : (hasErrors ? 500 : 200);
     
-    console.log(`Returning response with status ${status}`);
+    console.log(`Returning response with ${results.length} successes and ${errors.length} errors`);
     
     return new Response(
       JSON.stringify({ 
@@ -276,7 +281,7 @@ serve(async (req) => {
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status
+        status: hasSuccesses || !hasErrors ? 200 : 500
       }
     );
   } catch (error: any) {

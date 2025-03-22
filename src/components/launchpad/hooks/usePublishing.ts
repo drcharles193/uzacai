@@ -46,12 +46,20 @@ export const usePublishing = (currentUserId: string | null) => {
       console.log("With content:", postContent.substring(0, 30) + "...");
       console.log("Selected accounts:", selectedAccounts);
       
+      // Process media URLs - convert blob URLs to actual image data or server URLs
+      // For now we'll just filter out blob URLs since they can't be sent to an edge function
+      const validMediaUrls = mediaPreviewUrls.filter(url => !url.startsWith('blob:'));
+      
+      if (mediaPreviewUrls.length > 0 && validMediaUrls.length === 0) {
+        console.warn("Media URLs were provided but they're all blob URLs which can't be sent to the edge function");
+      }
+      
       // Make the publish request to our edge function
       const { data, error } = await supabase.functions.invoke('social-publish', {
         body: {
           userId: currentUserId,
           content: postContent,
-          mediaUrls: mediaPreviewUrls,
+          mediaUrls: validMediaUrls,
           selectedAccounts,
           platforms
         }
