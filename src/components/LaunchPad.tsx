@@ -1,13 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { X } from 'lucide-react';
-import { Button } from './ui/button';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { SocialAccount } from './launchpad/types';
-import { useToast } from "@/components/ui/use-toast";
 
 // Import refactored components
+import LaunchpadDialogHeader from './launchpad/LaunchpadDialogHeader';
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import CreatePostPanel from './launchpad/CreatePostPanel';
 import DraftsPanel from './launchpad/DraftsPanel';
@@ -17,6 +15,7 @@ import LaunchpadFooter from './launchpad/LaunchpadFooter';
 // Import custom hooks
 import { useDrafts } from './launchpad/hooks/useDrafts';
 import { useScheduling } from './launchpad/hooks/useScheduling';
+import { usePublishing } from './launchpad/hooks/usePublishing';
 
 interface LaunchPadProps {
   isOpen: boolean;
@@ -32,24 +31,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const { toast } = useToast();
-
-  // Custom hooks
-  const { drafts, isLoading: isDraftsLoading, saveDraft, deleteDraft } = useDrafts(currentUser, selectedTab);
-  const {
-    isSchedulePopoverOpen,
-    setIsSchedulePopoverOpen,
-    scheduleDate,
-    setScheduleDate,
-    scheduleTime,
-    setScheduleTime,
-    schedulePost,
-    isLoading: isSchedulingLoading
-  } = useScheduling(currentUser);
-
-  // Determine if any operation is currently loading
-  const isLoading = isDraftsLoading || isSchedulingLoading || isPublishing;
 
   // Get the current user on mount
   useEffect(() => {
@@ -63,6 +44,23 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     getUserId();
   }, []);
 
+  // Custom hooks
+  const { drafts, isLoading: isDraftsLoading, saveDraft, deleteDraft } = useDrafts(currentUser, selectedTab);
+  const {
+    isSchedulePopoverOpen,
+    setIsSchedulePopoverOpen,
+    scheduleDate,
+    setScheduleDate,
+    scheduleTime,
+    setScheduleTime,
+    schedulePost,
+    isLoading: isSchedulingLoading
+  } = useScheduling(currentUser);
+  const { isPublishing, publishNow } = usePublishing(currentUser);
+
+  // Determine if any operation is currently loading
+  const isLoading = isDraftsLoading || isSchedulingLoading || isPublishing;
+
   // Handle saving a draft
   const handleSaveAsDraft = () => {
     saveDraft(postContent, mediaPreviewUrls, selectedAccounts);
@@ -75,68 +73,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
 
   // Handle publishing a post now
   const handlePublishNow = async () => {
-    if (!postContent.trim() || selectedAccounts.length === 0) {
-      toast({
-        title: "Incomplete post",
-        description: "Please add content and select at least one account to post to.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setIsPublishing(true);
-      
-      const platformAccountMap = connectedAccounts.reduce((acc, account) => {
-        acc[account.account_name] = account.platform;
-        return acc;
-      }, {} as Record<string, string>);
-
-      // Map selected account names to their platforms
-      const platforms = selectedAccounts.map(accountName => platformAccountMap[accountName]).filter(Boolean);
-      
-      console.log("Publishing to platforms:", platforms);
-      console.log("With content:", postContent.substring(0, 30) + "...");
-      
-      // Make the publish request to our edge function
-      const { data, error } = await supabase.functions.invoke('social-publish', {
-        body: {
-          userId: currentUser,
-          content: postContent,
-          mediaUrls: mediaPreviewUrls,
-          selectedAccounts,
-          platforms
-        }
-      });
-
-      if (error) {
-        console.error("Error invoking function:", error);
-        throw error;
-      }
-
-      console.log("Publish response:", data);
-      
-      if (data.errors && data.errors.length > 0) {
-        // We have some errors
-        if (data.success) {
-          // But some posts were successful
-          toast({
-            title: "Partially Published",
-            description: `Some posts were published but there were errors with: ${data.errors.map((e: any) => e.platform).join(', ')}`,
-            variant: "default"
-          });
-        } else {
-          // All posts failed
-          throw new Error(`Failed to publish: ${data.errors[0].error}`);
-        }
-      } else {
-        // All posts were successful
-        toast({
-          title: "Post Published",
-          description: "Your post has been published successfully!"
-        });
-      }
-      
+    const success = await publishNow(postContent, mediaPreviewUrls, selectedAccounts, connectedAccounts);
+    if (success) {
       // Reset the form
       setPostContent('');
       setMediaFiles([]);
@@ -145,15 +83,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       
       // Close the dialog
       onClose();
-    } catch (error: any) {
-      console.error("Error publishing post:", error);
-      toast({
-        title: "Publishing Failed",
-        description: error.message || "There was an error publishing your post. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsPublishing(false);
     }
   };
 
@@ -173,16 +102,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh]">
-        <DialogTitle className="sr-only">Create Post</DialogTitle>
         <div className="flex flex-col h-full">
-          <div className="flex justify-between items-center border-b py-2 px-4">
-            <div>
-              <h2 className="text-lg font-semibold">Create Post</h2>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <LaunchpadDialogHeader onClose={onClose} />
           
           <LaunchpadHeader selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
           
