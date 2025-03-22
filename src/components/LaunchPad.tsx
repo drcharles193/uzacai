@@ -95,6 +95,9 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       // Map selected account names to their platforms
       const platforms = selectedAccounts.map(accountName => platformAccountMap[accountName]).filter(Boolean);
       
+      console.log("Publishing to platforms:", platforms);
+      console.log("With content:", postContent.substring(0, 30) + "...");
+      
       // Make the publish request to our edge function
       const { data, error } = await supabase.functions.invoke('social-publish', {
         body: {
@@ -107,19 +110,38 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       });
 
       if (error) {
+        console.error("Error invoking function:", error);
         throw error;
       }
 
+      console.log("Publish response:", data);
+      
+      if (data.errors && data.errors.length > 0) {
+        // We have some errors
+        if (data.success) {
+          // But some posts were successful
+          toast({
+            title: "Partially Published",
+            description: `Some posts were published but there were errors with: ${data.errors.map((e: any) => e.platform).join(', ')}`,
+            variant: "default"
+          });
+        } else {
+          // All posts failed
+          throw new Error(`Failed to publish: ${data.errors[0].error}`);
+        }
+      } else {
+        // All posts were successful
+        toast({
+          title: "Post Published",
+          description: "Your post has been published successfully!"
+        });
+      }
+      
       // Reset the form
       setPostContent('');
       setMediaFiles([]);
       setMediaPreviewUrls([]);
       setSelectedAccounts([]);
-      
-      toast({
-        title: "Post Published",
-        description: "Your post has been published successfully!"
-      });
       
       // Close the dialog
       onClose();

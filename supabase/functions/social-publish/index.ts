@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,12 +12,10 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Twitter API credentials
-const TWITTER_CLIENT_ID = Deno.env.get("TWITTER_CLIENT_ID");
-const TWITTER_CLIENT_SECRET = Deno.env.get("TWITTER_CLIENT_SECRET");
-
 async function publishToTwitter(userId: string, content: string): Promise<any> {
   try {
+    console.log(`Publishing to Twitter for user ${userId}`);
+    
     // Get the Twitter account credentials for this user
     const { data: accounts, error } = await supabase
       .from('social_accounts')
@@ -28,12 +25,16 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       .single();
     
     if (error) {
+      console.error(`Error fetching Twitter account: ${error.message}`);
       throw new Error(`Error fetching Twitter account: ${error.message}`);
     }
     
     if (!accounts) {
+      console.error('No Twitter account found for this user');
       throw new Error('No Twitter account found for this user');
     }
+    
+    console.log(`Found Twitter account: ${accounts.account_name}`);
     
     // Use the access token to make the API request
     const response = await fetch('https://api.twitter.com/2/tweets', {
@@ -45,12 +46,14 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       body: JSON.stringify({ text: content })
     });
     
-    const responseData = await response.json();
-    
     if (!response.ok) {
-      console.error('Twitter API error:', responseData);
-      throw new Error(`Twitter API error: ${JSON.stringify(responseData)}`);
+      const responseText = await response.text();
+      console.error('Twitter API response:', response.status, responseText);
+      throw new Error(`Twitter API error: ${response.status} - ${responseText}`);
     }
+    
+    const responseData = await response.json();
+    console.log('Twitter API response data:', JSON.stringify(responseData));
     
     // Update the last_used_at timestamp for this account
     await supabase
@@ -67,6 +70,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
 
 // Mock function for other platforms
 function mockPublishToOtherPlatform(platform: string, content: string): any {
+  console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
   return {
     success: true,
     platform,
@@ -81,11 +85,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('Received publish request');
+  
   try {
     const { userId, content, mediaUrls, selectedAccounts, platforms } = await req.json();
     console.log(`Publishing post for user ${userId} to platforms:`, platforms);
+    console.log(`Content to publish: ${content.substring(0, 30)}...`);
     
     if (!userId || !content || !selectedAccounts || selectedAccounts.length === 0) {
+      console.error("Missing required fields", { userId, contentLength: content?.length, selectedAccounts });
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -98,6 +106,7 @@ serve(async (req) => {
     // Publish to each platform
     for (const platform of platforms) {
       try {
+        console.log(`Attempting to publish to ${platform}`);
         let result;
         
         if (platform === 'twitter') {
@@ -111,6 +120,7 @@ serve(async (req) => {
           success: true,
           result
         });
+        console.log(`Successfully published to ${platform}`);
       } catch (error: any) {
         console.error(`Error publishing to ${platform}:`, error);
         errors.push({
@@ -122,13 +132,17 @@ serve(async (req) => {
     
     // If we have any successful posts but some errors, we'll still return a 200
     // but include the errors in the response
-    const status = results.length > 0 ? 200 : (errors.length > 0 ? 500 : 200);
+    const hasSuccesses = results.length > 0;
+    const hasErrors = errors.length > 0;
+    const status = hasSuccesses ? 200 : (hasErrors ? 500 : 200);
+    
+    console.log(`Returning response with status ${status}`);
     
     return new Response(
       JSON.stringify({ 
-        success: results.length > 0,
+        success: hasSuccesses,
         results,
-        errors: errors.length > 0 ? errors : undefined
+        errors: hasErrors ? errors : undefined
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
