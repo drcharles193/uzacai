@@ -50,8 +50,8 @@ const LaunchpadTabs: React.FC<LaunchpadTabsProps> = ({
       
       <TabsContent value="preview">
         <PostPreviewTab 
-          content={postContent} 
-          mediaUrls={mediaPreviewUrls} 
+          postContent={postContent} 
+          mediaPreviewUrls={mediaPreviewUrls} 
           selectedAccounts={selectedAccounts}
           connectedAccounts={connectedAccounts}
         />
