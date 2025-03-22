@@ -14,7 +14,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// ===== TWITTER API HELPERS =====
+// ===== TWITTER API AUTHENTICATION =====
 
 /**
  * Validates that all required Twitter API credentials are available
@@ -30,13 +30,33 @@ function validateTwitterCredentials() {
     return false;
   }
   
-  console.log("Using Twitter API credentials:");
-  console.log(`API Key exists: ${Boolean(apiKey)}, length: ${apiKey.length}`);
-  console.log(`API Secret exists: ${Boolean(apiSecret)}, length: ${apiSecret.length}`);
-  console.log(`Access Token exists: ${Boolean(accessToken)}, length: ${accessToken.length}`);
-  console.log(`Access Token Secret exists: ${Boolean(accessTokenSecret)}, length: ${accessTokenSecret.length}`);
-  
+  console.log("Twitter API credentials verified");
   return true;
+}
+
+/**
+ * Get user-specific tokens from database or fall back to environment variables
+ */
+async function getTwitterCredentials(userId: string) {
+  // Get user-specific tokens if available
+  const { data: account, error: accountError } = await supabase
+    .from('social_accounts')
+    .select('access_token, access_token_secret')
+    .eq('user_id', userId)
+    .eq('platform', 'twitter')
+    .maybeSingle();
+  
+  if (accountError) {
+    console.error("Error fetching user account:", accountError);
+  }
+  
+  // Use user tokens if available, otherwise fall back to environment variables
+  return {
+    apiKey: Deno.env.get("TWITTER_API_KEY") || "",
+    apiSecret: Deno.env.get("TWITTER_API_SECRET") || "",
+    accessToken: account?.access_token || Deno.env.get("TWITTER_ACCESS_TOKEN") || "",
+    accessTokenSecret: account?.access_token_secret || Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET") || ""
+  };
 }
 
 /**
@@ -64,12 +84,6 @@ function generateOAuthSignature(
   // Generate HMAC-SHA1 signature
   const hmac = createHmac("sha1", signingKey);
   const signature = hmac.update(signatureBaseString).digest("base64");
-  
-  console.log("OAuth Parameters:", JSON.stringify(oauthParams));
-  console.log("Parameter String:", parameterString);
-  console.log("Signature Base String:", signatureBaseString);
-  console.log("Signing Key (first 5 chars):", signingKey.substring(0, 5) + "...");
-  console.log("Signature:", signature);
   
   return signature;
 }
@@ -114,44 +128,19 @@ function createTwitterAuthHeader(
     .map(([key, value]) => `${encodeURIComponent(key)}="${encodeURIComponent(value)}"`)
     .join(', ');
   
-  console.log("Final Authorization header:", authHeader);
-  
   return authHeader;
 }
 
-/**
- * Get user-specific tokens from database or fall back to environment variables
- */
-async function getTwitterCredentials(userId: string) {
-  // Get user-specific tokens if available
-  const { data: account, error: accountError } = await supabase
-    .from('social_accounts')
-    .select('access_token, access_token_secret')
-    .eq('user_id', userId)
-    .eq('platform', 'twitter')
-    .maybeSingle();
-  
-  if (accountError) {
-    console.error("Error fetching user account:", accountError);
-  }
-  
-  // Use user tokens if available, otherwise fall back to environment variables
-  return {
-    apiKey: Deno.env.get("TWITTER_API_KEY") || "",
-    apiSecret: Deno.env.get("TWITTER_API_SECRET") || "",
-    accessToken: account?.access_token || Deno.env.get("TWITTER_ACCESS_TOKEN") || "",
-    accessTokenSecret: account?.access_token_secret || Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET") || ""
-  };
-}
+// ===== MEDIA HANDLING =====
 
 /**
- * Fetches a remote media file and returns it as a Blob
+ * Fetches a remote media file and returns it as an ArrayBuffer
  */
-async function fetchMediaAsBlob(mediaUrl: string): Promise<Blob | null> {
+async function fetchMedia(mediaUrl: string): Promise<{ buffer: ArrayBuffer, type: string } | null> {
   try {
     console.log(`Fetching media from ${mediaUrl}`);
     
-    // For now, we only process media URLs from our own domain or absolute URLs (not blob urls)
+    // Skip blob URLs since we can't fetch them from the server
     if (mediaUrl.startsWith('blob:')) {
       console.log("Skipping blob URL, cannot fetch from client");
       return null;
@@ -162,7 +151,11 @@ async function fetchMediaAsBlob(mediaUrl: string): Promise<Blob | null> {
       throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
     }
     
-    return await response.blob();
+    const buffer = await response.arrayBuffer();
+    const type = response.headers.get('content-type') || 'application/octet-stream';
+    
+    console.log(`Successfully fetched media: ${buffer.byteLength} bytes, type: ${type}`);
+    return { buffer, type };
   } catch (error) {
     console.error(`Error fetching media from ${mediaUrl}:`, error);
     return null;
@@ -174,13 +167,14 @@ async function fetchMediaAsBlob(mediaUrl: string): Promise<Blob | null> {
  */
 async function uploadMediaToTwitter(mediaUrl: string, credentials: any): Promise<string | null> {
   try {
-    const mediaBlob = await fetchMediaAsBlob(mediaUrl);
-    if (!mediaBlob) {
-      console.log("No valid media blob obtained, skipping upload");
+    // Fetch the media
+    const media = await fetchMedia(mediaUrl);
+    if (!media) {
+      console.log("No valid media obtained, skipping upload");
       return null;
     }
     
-    console.log(`Uploading media to Twitter, size: ${mediaBlob.size}, type: ${mediaBlob.type}`);
+    console.log(`Uploading media to Twitter, size: ${media.buffer.byteLength}, type: ${media.type}`);
     
     const { apiKey, apiSecret, accessToken, accessTokenSecret } = credentials;
     
@@ -198,9 +192,10 @@ async function uploadMediaToTwitter(mediaUrl: string, credentials: any): Promise
       accessTokenSecret
     );
     
-    // Create form data
+    // Create form data with the media
     const formData = new FormData();
-    formData.append('media', mediaBlob);
+    const blob = new Blob([media.buffer], { type: media.type });
+    formData.append('media', blob);
     
     // Upload the media
     const response = await fetch(uploadUrl, {
@@ -218,7 +213,7 @@ async function uploadMediaToTwitter(mediaUrl: string, credentials: any): Promise
     }
     
     const data = await response.json();
-    console.log("Media upload response:", data);
+    console.log("Media upload successful, media_id:", data.media_id_string);
     
     return data.media_id_string;
   } catch (error) {
@@ -226,6 +221,28 @@ async function uploadMediaToTwitter(mediaUrl: string, credentials: any): Promise
     return null;
   }
 }
+
+/**
+ * Process media URLs for Twitter
+ */
+async function processTwitterMedia(mediaUrls: string[], credentials: any): Promise<string[]> {
+  console.log(`Processing ${mediaUrls.length} media files for Twitter`);
+  
+  const mediaIds: string[] = [];
+  
+  for (const mediaUrl of mediaUrls) {
+    const mediaId = await uploadMediaToTwitter(mediaUrl, credentials);
+    if (mediaId) {
+      mediaIds.push(mediaId);
+      console.log(`Media ID ${mediaId} added to list`);
+    }
+  }
+  
+  console.log(`Processed ${mediaIds.length} media IDs for Twitter`);
+  return mediaIds;
+}
+
+// ===== PLATFORM-SPECIFIC PUBLISHING =====
 
 /**
  * Updates last_used_at timestamp for a social account
@@ -247,7 +264,7 @@ async function updateLastUsedTimestamp(userId: string, platform: string) {
  */
 async function publishToTwitter(userId: string, content: string, mediaUrls: string[] = []): Promise<any> {
   try {
-    console.log(`Publishing to Twitter for user ${userId}`);
+    console.log(`Publishing to Twitter for user ${userId} with ${mediaUrls.length} media items`);
     
     // Get credentials
     const credentials = await getTwitterCredentials(userId);
@@ -256,21 +273,8 @@ async function publishToTwitter(userId: string, content: string, mediaUrls: stri
       throw new Error("Twitter API credentials are missing. Please check your environment variables.");
     }
     
-    // First, upload any media if present
-    const mediaIds: string[] = [];
-    
-    if (mediaUrls && mediaUrls.length > 0) {
-      console.log(`Processing ${mediaUrls.length} media items for upload`);
-      
-      for (const mediaUrl of mediaUrls) {
-        const mediaId = await uploadMediaToTwitter(mediaUrl, credentials);
-        if (mediaId) {
-          mediaIds.push(mediaId);
-        }
-      }
-      
-      console.log(`Successfully uploaded ${mediaIds.length} media items`);
-    }
+    // Process media
+    const mediaIds = await processTwitterMedia(mediaUrls, credentials);
     
     // Set up Twitter API request for creating a tweet
     const tweetUrl = 'https://api.twitter.com/2/tweets';
@@ -287,7 +291,7 @@ async function publishToTwitter(userId: string, content: string, mediaUrls: stri
     );
     
     // Prepare request body
-    let requestBody: any = {
+    const requestBody: any = {
       text: content
     };
     
@@ -297,6 +301,8 @@ async function publishToTwitter(userId: string, content: string, mediaUrls: stri
         media_ids: mediaIds
       };
     }
+    
+    console.log("Tweet request body:", JSON.stringify(requestBody));
     
     // Make API request to Twitter
     const response = await fetch(tweetUrl, {
@@ -352,7 +358,7 @@ async function publishToPlatform(
   mediaUrls: string[] = []
 ): Promise<{ platform: string; success: boolean; result?: any; error?: string }> {
   try {
-    console.log(`Attempting to publish to ${platform}`);
+    console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media items`);
     let result;
     
     if (platform === 'twitter') {
@@ -400,16 +406,9 @@ function processMediaUrls(mediaUrls: string[] = []): string[] {
     return [];
   }
   
-  // Filter out blob URLs and empty strings
+  // Filter out empty strings
   return mediaUrls.filter(url => {
     if (!url || url.trim() === '') {
-      return false;
-    }
-    
-    // For now skip blob URLs since we can't fetch them from the server
-    // In a production app, you'd upload these to storage and then use the storage URL
-    if (url.startsWith('blob:')) {
-      console.log(`Skipping blob URL: ${url.substring(0, 30)}...`);
       return false;
     }
     

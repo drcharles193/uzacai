@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
   Popover,
@@ -10,7 +10,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Calendar } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, addMinutes } from "date-fns";
 
 interface SchedulePopoverProps {
   isOpen: boolean;
@@ -40,6 +40,68 @@ const SchedulePopover: React.FC<SchedulePopoverProps> = ({
     today.setHours(0, 0, 0, 0);
     return date < today;
   };
+
+  // Function to get the next valid time (5 minutes from now, rounded to next 5 min)
+  const getNextValidTime = () => {
+    const now = new Date();
+    const fiveMinutesFromNow = addMinutes(now, 5);
+    const minutes = Math.ceil(fiveMinutesFromNow.getMinutes() / 5) * 5;
+    
+    fiveMinutesFromNow.setMinutes(minutes);
+    fiveMinutesFromNow.setSeconds(0);
+    
+    return {
+      timeString: `${String(fiveMinutesFromNow.getHours()).padStart(2, '0')}:${String(fiveMinutesFromNow.getMinutes()).padStart(2, '0')}`,
+      date: fiveMinutesFromNow
+    };
+  };
+
+  // When date changes, validate and potentially update time
+  useEffect(() => {
+    if (!scheduleDate) return;
+    
+    const now = new Date();
+    const selectedDate = new Date(scheduleDate);
+    
+    // If selected date is today, ensure time is valid
+    if (
+      selectedDate.getDate() === now.getDate() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getFullYear() === now.getFullYear()
+    ) {
+      const [hours, minutes] = scheduleTime.split(':').map(Number);
+      const scheduledDateTime = new Date(scheduleDate);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+      
+      // If scheduled time is less than 5 minutes from now, update it
+      const minScheduleTime = addMinutes(now, 5);
+      if (scheduledDateTime < minScheduleTime) {
+        const nextValid = getNextValidTime();
+        setScheduleTime(nextValid.timeString);
+      }
+    }
+  }, [scheduleDate]);
+
+  // Determine if scheduled date/time is valid
+  const getValidationMessage = () => {
+    if (!scheduleDate) return "Please select a date";
+    if (!scheduleTime) return "Please select a time";
+    
+    const [hours, minutes] = scheduleTime.split(':').map(Number);
+    const scheduledDateTime = new Date(scheduleDate);
+    scheduledDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Must be at least 5 minutes in the future
+    const minScheduleTime = addMinutes(new Date(), 5);
+    
+    if (scheduledDateTime <= minScheduleTime) {
+      return "Schedule time must be at least 5 minutes in the future";
+    }
+    
+    return "";
+  };
+
+  const validationMessage = getValidationMessage();
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -81,9 +143,9 @@ const SchedulePopover: React.FC<SchedulePopoverProps> = ({
           >
             {isLoading ? 'Scheduling...' : 'Confirm Schedule'}
           </Button>
-          {!isValid && scheduleDate && (
+          {!isValid && validationMessage && (
             <p className="text-xs text-destructive mt-1">
-              Please schedule your post at least 5 minutes in the future.
+              {validationMessage}
             </p>
           )}
         </div>

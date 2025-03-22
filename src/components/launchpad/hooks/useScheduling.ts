@@ -2,29 +2,29 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 
 export const useScheduling = (currentUserId: string | null) => {
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(new Date());
   const [scheduleTime, setScheduleTime] = useState<string>(() => {
-    // Set default time to current time + 1 hour, rounded to nearest 15 min
+    // Set default time to current time + 15 min, rounded to nearest 5 min
     const now = new Date();
-    now.setHours(now.getHours() + 1);
-    now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15);
+    now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5 + 15);
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const validateScheduledTime = (date: Date, time: string): boolean => {
+    if (!date || !time) return false;
+    
     const [hours, minutes] = time.split(':').map(Number);
     const scheduledDateTime = new Date(date);
     scheduledDateTime.setHours(hours, minutes, 0, 0);
     
     // Must be at least 5 minutes in the future
-    const minScheduleTime = new Date();
-    minScheduleTime.setMinutes(minScheduleTime.getMinutes() + 5);
+    const minScheduleTime = addMinutes(new Date(), 5);
     
     return scheduledDateTime > minScheduleTime;
   };
@@ -40,7 +40,7 @@ export const useScheduling = (currentUserId: string | null) => {
         description: "Please select a date to schedule your post.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     if (!postContent.trim() || selectedAccounts.length === 0) {
@@ -49,7 +49,7 @@ export const useScheduling = (currentUserId: string | null) => {
         description: "Please add content and select at least one account to post to.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     if (!currentUserId) {
@@ -58,7 +58,7 @@ export const useScheduling = (currentUserId: string | null) => {
         description: "Please sign in to schedule posts.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     // Validate the scheduled time
@@ -68,7 +68,7 @@ export const useScheduling = (currentUserId: string | null) => {
         description: "Please schedule your post at least 5 minutes in the future.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -77,7 +77,7 @@ export const useScheduling = (currentUserId: string | null) => {
       // Combine date and time
       const scheduledDateTime = new Date(scheduleDate);
       const [hours, minutes] = scheduleTime.split(':').map(Number);
-      scheduledDateTime.setHours(hours, minutes);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
       
       // Insert scheduled post into Supabase
       const { error } = await supabase
@@ -102,7 +102,7 @@ export const useScheduling = (currentUserId: string | null) => {
         description: `Your post has been scheduled for ${format(scheduledDateTime, 'PPP')} at ${format(scheduledDateTime, 'p')}.`,
       });
       
-      // Return true to indicate success
+      // Return true to indicate success so components can reset state if needed
       return true;
     } catch (error: any) {
       console.error("Error scheduling post:", error);

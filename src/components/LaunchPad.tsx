@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,8 +66,21 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   };
 
   // Handle scheduling a post
-  const handleSchedulePost = () => {
-    schedulePost(postContent, mediaPreviewUrls, selectedAccounts);
+  const handleSchedulePost = async () => {
+    const success = await schedulePost(postContent, mediaPreviewUrls, selectedAccounts);
+    
+    // Reset form if scheduled successfully
+    if (success) {
+      setPostContent('');
+      setMediaFiles([]);
+      setMediaPreviewUrls([]);
+      setSelectedAccounts([]);
+      
+      // Close the dialog after a short delay to allow the user to see the success toast
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    }
   };
 
   // Handle publishing a post now
