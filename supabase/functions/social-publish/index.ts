@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,12 +13,105 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Twitter OAuth 1.0a implementation
+function generateOAuthSignature(
+  method: string,
+  url: string,
+  params: Record<string, string>,
+  consumerSecret: string,
+  tokenSecret: string
+): string {
+  const signatureBaseString = `${method}&${encodeURIComponent(
+    url
+  )}&${encodeURIComponent(
+    Object.entries(params)
+      .sort()
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&")
+  )}`;
+  
+  const signingKey = `${encodeURIComponent(
+    consumerSecret
+  )}&${encodeURIComponent(tokenSecret)}`;
+  
+  const hmacSha1 = createHmac("sha1", signingKey);
+  const signature = hmacSha1.update(signatureBaseString).digest("base64");
+  
+  console.log("OAuth Signature Base String:", signatureBaseString);
+  console.log("OAuth Signing Key (partially hidden):", signingKey.substring(0, 10) + "...");
+  console.log("OAuth Signature:", signature);
+  
+  return signature;
+}
+
+function generateOAuthHeader(
+  method: string,
+  url: string,
+  apiKey: string,
+  apiSecret: string,
+  accessToken: string,
+  accessTokenSecret: string
+): string {
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: apiKey,
+    oauth_nonce: Math.random().toString(36).substring(2),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: accessToken,
+    oauth_version: "1.0",
+  };
+
+  const signature = generateOAuthSignature(
+    method,
+    url,
+    oauthParams,
+    apiSecret,
+    accessTokenSecret
+  );
+
+  const signedOAuthParams = {
+    ...oauthParams,
+    oauth_signature: signature,
+  };
+
+  return (
+    "OAuth " +
+    Object.entries(signedOAuthParams)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, v]) => `${encodeURIComponent(k)}="${encodeURIComponent(v)}"`)
+      .join(", ")
+  );
+}
+
 async function publishToTwitter(userId: string, content: string): Promise<any> {
   try {
     console.log(`Publishing to Twitter for user ${userId}`);
     
+    // Get the Twitter API credentials
+    const { data: twitterAPISecret, error: secretError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', 'TWITTER_API_SECRET')
+      .single();
+    
+    if (secretError) {
+      console.error(`Error fetching Twitter API secret: ${secretError.message}`);
+      throw new Error(`Error fetching Twitter API secret: ${secretError.message}`);
+    }
+    
+    const { data: twitterAPIKey, error: keyError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', 'TWITTER_API_KEY')
+      .single();
+    
+    if (keyError) {
+      console.error(`Error fetching Twitter API key: ${keyError.message}`);
+      throw new Error(`Error fetching Twitter API key: ${keyError.message}`);
+    }
+    
     // Get the Twitter account credentials for this user
-    const { data: accounts, error } = await supabase
+    const { data: account, error } = await supabase
       .from('social_accounts')
       .select('*')
       .eq('user_id', userId)
@@ -29,40 +123,61 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Error fetching Twitter account: ${error.message}`);
     }
     
-    if (!accounts) {
+    if (!account) {
       console.error('No Twitter account found for this user');
       throw new Error('No Twitter account found for this user');
     }
     
-    console.log(`Found Twitter account: ${accounts.account_name}`);
+    console.log(`Found Twitter account: ${account.account_name}`);
     
-    // Use the access token to make the API request
-    const response = await fetch('https://api.twitter.com/2/tweets', {
-      method: 'POST',
+    if (!account.access_token || !account.access_token_secret) {
+      console.error('Twitter account is missing access token or secret');
+      throw new Error('Twitter account is missing required credentials. Please reconnect your account.');
+    }
+    
+    // Prepare to tweet using OAuth 1.0a
+    const tweetUrl = 'https://api.twitter.com/2/tweets';
+    const method = 'POST';
+    
+    const oauthHeader = generateOAuthHeader(
+      method,
+      tweetUrl,
+      twitterAPIKey.value,
+      twitterAPISecret.value,
+      account.access_token,
+      account.access_token_secret
+    );
+    
+    console.log("OAuth header generated for Twitter API request");
+    
+    // Make the API request
+    const response = await fetch(tweetUrl, {
+      method: method,
       headers: {
-        'Authorization': `Bearer ${accounts.access_token}`,
+        'Authorization': oauthHeader,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ text: content })
     });
     
+    const responseText = await response.text();
+    console.log(`Twitter API response status: ${response.status}`);
+    console.log(`Twitter API response body: ${responseText}`);
+    
     if (!response.ok) {
-      const responseText = await response.text();
-      console.error('Twitter API response:', response.status, responseText);
       throw new Error(`Twitter API error: ${response.status} - ${responseText}`);
     }
     
-    const responseData = await response.json();
-    console.log('Twitter API response data:', JSON.stringify(responseData));
+    const responseData = JSON.parse(responseText);
     
     // Update the last_used_at timestamp for this account
     await supabase
       .from('social_accounts')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('id', accounts.id);
+      .eq('id', account.id);
     
     return responseData;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error publishing to Twitter:', error);
     throw error;
   }
