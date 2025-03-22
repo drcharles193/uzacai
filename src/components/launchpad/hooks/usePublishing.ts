@@ -8,9 +8,30 @@ export const usePublishing = (currentUserId: string | null) => {
   const [isPublishing, setIsPublishing] = useState(false);
   const { toast } = useToast();
 
+  /**
+   * Convert a File object to base64
+   */
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('Failed to convert file to base64'));
+        }
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const publishNow = async (
     postContent: string,
     mediaPreviewUrls: string[],
+    mediaFiles: File[],
     selectedAccounts: string[],
     connectedAccounts: SocialAccount[]
   ) => {
@@ -45,9 +66,21 @@ export const usePublishing = (currentUserId: string | null) => {
       
       console.log("Selected accounts:", selectedAccounts);
       console.log("Publishing to platforms:", platforms);
+      console.log("Media files:", mediaFiles.length);
       
-      // Process media URLs - for now, we'll handle this later with proper file uploads
-      // For the MVP, let's just skip blob URLs
+      // Convert media files to base64
+      let mediaBase64: string[] = [];
+      if (mediaFiles.length > 0) {
+        try {
+          const base64Promises = mediaFiles.map(file => fileToBase64(file));
+          mediaBase64 = await Promise.all(base64Promises);
+          console.log(`Converted ${mediaBase64.length} files to base64`);
+        } catch (error) {
+          console.error("Error converting files to base64:", error);
+        }
+      }
+      
+      // Process external media URLs - these are URLs that aren't blob URLs
       const validMediaUrls = mediaPreviewUrls.filter(url => !url.startsWith('blob:'));
       
       // Call our edge function to handle the publishing
@@ -56,6 +89,7 @@ export const usePublishing = (currentUserId: string | null) => {
           userId: currentUserId,
           content: postContent,
           mediaUrls: validMediaUrls,
+          mediaBase64,
           selectedAccounts,
           platforms
         }

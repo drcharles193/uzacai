@@ -188,10 +188,11 @@ async function getMediaAsBase64(mediaUrl: string): Promise<string> {
  */
 async function uploadMediaToTwitter(
   userId: string,
-  mediaUrl: string
+  mediaBase64: string,
+  contentType: string
 ): Promise<string> {
   try {
-    console.log(`Uploading media to Twitter: ${mediaUrl}`);
+    console.log(`Uploading media to Twitter with content type: ${contentType}`);
     
     // Get credentials
     const { apiKey, apiSecret, accessToken, accessTokenSecret } = await getTwitterCredentials(userId);
@@ -200,30 +201,9 @@ async function uploadMediaToTwitter(
       throw new Error("Twitter API credentials are missing. Please check your environment variables.");
     }
     
-    // Convert media to base64
-    const base64Media = await getMediaAsBase64(mediaUrl);
-    
     // Set up Twitter API request for media upload
     const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
     const method = 'POST';
-    
-    // Create form data for the media upload
-    const formData = new FormData();
-    // Convert base64 to blob
-    const byteCharacters = atob(base64Media);
-    const byteArrays = [];
-    for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
-      const slice = byteCharacters.slice(offset, offset + 1024);
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
-    const blob = new Blob(byteArrays);
-    
-    formData.append('media', blob);
     
     // Create Authorization header
     const authHeader = createTwitterAuthHeader(
@@ -234,6 +214,10 @@ async function uploadMediaToTwitter(
       accessToken,
       accessTokenSecret
     );
+    
+    // Prepare form data with base64 encoded media
+    const formData = new FormData();
+    formData.append('media_data', mediaBase64);
     
     // Make API request to Twitter for media upload
     const uploadResponse = await fetch(uploadUrl, {
@@ -269,15 +253,46 @@ async function uploadMediaToTwitter(
 }
 
 /**
+ * Process media from blob URL or remote URL and upload to Twitter
+ */
+async function processAndUploadMedia(userId: string, mediaUrl: string): Promise<string> {
+  try {
+    console.log(`Processing media at URL: ${mediaUrl}`);
+    
+    // Determine if the media URL is a blob URL or a remote URL
+    if (mediaUrl.startsWith('blob:')) {
+      throw new Error('Blob URLs cannot be processed directly in edge functions. Media must be sent as base64 or remote URLs.');
+    }
+    
+    // For regular URLs, fetch the media and convert to base64
+    const response = await fetch(mediaUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    // Upload the media to Twitter
+    return await uploadMediaToTwitter(userId, base64, contentType);
+  } catch (error: any) {
+    console.error('Error processing and uploading media:', error);
+    throw error;
+  }
+}
+
+/**
  * Publish content and media to Twitter
  */
 async function publishToTwitter(
   userId: string, 
   content: string, 
-  mediaUrls: string[] = []
+  mediaUrls: string[] = [],
+  base64Media: string[] = []
 ): Promise<any> {
   try {
-    console.log(`Publishing to Twitter for user ${userId} with ${mediaUrls.length} media items`);
+    console.log(`Publishing to Twitter for user ${userId} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media items`);
     
     // Get credentials
     const { apiKey, apiSecret, accessToken, accessTokenSecret } = await getTwitterCredentials(userId);
@@ -288,18 +303,41 @@ async function publishToTwitter(
     
     // Upload media if provided
     let mediaIds: string[] = [];
+    
+    // First, try to upload from URLs
     if (mediaUrls.length > 0) {
       // Twitter allows up to 4 media items per tweet
       const maxMediaItems = Math.min(mediaUrls.length, 4);
       
-      // Upload each media item
-      const uploadPromises = mediaUrls.slice(0, maxMediaItems).map(url => 
-        uploadMediaToTwitter(userId, url)
-      );
-      
-      mediaIds = await Promise.all(uploadPromises);
-      console.log(`Successfully uploaded ${mediaIds.length} media items with IDs:`, mediaIds);
+      // Process and upload each media item from URLs
+      for (let i = 0; i < maxMediaItems; i++) {
+        try {
+          const mediaId = await processAndUploadMedia(userId, mediaUrls[i]);
+          mediaIds.push(mediaId);
+        } catch (error) {
+          console.error(`Error uploading media #${i + 1}:`, error);
+          // Continue with the next media item
+        }
+      }
     }
+    
+    // Then, try to upload from base64 data if provided and we have room for more media
+    if (base64Media.length > 0 && mediaIds.length < 4) {
+      const remainingSlots = 4 - mediaIds.length;
+      const maxBase64Items = Math.min(base64Media.length, remainingSlots);
+      
+      for (let i = 0; i < maxBase64Items; i++) {
+        try {
+          const mediaId = await uploadMediaToTwitter(userId, base64Media[i], 'image/jpeg');
+          mediaIds.push(mediaId);
+        } catch (error) {
+          console.error(`Error uploading base64 media #${i + 1}:`, error);
+          // Continue with the next media item
+        }
+      }
+    }
+    
+    console.log(`Successfully uploaded ${mediaIds.length} media items with IDs:`, mediaIds);
     
     // Set up Twitter API request for tweet creation
     const tweetUrl = 'https://api.twitter.com/2/tweets';
@@ -376,14 +414,15 @@ async function publishToPlatform(
   platform: string, 
   userId: string, 
   content: string,
-  mediaUrls: string[] = []
+  mediaUrls: string[] = [],
+  base64Media: string[] = []
 ): Promise<{ platform: string; success: boolean; result?: any; error?: string }> {
   try {
-    console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media items`);
+    console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media`);
     let result;
     
     if (platform === 'twitter') {
-      result = await publishToTwitter(userId, content, mediaUrls);
+      result = await publishToTwitter(userId, content, mediaUrls, base64Media);
     } else {
       result = mockPublishToOtherPlatform(platform, content);
     }
@@ -420,6 +459,28 @@ function validateRequest(userId: string, content: string, selectedAccounts: stri
 }
 
 /**
+ * Converts a blob URL media to base64
+ */
+async function processBlobMediaUrls(mediaUrls: string[], mediaBase64: string[] = []): Promise<{urls: string[], base64: string[]}> {
+  const validUrls: string[] = [];
+  const base64Data: string[] = [...mediaBase64];
+  
+  for (const url of mediaUrls) {
+    // If it's not a blob URL, just add it to valid URLs
+    if (!url.startsWith('blob:')) {
+      validUrls.push(url);
+    }
+    // If it's a blob URL and base64 data was provided, we'll use that
+    // No action here as blob URLs can't be processed in edge functions
+  }
+  
+  return {
+    urls: validUrls,
+    base64: base64Data
+  };
+}
+
+/**
  * Main handler for the edge function
  */
 serve(async (req) => {
@@ -431,10 +492,11 @@ serve(async (req) => {
   console.log('Received publish request');
   
   try {
-    const { userId, content, mediaUrls, selectedAccounts, platforms } = await req.json();
+    const { userId, content, mediaUrls, mediaBase64, selectedAccounts, platforms } = await req.json();
     console.log(`Publishing post for user ${userId} to platforms:`, platforms);
     console.log(`Content to publish: ${content.substring(0, 30)}...`);
     console.log(`Media URLs:`, mediaUrls);
+    console.log(`Base64 Media count:`, mediaBase64?.length || 0);
     
     // Validate request parameters
     if (!validateRequest(userId, content, selectedAccounts)) {
@@ -452,9 +514,12 @@ serve(async (req) => {
       );
     }
     
+    // Process the media URLs and base64 data
+    const processedMedia = await processBlobMediaUrls(mediaUrls || [], mediaBase64 || []);
+    
     // Process publishing for each platform
     const publishingPromises = platforms.map(platform => 
-      publishToPlatform(platform, userId, content, mediaUrls)
+      publishToPlatform(platform, userId, content, processedMedia.urls, processedMedia.base64)
     );
     
     const publishingResults = await Promise.all(publishingPromises);
