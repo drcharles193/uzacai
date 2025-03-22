@@ -649,4 +649,3 @@ serve(async (req) => {
     );
   }
 });
-
