@@ -21,21 +21,26 @@ function generateOAuthSignature(
   consumerSecret: string,
   tokenSecret: string
 ): string {
+  // Sort parameters alphabetically and encode them properly
   const parameterString = Object.entries(oauthParams)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
   
+  // Create signature base string
   const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(parameterString)}`;
   
+  // Create signing key
   const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
   
+  // Generate HMAC-SHA1 signature
   const hmac = createHmac("sha1", signingKey);
   const signature = hmac.update(signatureBaseString).digest("base64");
   
+  console.log("OAuth Parameters:", JSON.stringify(oauthParams));
   console.log("OAuth Parameter String:", parameterString);
   console.log("OAuth Signature Base String:", signatureBaseString);
-  console.log("OAuth Signing Key (partially hidden):", signingKey.substring(0, 5) + "...");
+  console.log("OAuth Signing Key (first 5 chars):", signingKey.substring(0, 5) + "...");
   console.log("OAuth Signature:", signature);
   
   return signature;
@@ -101,7 +106,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
     
-    // Create OAuth parameters
+    // Create OAuth parameters - CRITICAL: Do not include the tweet text in the parameters for signature
     const oauthParams: Record<string, string> = {
       oauth_consumer_key: twitterAPIKey.value,
       oauth_nonce: nonce,
@@ -123,12 +128,12 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     // Add signature to OAuth parameters
     oauthParams.oauth_signature = signature;
     
-    // Create the Authorization header
+    // Create the Authorization header - IMPORTANT: Format exactly as Twitter expects
     const authHeader = 'OAuth ' + Object.entries(oauthParams)
       .map(([key, value]) => `${encodeURIComponent(key)}="${encodeURIComponent(value)}"`)
       .join(', ');
     
-    console.log("Full Authorization header:", authHeader);
+    console.log("Final Authorization header:", authHeader);
     
     // Make the API request
     const response = await fetch(tweetUrl, {
@@ -145,6 +150,7 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     console.log(`Twitter API response body: ${responseText}`);
     
     if (!response.ok) {
+      console.error(`Twitter API error: ${response.status} - ${responseText}`);
       throw new Error(`Twitter API error: ${response.status} - ${responseText}`);
     }
     
