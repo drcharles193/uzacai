@@ -20,7 +20,16 @@ export const usePublishing = (currentUserId: string | null) => {
         description: "Please add content and select at least one account to post to.",
         variant: "destructive"
       });
-      return;
+      return false;
+    }
+
+    if (!currentUserId) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to publish posts.",
+        variant: "destructive"
+      });
+      return false;
     }
 
     try {
@@ -50,7 +59,7 @@ export const usePublishing = (currentUserId: string | null) => {
 
       if (error) {
         console.error("Error invoking function:", error);
-        throw error;
+        throw new Error(`Failed to publish: ${error.message}`);
       }
 
       console.log("Publish response:", data);
@@ -66,7 +75,7 @@ export const usePublishing = (currentUserId: string | null) => {
           });
         } else {
           // All posts failed
-          throw new Error(`Failed to publish: ${data.errors[0].error}`);
+          throw new Error(`Failed to publish: ${data.errors[0].error || 'Unknown error'}`);
         }
       } else {
         // All posts were successful

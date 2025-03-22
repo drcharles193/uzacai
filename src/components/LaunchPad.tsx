@@ -73,8 +73,11 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
 
   // Handle publishing a post now
   const handlePublishNow = async () => {
+    console.log("Attempting to publish now...");
     const success = await publishNow(postContent, mediaPreviewUrls, selectedAccounts, connectedAccounts);
+    
     if (success) {
+      console.log("Publish successful, resetting form");
       // Reset the form
       setPostContent('');
       setMediaFiles([]);
@@ -83,6 +86,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
       
       // Close the dialog
       onClose();
+    } else {
+      console.log("Publish failed, keeping form open");
     }
   };
 

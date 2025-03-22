@@ -58,6 +58,7 @@ const LaunchpadFooter: React.FC<LaunchpadFooterProps> = ({
         <Button 
           disabled={!isPostValid || isLoading}
           onClick={onPublishNow}
+          className="focus:ring-2 focus:ring-offset-2 focus:ring-primary"
         >
           {isLoading ? 'Publishing...' : 'Publish Now'}
         </Button>
