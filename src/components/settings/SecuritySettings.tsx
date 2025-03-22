@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 const SecuritySettings = () => {
   const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     fetchConnectedIdentities();
@@ -48,10 +49,38 @@ const SecuritySettings = () => {
 
   const disconnectAccount = async (provider: string) => {
     try {
-      toast.info(`To disconnect your ${provider} account, please contact support as this requires backend changes.`);
+      setIsDisconnecting(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("No user found. Please sign in again.");
+      }
+      
+      // Call the edge function to disconnect the account
+      const { data, error } = await supabase.functions.invoke('disconnect-social', {
+        body: {
+          userId: user.id,
+          provider: provider
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      toast.success(data.message || `${provider.charAt(0).toUpperCase() + provider.slice(1)} account disconnected successfully`);
+      
+      // Refresh the connected accounts list
+      await fetchConnectedIdentities();
+      
     } catch (error: any) {
       console.error(`Error disconnecting ${provider} account:`, error);
       toast.error(`Failed to disconnect ${provider} account: ${error.message}`);
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
@@ -134,8 +163,9 @@ const SecuritySettings = () => {
                   variant="outline" 
                   className="text-destructive border-destructive hover:bg-destructive/10"
                   onClick={() => disconnectAccount('google')}
+                  disabled={isDisconnecting}
                 >
-                  Disconnect
+                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
                 </Button>
               ) : (
                 <Button 
