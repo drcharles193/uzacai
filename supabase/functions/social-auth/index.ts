@@ -121,14 +121,11 @@ function getFacebookAuthUrl() {
   
   const state = generateState();
   
-  // Define Facebook permissions - UPDATED WITH VALID PERMISSIONS
+  // Simplifying to just basic permissions needed for posting
   const permissions = [
     'public_profile',
     'email',
-    'pages_manage_metadata',
-    'pages_read_user_content',
-    'pages_manage_posts',
-    'pages_manage_engagement'
+    'pages_manage_posts'
   ].join(',');
   
   const url = new URL('https://www.facebook.com/v18.0/dialog/oauth');
