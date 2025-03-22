@@ -26,6 +26,9 @@ function generateState() {
 
 // Twitter OAuth URL generator
 function getTwitterAuthUrl() {
+  console.log("Twitter API Key:", TWITTER_API_KEY ? "Exists" : "Missing");
+  console.log("Twitter Callback URL:", TWITTER_CALLBACK_URL ? "Exists" : "Missing");
+  
   if (!TWITTER_API_KEY || !TWITTER_CALLBACK_URL) {
     throw new Error("Twitter API credentials not configured");
   }
@@ -235,6 +238,11 @@ serve(async (req) => {
   try {
     const { platform, code, userId, action } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
+    console.log("Environment variables check:", {
+      twitterApiKey: TWITTER_API_KEY ? "Exists" : "Missing",
+      twitterApiSecret: TWITTER_API_SECRET ? "Exists" : "Missing",
+      twitterCallbackUrl: TWITTER_CALLBACK_URL ? "Exists" : "Missing"
+    });
     
     // Handle Twitter OAuth flow
     if (platform === 'twitter') {
