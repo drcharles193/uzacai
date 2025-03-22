@@ -17,70 +17,28 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 function generateOAuthSignature(
   method: string,
   url: string,
-  params: Record<string, string>,
+  oauthParams: Record<string, string>,
   consumerSecret: string,
   tokenSecret: string
 ): string {
-  const signatureBaseString = `${method}&${encodeURIComponent(
-    url
-  )}&${encodeURIComponent(
-    Object.entries(params)
-      .sort()
-      .map(([k, v]) => `${k}=${v}`)
-      .join("&")
-  )}`;
+  const parameterString = Object.entries(oauthParams)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
   
-  const signingKey = `${encodeURIComponent(
-    consumerSecret
-  )}&${encodeURIComponent(tokenSecret)}`;
+  const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(parameterString)}`;
   
-  const hmacSha1 = createHmac("sha1", signingKey);
-  const signature = hmacSha1.update(signatureBaseString).digest("base64");
+  const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
   
+  const hmac = createHmac("sha1", signingKey);
+  const signature = hmac.update(signatureBaseString).digest("base64");
+  
+  console.log("OAuth Parameter String:", parameterString);
   console.log("OAuth Signature Base String:", signatureBaseString);
-  console.log("OAuth Signing Key (partially hidden):", signingKey.substring(0, 10) + "...");
+  console.log("OAuth Signing Key (partially hidden):", signingKey.substring(0, 5) + "...");
   console.log("OAuth Signature:", signature);
   
   return signature;
-}
-
-function generateOAuthHeader(
-  method: string,
-  url: string,
-  apiKey: string,
-  apiSecret: string,
-  accessToken: string,
-  accessTokenSecret: string
-): string {
-  const oauthParams: Record<string, string> = {
-    oauth_consumer_key: apiKey,
-    oauth_nonce: Math.random().toString(36).substring(2),
-    oauth_signature_method: "HMAC-SHA1",
-    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-    oauth_token: accessToken,
-    oauth_version: "1.0",
-  };
-
-  const signature = generateOAuthSignature(
-    method,
-    url,
-    oauthParams,
-    apiSecret,
-    accessTokenSecret
-  );
-
-  const signedOAuthParams = {
-    ...oauthParams,
-    oauth_signature: signature,
-  };
-
-  return (
-    "OAuth " +
-    Object.entries(signedOAuthParams)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([k, v]) => `${encodeURIComponent(k)}="${encodeURIComponent(v)}"`)
-      .join(", ")
-  );
 }
 
 async function publishToTwitter(userId: string, content: string): Promise<any> {
@@ -88,17 +46,6 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     console.log(`Publishing to Twitter for user ${userId}`);
     
     // Get the Twitter API credentials
-    const { data: twitterAPISecret, error: secretError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', 'TWITTER_API_SECRET')
-      .single();
-    
-    if (secretError) {
-      console.error(`Error fetching Twitter API secret: ${secretError.message}`);
-      throw new Error(`Error fetching Twitter API secret: ${secretError.message}`);
-    }
-    
     const { data: twitterAPIKey, error: keyError } = await supabase
       .from('secrets')
       .select('value')
@@ -107,20 +54,31 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
     
     if (keyError) {
       console.error(`Error fetching Twitter API key: ${keyError.message}`);
-      throw new Error(`Error fetching Twitter API key: ${keyError.message}`);
+      throw new Error(`Failed to get Twitter API key: ${keyError.message}`);
+    }
+    
+    const { data: twitterAPISecret, error: secretError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', 'TWITTER_API_SECRET')
+      .single();
+    
+    if (secretError) {
+      console.error(`Error fetching Twitter API secret: ${secretError.message}`);
+      throw new Error(`Failed to get Twitter API secret: ${secretError.message}`);
     }
     
     // Get the Twitter account credentials for this user
-    const { data: account, error } = await supabase
+    const { data: account, error: accountError } = await supabase
       .from('social_accounts')
       .select('*')
       .eq('user_id', userId)
       .eq('platform', 'twitter')
       .single();
     
-    if (error) {
-      console.error(`Error fetching Twitter account: ${error.message}`);
-      throw new Error(`Error fetching Twitter account: ${error.message}`);
+    if (accountError) {
+      console.error(`Error fetching Twitter account: ${accountError.message}`);
+      throw new Error(`Failed to get Twitter account: ${accountError.message}`);
     }
     
     if (!account) {
@@ -135,27 +93,49 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error('Twitter account is missing required credentials. Please reconnect your account.');
     }
     
-    // Prepare to tweet using OAuth 1.0a
+    // Twitter API v2 endpoint for creating tweets
     const tweetUrl = 'https://api.twitter.com/2/tweets';
     const method = 'POST';
     
-    const oauthHeader = generateOAuthHeader(
+    // Create OAuth timestamp and nonce
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+    
+    // Create OAuth parameters
+    const oauthParams: Record<string, string> = {
+      oauth_consumer_key: twitterAPIKey.value,
+      oauth_nonce: nonce,
+      oauth_signature_method: 'HMAC-SHA1',
+      oauth_timestamp: timestamp,
+      oauth_token: account.access_token,
+      oauth_version: '1.0'
+    };
+    
+    // Generate the OAuth signature
+    const signature = generateOAuthSignature(
       method,
       tweetUrl,
-      twitterAPIKey.value,
+      oauthParams,
       twitterAPISecret.value,
-      account.access_token,
       account.access_token_secret
     );
     
-    console.log("OAuth header generated for Twitter API request");
+    // Add signature to OAuth parameters
+    oauthParams.oauth_signature = signature;
+    
+    // Create the Authorization header
+    const authHeader = 'OAuth ' + Object.entries(oauthParams)
+      .map(([key, value]) => `${encodeURIComponent(key)}="${encodeURIComponent(value)}"`)
+      .join(', ');
+    
+    console.log("Full Authorization header:", authHeader);
     
     // Make the API request
     const response = await fetch(tweetUrl, {
       method: method,
       headers: {
-        'Authorization': oauthHeader,
-        'Content-Type': 'application/json'
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ text: content })
     });
@@ -168,7 +148,13 @@ async function publishToTwitter(userId: string, content: string): Promise<any> {
       throw new Error(`Twitter API error: ${response.status} - ${responseText}`);
     }
     
-    const responseData = JSON.parse(responseText);
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Error parsing Twitter API response:", e);
+      throw new Error(`Error parsing Twitter API response: ${responseText}`);
+    }
     
     // Update the last_used_at timestamp for this account
     await supabase
