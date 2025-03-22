@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Lock, Facebook } from 'lucide-react';
-import DeleteAccountSection from './DeleteAccountSection';
+import DeleteAccountSection from '@/components/settings/DeleteAccountSection';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
