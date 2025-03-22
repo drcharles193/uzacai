@@ -33,12 +33,15 @@ const SecuritySettings = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/settings?tab=security',
+          redirectTo: `${window.location.origin}/settings?tab=security`,
           skipBrowserRedirect: false,
         }
       });
       
       if (error) throw error;
+      
+      // No need to set isConnecting to false here as we're redirecting the user
+      // It will be reset when the component remounts after redirection
       
     } catch (error: any) {
       console.error("Error connecting Google account:", error);

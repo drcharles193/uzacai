@@ -7,11 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -20,96 +15,102 @@ serve(async (req) => {
 
   try {
     const { userId, provider } = await req.json();
-    console.log(`Processing disconnect request for user: ${userId}, provider: ${provider}`);
     
     if (!userId || !provider) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters: userId and provider" }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // 1. Get the user's current identities
-    const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId);
-    
-    if (userError || !user) {
-      console.error("Error fetching user:", userError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch user" }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // 2. Check if the user has the specified provider connected
-    if (!user.identities || user.identities.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No connected identities found for user" }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    const hasProvider = user.identities.some(identity => identity.provider === provider);
-    if (!hasProvider) {
-      return new Response(
-        JSON.stringify({ error: `User does not have a connected ${provider} account` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // 3. Check if the user has other identities (to prevent account lockout)
-    const otherIdentities = user.identities.filter(identity => identity.provider !== provider);
-    const hasEmailIdentity = user.identities.some(identity => identity.provider === 'email');
-    
-    if (otherIdentities.length === 0 && !hasEmailIdentity) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Cannot disconnect the only identity. Add another authentication method first." 
+        JSON.stringify({
+          error: "Missing required parameters: userId and provider are required"
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // 4. Delete the related social account record
-    const { error: deleteError } = await supabase
+    // Initialize Supabase client with service key
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    // Check if this is the only identity (to prevent account lockout)
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(
+      userId
+    );
+
+    if (userError || !userData.user) {
+      return new Response(
+        JSON.stringify({ error: userError?.message || "User not found" }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    const identities = userData.user.identities || [];
+    
+    // Check if we're trying to remove the only identity
+    if (identities.length <= 1) {
+      return new Response(
+        JSON.stringify({
+          error: "Cannot disconnect the only login method. Please add another login method first."
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Find the identity we want to disconnect
+    const identityToRemove = identities.find(identity => identity.provider === provider);
+    
+    if (!identityToRemove) {
+      return new Response(
+        JSON.stringify({ error: `No ${provider} identity found for this user` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    // First, remove the social account from the social_accounts table if it exists
+    const { error: deleteError } = await supabaseAdmin
       .from('social_accounts')
       .delete()
       .eq('user_id', userId)
       .eq('platform', provider);
 
     if (deleteError) {
-      console.error("Error deleting social account record:", deleteError);
-      // Continue anyway as this is just a linked record
+      console.warn("Error deleting social account record:", deleteError);
+      // Continue anyway, as this might not exist
     }
 
-    // 5. Unlink the identity from the user's account
-    const { error: unlinkError } = await supabase.auth.admin.unlinkIdentity({
-      id: userId,
-      identityId: user.identities.find(identity => identity.provider === provider)?.id || '',
-      provider,
-    });
+    // Unlink the identity
+    const { error: unlinkError } = await supabaseAdmin.auth.admin.unlinkIdentity(
+      userId,
+      {
+        provider: provider,
+        id: identityToRemove.id
+      }
+    );
 
     if (unlinkError) {
-      console.error("Error unlinking identity:", unlinkError);
       return new Response(
-        JSON.stringify({ error: `Failed to disconnect ${provider} account: ${unlinkError.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: unlinkError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    console.log(`Successfully disconnected ${provider} account for user: ${userId}`);
-    
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `${provider.charAt(0).toUpperCase() + provider.slice(1)} account disconnected successfully` 
+      JSON.stringify({
+        success: true,
+        message: `Successfully disconnected ${provider} account`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
+
   } catch (error) {
-    console.error("Error processing disconnect request:", error);
+    console.error("Error in disconnect-social function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Internal server error" }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
