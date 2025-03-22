@@ -32,9 +32,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ date, setDate, scheduledPos
   // Create custom day content with post indicator
   const renderDay = (day: Date) => {
     const count = getPostsCount(day);
-    if (count === 0) return undefined;
     
-    // Return a custom component to be rendered in the day cell
+    // Always return a React element, using day.getDate() as text content if no posts
+    if (count === 0) {
+      return <div className="w-full h-full flex items-center justify-center">{day.getDate()}</div>;
+    }
+    
+    // Return a custom component for days with posts
     return (
       <div className="relative w-full h-full flex items-center justify-center">
         {day.getDate()}
@@ -69,7 +73,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ date, setDate, scheduledPos
               }
             }}
             components={{
-              DayContent: ({ date }) => renderDay(date) || date.getDate()
+              DayContent: ({ date }) => renderDay(date)
             }}
           />
         </CardContent>
