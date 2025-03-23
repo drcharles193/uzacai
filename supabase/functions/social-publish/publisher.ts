@@ -1,6 +1,6 @@
 
 import { PlatformResponse } from './types.ts';
-import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType } from './utils.ts';
+import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType, formatLinkedInContent } from './utils.ts';
 import { createTwitterAuthHeader, getTwitterCredentials } from './twitter.ts';
 import { processAndUploadMedia, uploadMediaToTwitter } from './media.ts';
 
@@ -142,6 +142,102 @@ export async function publishToTwitter(
 }
 
 /**
+ * Publish content and media to LinkedIn
+ */
+export async function publishToLinkedIn(
+  supabase: any,
+  userId: string, 
+  content: string, 
+  mediaUrls: string[] = [],
+  base64Media: string[] = [],
+  contentTypes: string[] = []
+): Promise<any> {
+  try {
+    console.log(`Publishing to LinkedIn for user ${userId} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media items`);
+    
+    // Get the LinkedIn credentials from the database
+    const { data, error } = await supabase
+      .from('social_accounts')
+      .select('access_token, platform_account_id')
+      .eq('user_id', userId)
+      .eq('platform', 'linkedin')
+      .single();
+    
+    if (error || !data || !data.access_token) {
+      throw new Error("LinkedIn credentials not found. Please reconnect your LinkedIn account.");
+    }
+    
+    const accessToken = data.access_token;
+    const userId_URN = data.platform_account_id;
+    
+    // Format the content for LinkedIn
+    const formattedContent = formatLinkedInContent(content);
+    
+    // Use a mock response for now, but in a production environment 
+    // you would make the actual API call to LinkedIn
+    // In the future, this function can be expanded to actually post to LinkedIn
+    
+    // Update last_used_at timestamp
+    await updateLastUsedTimestamp(supabase, userId, 'linkedin');
+    
+    return mockPublishToOtherPlatform('linkedin', content, mediaUrls, contentTypes);
+    
+    /* Commented out actual LinkedIn publishing code for future implementation
+    // This is where you would actually post to LinkedIn
+    // LinkedIn API endpoint for sharing
+    const shareEndpoint = 'https://api.linkedin.com/v2/ugcPosts';
+    
+    // Prepare request body for text-only post
+    const requestBody = {
+      author: `urn:li:person:${userId_URN}`,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: formattedContent
+          },
+          shareMediaCategory: "NONE"
+        }
+      },
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+      }
+    };
+    
+    // If there are media items, we need to handle them differently
+    // LinkedIn requires uploading media first and then referencing it
+    
+    // Make API request to LinkedIn
+    const response = await fetch(shareEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('LinkedIn API error:', errorText);
+      throw new Error(`LinkedIn API error: ${response.status} - ${errorText}`);
+    }
+    
+    const responseData = await response.json();
+    
+    // Update last_used_at timestamp
+    await updateLastUsedTimestamp(supabase, userId, 'linkedin');
+    
+    return responseData;
+    */
+  } catch (error: any) {
+    console.error('Error publishing to LinkedIn:', error);
+    throw error;
+  }
+}
+
+/**
  * Process publishing request for a specific platform
  */
 export async function publishToPlatform(
@@ -161,6 +257,8 @@ export async function publishToPlatform(
     
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
+    } else if (platform === 'linkedin') {
+      result = await publishToLinkedIn(supabase, userId, content, mediaUrls, base64Media, contentTypes);
     } else {
       // For other platforms (placeholder for future implementation)
       // We pass media information to the mock function

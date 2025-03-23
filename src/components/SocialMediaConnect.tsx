@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -53,6 +52,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [connectionSuccess, setConnectionSuccess] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
+  const [linkedinWindow, setLinkedinWindow] = useState<Window | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
@@ -166,6 +166,13 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   ]);
 
   useEffect(() => {
+    if (supabase) {
+      localStorage.setItem('supabaseUrl', supabase.supabaseUrl);
+      localStorage.setItem('supabaseKey', supabase.supabaseKey);
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchConnectedAccounts = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -207,12 +214,50 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       }
     };
 
+    const handleLinkedInCallback = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'linkedin-oauth-callback') {
+        console.log('Received LinkedIn callback:', event.data);
+        
+        if (event.data.success) {
+          setPlatforms(platforms.map(platform => {
+            if (platform.id === 'linkedin') {
+              return { 
+                ...platform, 
+                connected: true,
+                accountName: event.data.accountName || 'LinkedIn Account'
+              };
+            }
+            return platform;
+          }));
+          
+          setConnectionSuccess('linkedin');
+          setIsConnecting(null);
+          
+          toast({
+            title: "LinkedIn Connected",
+            description: `Your LinkedIn account has been connected successfully.`
+          });
+          
+          setTimeout(() => {
+            setConnectionSuccess(null);
+          }, 3000);
+        }
+      }
+    };
+
     window.addEventListener('message', handleTwitterCallback);
+    window.addEventListener('message', handleLinkedInCallback);
     
     return () => {
       window.removeEventListener('message', handleTwitterCallback);
+      window.removeEventListener('message', handleLinkedInCallback);
+      
       if (twitterWindow && !twitterWindow.closed) {
         twitterWindow.close();
+      }
+      
+      if (linkedinWindow && !linkedinWindow.closed) {
+        linkedinWindow.close();
       }
     };
   }, []);
@@ -341,36 +386,76 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         setTwitterWindow(twitterPopup);
         
         return;
-      } 
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: JSON.stringify({
-          platform: id,
-          userId: session.user.id
-        })
-      });
-      
-      if (response.error) {
-        throw new Error(response.error.message || "Failed to connect account");
       }
-      
-      setPlatforms(platforms.map(platform => {
-        if (platform.id === id) {
-          return { 
-            ...platform, 
-            connected: true,
-            accountName: response.data.accountName || `${platform.name} Account`
-          };
+      else if (id === 'linkedin') {
+        console.log("Starting LinkedIn OAuth flow...");
+        
+        const response = await supabase.functions.invoke('social-auth', {
+          body: {
+            platform: 'linkedin',
+            action: 'auth-url',
+            userId: session.user.id
+          }
+        });
+        
+        console.log("LinkedIn auth response:", response);
+        
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to start LinkedIn connection");
         }
-        return platform;
-      }));
-      
-      setConnectionSuccess(id);
-      
-      toast({
-        title: "Account Connected",
-        description: `Your ${platforms.find(p => p.id === id)?.name} account has been connected successfully.`
-      });
+        
+        if (!response.data.authUrl) {
+          throw new Error("No LinkedIn auth URL returned");
+        }
+        
+        const width = 600, height = 700;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.innerHeight / 2 - height / 2;
+        
+        const linkedinPopup = window.open(
+          response.data.authUrl,
+          'linkedin-oauth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        if (!linkedinPopup) {
+          throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
+        }
+        
+        setLinkedinWindow(linkedinPopup);
+        
+        return;
+      }
+      else {
+        const response = await supabase.functions.invoke('social-auth', {
+          body: JSON.stringify({
+            platform: id,
+            userId: session.user.id
+          })
+        });
+        
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to connect account");
+        }
+        
+        setPlatforms(platforms.map(platform => {
+          if (platform.id === id) {
+            return { 
+              ...platform, 
+              connected: true,
+              accountName: response.data.accountName || `${platform.name} Account`
+            };
+          }
+          return platform;
+        }));
+        
+        setConnectionSuccess(id);
+        
+        toast({
+          title: "Account Connected",
+          description: `Your ${platforms.find(p => p.id === id)?.name} account has been connected successfully.`
+        });
+      }
       
     } catch (error: any) {
       console.error("Error connecting platform:", error);
@@ -381,7 +466,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         variant: "destructive"
       });
     } finally {
-      if (id !== 'twitter') {
+      if (id !== 'twitter' && id !== 'linkedin') {
         setIsConnecting(null);
         
         setTimeout(() => {
@@ -588,7 +673,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           </DialogContent>
         </Dialog>
         
-        {/* Dialog component alert dialog for disconnection confirmation */}
         <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -683,7 +767,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         </div>
       </div>
       
-      {/* Add the disconnect confirmation dialog */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
