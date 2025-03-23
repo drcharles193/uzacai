@@ -8,6 +8,23 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Get environment variables
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
+const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
+
+// LinkedIn OAuth configuration
+// IMPORTANT: This must match exactly what's registered in LinkedIn Developer Console
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/auth/linkedin/callback";
+
+console.log("Edge function environment:");
+console.log("SUPABASE_URL:", SUPABASE_URL ? "set" : "not set");
+console.log("SUPABASE_ANON_KEY:", SUPABASE_ANON_KEY ? "set" : "not set");
+console.log("LINKEDIN_CLIENT_ID:", LINKEDIN_CLIENT_ID ? "set" : "not set");
+console.log("LINKEDIN_CLIENT_SECRET:", LINKEDIN_CLIENT_SECRET ? "set" : "not set");
+console.log("Using fixed LINKEDIN_REDIRECT_URI:", LINKEDIN_REDIRECT_URI);
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -15,15 +32,11 @@ serve(async (req) => {
   }
 
   try {
-    // Get environment variables
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // Parse request body
-    const { platform, action, code, userId, credentials } = await req.json();
+    const { platform, action, code, userId } = await req.json();
     
     console.log(`Processing ${action} request for ${platform} platform`);
     
@@ -35,36 +48,18 @@ serve(async (req) => {
       );
     }
     
-    // Get LinkedIn API credentials from Supabase secrets
-    let LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
-    let LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
-    let LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://uzacai.com/';
-    
-    // If environment variables aren't set, use credentials from request (fallback)
-    if ((!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) && credentials) {
-      console.log("Using LinkedIn credentials from request as fallback");
-      LINKEDIN_CLIENT_ID = credentials.clientId;
-      LINKEDIN_CLIENT_SECRET = credentials.clientSecret;
-      LINKEDIN_REDIRECT_URI = credentials.redirectUrl;
-    }
-    
-    console.log("LinkedIn OAuth configuration:");
-    console.log("LINKEDIN_CLIENT_ID:", LINKEDIN_CLIENT_ID ? "set" : "not set");
-    console.log("LINKEDIN_CLIENT_SECRET:", LINKEDIN_CLIENT_SECRET ? "set" : "not set");
-    console.log("Using LINKEDIN_REDIRECT_URI:", LINKEDIN_REDIRECT_URI);
-    
     // Check if we have the necessary API credentials
     if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
       console.error("LinkedIn API credentials are missing");
       return new Response(
-        JSON.stringify({ error: "LinkedIn API credentials are missing. Please set them in Supabase secrets." }),
+        JSON.stringify({ error: "LinkedIn API credentials are missing" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     
     // Handle different actions
     if (action === 'auth-url') {
-      // Using ONLY authorized scopes
+      // Using ONLY authorized scopes from the image
       const scopes = ['openid', 'profile', 'w_member_social', 'email'];
       
       // Create LinkedIn authorization URL
@@ -76,7 +71,6 @@ serve(async (req) => {
         `&scope=${encodeURIComponent(scopes.join(' '))}`;
       
       console.log(`Generated LinkedIn auth URL with scopes: ${scopes.join(', ')}`);
-      console.log(`Using redirect URI: ${LINKEDIN_REDIRECT_URI}`);
       
       return new Response(
         JSON.stringify({ success: true, authUrl }),

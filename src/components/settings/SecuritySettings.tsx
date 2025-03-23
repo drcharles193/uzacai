@@ -1,21 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import LinkedInConnect from '@/components/linkedin/LinkedInConnect';
 
 const SecuritySettings = () => {
   const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [linkedInAccounts, setLinkedInAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     fetchConnectedIdentities();
-    fetchLinkedInAccounts();
   }, []);
 
   const fetchConnectedIdentities = async () => {
@@ -27,24 +23,6 @@ const SecuritySettings = () => {
       }
     } catch (error) {
       console.error("Error fetching connected identities:", error);
-    }
-  };
-
-  const fetchLinkedInAccounts = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('social_accounts')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('platform', 'linkedin');
-        
-        if (error) throw error;
-        setLinkedInAccounts(data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching LinkedIn accounts:", error);
     }
   };
 
@@ -147,48 +125,8 @@ const SecuritySettings = () => {
     }
   };
 
-  const disconnectLinkedInAccount = async () => {
-    try {
-      setIsDisconnecting(true);
-      
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("No user found. Please sign in again.");
-      }
-      
-      console.log(`Attempting to disconnect LinkedIn account for user ${user.id}`);
-      
-      // Delete the social account record
-      const { error } = await supabase
-        .from('social_accounts')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('platform', 'linkedin');
-      
-      if (error) throw error;
-      
-      toast.success("LinkedIn account disconnected successfully");
-      
-      // Refresh the LinkedIn accounts list
-      await fetchLinkedInAccounts();
-      
-    } catch (error: any) {
-      console.error("Error disconnecting LinkedIn account:", error);
-      toast.error(`Failed to disconnect LinkedIn account: ${error.message}`);
-    } finally {
-      setIsDisconnecting(false);
-    }
-  };
-
-  const handleLinkedInConnectSuccess = (accountName: string) => {
-    toast.success(`LinkedIn account connected: ${accountName}`);
-    fetchLinkedInAccounts();
-  };
-
   const isGoogleConnected = connectedAccounts.includes('google');
   const isTwitterConnected = connectedAccounts.includes('twitter');
-  const isLinkedInConnected = linkedInAccounts.length > 0;
 
   return (
     <div className="space-y-8">
@@ -315,50 +253,6 @@ const SecuritySettings = () => {
                 >
                   {isConnecting ? "Connecting..." : "Connect"}
                 </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="border rounded-md p-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    viewBox="0 0 24 24" 
-                    width="18" 
-                    height="18" 
-                    className="text-primary"
-                  >
-                    <path 
-                      fill="currentColor" 
-                      d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-medium">LinkedIn Account</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {isLinkedInConnected 
-                      ? `Your LinkedIn account (${linkedInAccounts[0]?.account_name || 'Unknown'}) is connected` 
-                      : "Connect your LinkedIn account for social posting"}
-                  </p>
-                </div>
-              </div>
-              {isLinkedInConnected ? (
-                <Button 
-                  variant="outline" 
-                  className="text-destructive border-destructive hover:bg-destructive/10"
-                  onClick={disconnectLinkedInAccount}
-                  disabled={isDisconnecting}
-                >
-                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-                </Button>
-              ) : (
-                <LinkedInConnect 
-                  buttonVariant="outline"
-                  onSuccess={handleLinkedInConnectSuccess}
-                />
               )}
             </div>
           </div>

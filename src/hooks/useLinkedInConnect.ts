@@ -1,113 +1,216 @@
+import { useState, useEffect } from 'react';
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+// Configure your specific redirect URI here
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/auth/linkedin/callback";
 
-interface UseLinkedInConnectProps {
-  onSuccess?: (accountName: string) => void;
-  onError?: (error: string) => void;
-  credentials?: {
-    clientId: string;
-    clientSecret: string;
-    redirectUrl: string;
-  } | null;
-}
+export type LinkedInConnectionState = {
+  isConnecting: boolean;
+  isConnected: boolean;
+  accountName: string | null;
+};
 
-export const useLinkedInConnect = ({
-  onSuccess,
-  onError,
-  credentials
-}: UseLinkedInConnectProps = {}) => {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [authUrl, setAuthUrl] = useState('');
+export const useLinkedInConnect = () => {
+  const { toast } = useToast();
+  const [state, setState] = useState<LinkedInConnectionState>({
+    isConnecting: false,
+    isConnected: false,
+    accountName: null
+  });
+  
+  useEffect(() => {
+    // Store important config values for the callback page
+    localStorage.setItem('supabaseUrl', import.meta.env.VITE_SUPABASE_URL || "https://gvmiaosmypgxrkjwvtbx.supabase.co");
+    localStorage.setItem('supabaseKey', import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4");
+    
+    // Check if the user has already connected LinkedIn
+    checkLinkedInConnection();
+    
+    // Add listener for the callback message
+    const handleLinkedInCallback = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'linkedin-oauth-callback') {
+        console.log('Received LinkedIn callback:', event.data);
+        
+        if (event.data.success) {
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            accountName: event.data.accountName || 'LinkedIn Account',
+            isConnecting: false
+          }));
+          
+          toast({
+            title: "LinkedIn Connected",
+            description: `Your LinkedIn account has been connected successfully.`
+          });
+          
+          // Clear temporary userId from localStorage
+          localStorage.removeItem('linkedin_auth_user_id');
+        } else if (event.data.error) {
+          // Handle error from callback
+          setState(prev => ({
+            ...prev,
+            isConnecting: false
+          }));
+          
+          toast({
+            title: "LinkedIn Connection Failed",
+            description: event.data.error || "Failed to connect LinkedIn account",
+            variant: "destructive"
+          });
+          
+          // Clear temporary userId from localStorage
+          localStorage.removeItem('linkedin_auth_user_id');
+        }
+      }
+    };
+    
+    window.addEventListener('message', handleLinkedInCallback);
+    return () => window.removeEventListener('message', handleLinkedInCallback);
+  }, [toast]);
 
-  // Function to handle code parameter from URL
-  const handleAuthCallback = useCallback(async (code: string) => {
-    if (!code) {
-      console.error('No authorization code found in URL');
-      onError?.('No authorization code found');
-      return;
-    }
-
+  const checkLinkedInConnection = async () => {
     try {
-      setIsConnecting(true);
-
-      // Get current user's ID
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) {
-        throw new Error('You must be logged in to connect LinkedIn');
-      }
-
-      // Call the Supabase Edge Function to handle the callback
-      const { data, error } = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'linkedin',
-          action: 'callback',
-          code,
-          userId: user.id
+      if (session) {
+        const { data, error } = await supabase
+          .from('social_accounts')
+          .select('account_name')
+          .eq('user_id', session.user.id)
+          .eq('platform', 'linkedin')
+          .single();
+        
+        if (data) {
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            accountName: data.account_name
+          }));
         }
-      });
-
-      if (error) {
-        throw new Error(error.message);
       }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      console.log('LinkedIn connection successful:', data);
-      onSuccess?.(data.accountName || 'LinkedIn Account');
-    } catch (error: any) {
-      console.error('Error connecting LinkedIn:', error);
-      onError?.(error.message || 'Failed to connect LinkedIn');
-    } finally {
-      setIsConnecting(false);
+    } catch (error) {
+      console.error("Error checking LinkedIn connection:", error);
     }
-  }, [onSuccess, onError]);
+  };
 
-  // Function to initiate LinkedIn OAuth flow
-  const connectLinkedIn = useCallback(async () => {
+  const connectLinkedIn = async () => {
     try {
-      setIsConnecting(true);
-
-      // Call Supabase Edge Function to get authorization URL - no credentials needed
-      const { data, error } = await supabase.functions.invoke('social-auth', {
+      setState(prev => ({ ...prev, isConnecting: true }));
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to connect your LinkedIn account.",
+          variant: "destructive"
+        });
+        setState(prev => ({ ...prev, isConnecting: false }));
+        return;
+      }
+      
+      // Store the user ID for the callback to use
+      localStorage.setItem('linkedin_auth_user_id', session.user.id);
+      
+      console.log("Starting LinkedIn OAuth flow with redirect URI:", LINKEDIN_REDIRECT_URI);
+      
+      const response = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
-          action: 'auth-url'
-          // No need to pass credentials here anymore, using the secrets
+          action: 'auth-url',
+          userId: session.user.id
         }
       });
-
-      if (error) {
-        throw new Error(error.message);
+      
+      console.log("LinkedIn auth response:", response);
+      
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to start LinkedIn connection");
       }
-
-      if (data.error) {
-        throw new Error(data.error);
+      
+      if (!response.data.authUrl) {
+        throw new Error("No LinkedIn auth URL returned");
       }
-
-      console.log('LinkedIn auth response:', { data, error });
-
-      if (data.authUrl) {
-        setAuthUrl(data.authUrl);
-        // Redirect to LinkedIn authorization URL
-        window.location.href = data.authUrl;
-      } else {
-        throw new Error('No authorization URL returned');
+      
+      const width = 600, height = 700;
+      const left = window.innerWidth / 2 - width / 2;
+      const top = window.innerHeight / 2 - height / 2;
+      
+      const linkedinPopup = window.open(
+        response.data.authUrl,
+        'linkedin-oauth',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+      
+      if (!linkedinPopup) {
+        throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
       }
+      
+      // The popup will handle the rest of the flow
+      
     } catch (error: any) {
-      console.error('Error initiating LinkedIn connection:', error);
-      onError?.(error.message || 'Failed to initiate LinkedIn connection');
-      setIsConnecting(false);
+      console.error("Error connecting LinkedIn:", error);
+      toast({
+        title: "LinkedIn Connection Failed",
+        description: error.message || "Failed to connect LinkedIn account. Please try again.",
+        variant: "destructive"
+      });
+      setState(prev => ({ ...prev, isConnecting: false }));
     }
-  }, [onError]);
+  };
+
+  const disconnectLinkedIn = async () => {
+    try {
+      setState(prev => ({ ...prev, isConnecting: true }));
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to disconnect your LinkedIn account.",
+          variant: "destructive"
+        });
+        setState(prev => ({ ...prev, isConnecting: false }));
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('social_accounts')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('platform', 'linkedin');
+        
+      if (error) {
+        throw new Error(error.message || "Failed to disconnect account");
+      }
+      
+      setState(prev => ({
+        ...prev,
+        isConnected: false,
+        accountName: null
+      }));
+      
+      toast({
+        title: "LinkedIn Disconnected",
+        description: "Your LinkedIn account has been disconnected."
+      });
+      
+    } catch (error: any) {
+      console.error("Error disconnecting LinkedIn:", error);
+      toast({
+        title: "Disconnection Failed",
+        description: error.message || "Failed to disconnect account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setState(prev => ({ ...prev, isConnecting: false }));
+    }
+  };
 
   return {
+    ...state,
     connectLinkedIn,
-    isConnecting,
-    authUrl,
-    handleAuthCallback
+    disconnectLinkedIn
   };
 };
