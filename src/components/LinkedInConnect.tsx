@@ -5,8 +5,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Linkedin } from 'lucide-react';
 
-// Configure your redirect URI here - must match what you registered on LinkedIn Developer Portal
-const LINKEDIN_REDIRECT_URI = window.location.origin + "/linkedin-callback.html";
+// Configure your specific redirect URI here
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
 
 const LinkedInConnect: React.FC = () => {
   const { toast } = useToast();
