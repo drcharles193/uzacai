@@ -103,6 +103,24 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
     return null;
   }
 
+  // Create a deduplicated list of accounts with unique keys
+  const uniqueAccounts = accounts.reduce<SocialAccount[]>((acc, current) => {
+    // Create a unique identifier for each account
+    const accountId = `${current.platform}-${current.platform_account_id || current.account_name}`;
+    
+    // Check if we already have this account in our accumulator
+    const exists = acc.some(account => 
+      `${account.platform}-${account.platform_account_id || account.account_name}` === accountId
+    );
+    
+    // Only add if it doesn't exist yet
+    if (!exists) {
+      acc.push(current);
+    }
+    
+    return acc;
+  }, []);
+
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4 text-[#689675]">Publishing by Accounts</h2>
@@ -120,8 +138,8 @@ const ConnectedAccountsList: React.FC<ConnectedAccountsListProps> = ({ accounts,
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map((account) => (
-                <TableRow key={`${account.platform}-${account.account_name}`}>
+              {uniqueAccounts.map((account) => (
+                <TableRow key={`${account.platform}-${account.platform_account_id || Math.random().toString(36).substring(2)}`}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {getPlatformIcon(account.platform)}

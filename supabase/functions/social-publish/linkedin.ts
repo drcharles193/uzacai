@@ -9,7 +9,7 @@ export async function getLinkedInCredentials(supabase: any, userId: string): Pro
     // Get the LinkedIn credentials from the social_accounts table
     const { data, error } = await supabase
       .from('social_accounts')
-      .select('access_token')
+      .select('access_token, refresh_token, platform_account_id')
       .eq('user_id', userId)
       .eq('platform', 'linkedin')
       .single();
@@ -30,7 +30,9 @@ export async function getLinkedInCredentials(supabase: any, userId: string): Pro
     return {
       clientId,
       clientSecret,
-      accessToken: data.access_token
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      platformAccountId: data.platform_account_id
     };
   } catch (error) {
     console.error("Error in getLinkedInCredentials:", error);
@@ -53,14 +55,15 @@ export async function publishToLinkedIn(
     console.log(`Publishing to LinkedIn for user ${userId} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media items`);
     
     // Get credentials
-    const { accessToken } = await getLinkedInCredentials(supabase, userId);
+    const { accessToken, platformAccountId } = await getLinkedInCredentials(supabase, userId);
     
     if (!accessToken) {
       throw new Error("LinkedIn access token is missing. Please reconnect your LinkedIn account.");
     }
     
     // LinkedIn API endpoints
-    const personId = "me"; // Using 'me' to refer to the current authenticated user
+    // Use the actual platform account ID if available, or fall back to 'me'
+    const personId = platformAccountId || "me"; 
     const apiUrl = `https://api.linkedin.com/v2/ugcPosts`;
     
     // Prepare the post content

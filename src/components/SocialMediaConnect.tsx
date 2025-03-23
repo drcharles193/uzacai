@@ -98,15 +98,18 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
             platform: 'linkedin',
             userId,
             action: 'auth-url',
-            redirectUri: encodeURIComponent(window.location.origin + '/linkedin-callback.html')
+            redirectUri: window.location.origin + '/linkedin-callback.html'
           }
         });
         
         if (error) {
+          console.error("LinkedIn auth URL error:", error);
           throw error;
         }
         
         if (data && data.authUrl) {
+          console.log("LinkedIn auth URL:", data.authUrl);
+          
           // Open LinkedIn auth URL in a popup
           const width = 600;
           const height = 700;
@@ -121,10 +124,14 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           
           // Handle the callback with a window message listener
           const handleMessage = async (event: MessageEvent) => {
+            console.log("Message received:", event.data, "Origin:", event.origin, "Expected:", window.location.origin);
+            
             // Verify origin for security
             if (event.origin !== window.location.origin) return;
             
             if (event.data.type === 'LINKEDIN_AUTH_CALLBACK' && event.data.code) {
+              console.log("LinkedIn callback code received:", event.data.code);
+              
               // Close the popup
               if (popup) popup.close();
               
@@ -180,6 +187,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 
   const processLinkedInCallback = async (code: string) => {
     try {
+      console.log("Processing LinkedIn callback with code:", code);
+      
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
@@ -191,9 +200,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       });
       
       if (error) {
+        console.error("LinkedIn callback error:", error);
         throw error;
       }
       
+      console.log("LinkedIn connection successful:", data);
       toast.success(`LinkedIn account connected: ${data.accountName}`);
       
       if (onDone) {
