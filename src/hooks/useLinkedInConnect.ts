@@ -14,6 +14,9 @@ type UseLinkedInConnectOptions = {
   onError?: (error: string) => void;
 };
 
+// Define our LinkedIn redirect URI consistently
+const LINKEDIN_REDIRECT_URI = "https://www.uzacai.com/auth/linkedin/callback";
+
 export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
   const { toast } = useToast();
   const [state, setState] = useState<LinkedInConnectionState>({
@@ -142,21 +145,25 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
       console.log("Starting LinkedIn OAuth flow");
       
       // Store the Supabase URL and key in localStorage for the callback page
-      // Using environment variables instead of protected properties
+      // Using hardcoded values
       const supabaseUrl = "https://gvmiaosmypgxrkjwvtbx.supabase.co";
       const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4";
       
       localStorage.setItem('supabaseUrl', supabaseUrl);
       localStorage.setItem('supabaseKey', supabaseKey);
       
+      // Store the redirect URI in localStorage for consistency
+      localStorage.setItem('linkedinRedirectUri', LINKEDIN_REDIRECT_URI);
+      
       // Log the redirect URI being used
-      console.log("Starting LinkedIn OAuth flow with redirect URI: https://www.uzacai.com/auth/linkedin/callback");
+      console.log("Starting LinkedIn OAuth flow with redirect URI:", LINKEDIN_REDIRECT_URI);
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
           action: 'auth-url',
-          userId: session.user.id
+          userId: session.user.id,
+          redirectUri: LINKEDIN_REDIRECT_URI // Pass the redirect URI explicitly
         }
       });
       

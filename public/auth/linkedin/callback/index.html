@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -160,8 +159,8 @@
         return;
       }
       
-      // Get the redirect URI
-      const redirectUri = "https://www.uzacai.com/auth/linkedin/callback";
+      // Get the redirect URI from localStorage or use the fixed one as fallback
+      const redirectUri = localStorage.getItem('linkedinRedirectUri') || "https://www.uzacai.com/auth/linkedin/callback";
       logDebug('Using redirect URI:', redirectUri);
       
       try {

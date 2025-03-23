@@ -33,7 +33,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // Parse request body
-    const { platform, action, code, userId } = await req.json();
+    const { platform, action, code, userId, redirectUri } = await req.json();
     
     console.log(`Processing ${action} request for ${platform} platform`);
     
@@ -59,11 +59,15 @@ serve(async (req) => {
       // Using ONLY authorized scopes from the image
       const scopes = ['openid', 'profile', 'w_member_social', 'email'];
       
+      // Use the redirectUri from the request if provided, fall back to environment variable
+      const finalRedirectUri = redirectUri || LINKEDIN_REDIRECT_URI;
+      console.log("Using redirect URI:", finalRedirectUri);
+      
       // Create LinkedIn authorization URL
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?` +
         `response_type=code` +
         `&client_id=${LINKEDIN_CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}` +
+        `&redirect_uri=${encodeURIComponent(finalRedirectUri)}` +
         `&state=${Math.random().toString(36).substring(2)}` +
         `&scope=${encodeURIComponent(scopes.join(' '))}`;
       
@@ -92,8 +96,9 @@ serve(async (req) => {
       }
       
       try {
-        // Exchange code for access token
-        console.log("Exchanging code for access token using redirect URI:", LINKEDIN_REDIRECT_URI);
+        // Use the redirectUri from the request if provided, fall back to environment variable
+        const finalRedirectUri = redirectUri || LINKEDIN_REDIRECT_URI;
+        console.log("Exchanging code for access token using redirect URI:", finalRedirectUri);
         
         const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
           method: 'POST',
@@ -105,7 +110,7 @@ serve(async (req) => {
             code: code,
             client_id: LINKEDIN_CLIENT_ID,
             client_secret: LINKEDIN_CLIENT_SECRET,
-            redirect_uri: LINKEDIN_REDIRECT_URI
+            redirect_uri: finalRedirectUri
           })
         });
         
