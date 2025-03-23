@@ -42,7 +42,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       if (event.data.type === 'LINKEDIN_AUTH_CALLBACK' && event.data.code) {
         console.log("LinkedIn callback code received:", event.data.code.substring(0, 10) + "...");
-        await processLinkedInCallback(event.data.code);
+        await processLinkedInCallback(event.data.code, event.data.redirectUri);
       }
     };
     
@@ -103,12 +103,16 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
       } else if (platform === 'linkedin') {
         console.log("Starting LinkedIn connection process...");
+        
+        const exactRedirectUri = window.location.origin + '/linkedin-callback.html';
+        console.log("Using LinkedIn redirect URI:", exactRedirectUri);
+        
         const { data, error } = await supabase.functions.invoke('social-auth', {
           body: {
             platform: 'linkedin',
             userId,
             action: 'auth-url',
-            redirectUri: window.location.origin + '/linkedin-callback.html'
+            redirectUri: exactRedirectUri
           }
         });
         
@@ -176,9 +180,12 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  const processLinkedInCallback = async (code: string) => {
+  const processLinkedInCallback = async (code: string, redirectUri?: string) => {
     try {
       console.log("Processing LinkedIn callback with code:", code.substring(0, 10) + "...");
+      
+      const exactRedirectUri = redirectUri || window.location.origin + '/linkedin-callback.html';
+      console.log("Using exact redirect URI for token exchange:", exactRedirectUri);
       
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
@@ -186,7 +193,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           userId,
           code,
           action: 'callback',
-          redirectUri: window.location.origin + '/linkedin-callback.html'
+          redirectUri: exactRedirectUri
         }
       });
       

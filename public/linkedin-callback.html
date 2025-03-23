@@ -85,15 +85,20 @@
       
       console.log("LinkedIn callback received:", { code, state, error, errorDescription });
       
-      // Show debug info (enable for testing, then comment out)
-      // debugElement.style.display = 'block';
-      // debugElement.innerHTML = `Code: ${code?.substring(0, 10)}...<br>State: ${state}<br>Error: ${error || 'None'}<br>Origin: ${window.location.origin}`;
+      // Enable debug info for troubleshooting
+      debugElement.style.display = 'block';
+      debugElement.innerHTML = `Code: ${code ? code.substring(0, 10) + '...' : 'None'}<br>
+                                State: ${state || 'None'}<br>
+                                Error: ${error || 'None'}<br>
+                                Error Description: ${errorDescription || 'None'}<br>
+                                Origin: ${window.location.origin}<br>
+                                Full URL: ${window.location.href}`;
       
       if (error) {
         spinner.style.display = 'none';
         statusElement.innerHTML = `<p class="error">Error: ${error}</p>
           <p>${errorDescription || 'No error description provided'}</p>
-          <p>You can close this window and try again.</p>`;
+          <p>Please close this window and try again.</p>`;
         return;
       }
       
@@ -105,7 +110,8 @@
             window.opener.postMessage({
               type: 'LINKEDIN_AUTH_CALLBACK',
               code: code,
-              state: state
+              state: state,
+              redirectUri: window.location.href.split('?')[0] // Include the exact redirect URI used
             }, window.location.origin);
             
             statusElement.innerHTML = '<p class="success">Successfully authenticated with LinkedIn!</p><p>This window will close automatically.</p>';
