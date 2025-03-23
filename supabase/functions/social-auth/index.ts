@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -9,23 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Get environment variables
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '86fqmnnhfquv0s';
-const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || 'WPL_AP1.Sr7VPeLz1sncqQfY.S3l2yA==';
-
-// LinkedIn OAuth configuration
-// IMPORTANT: This must match exactly what's registered in LinkedIn Developer Console
-const LINKEDIN_REDIRECT_URI = "https://uzacai.com/";
-
-console.log("Edge function environment:");
-console.log("SUPABASE_URL:", SUPABASE_URL ? "set" : "not set");
-console.log("SUPABASE_ANON_KEY:", SUPABASE_ANON_KEY ? "set" : "not set");
-console.log("LINKEDIN_CLIENT_ID:", LINKEDIN_CLIENT_ID ? "set" : "not set");
-console.log("LINKEDIN_CLIENT_SECRET:", LINKEDIN_CLIENT_SECRET ? "set" : "not set");
-console.log("Using LINKEDIN_REDIRECT_URI:", LINKEDIN_REDIRECT_URI);
-
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -33,11 +15,15 @@ serve(async (req) => {
   }
 
   try {
+    // Get environment variables
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // Parse request body
-    const { platform, action, code, userId } = await req.json();
+    const { platform, action, code, userId, credentials } = await req.json();
     
     console.log(`Processing ${action} request for ${platform} platform`);
     
@@ -48,6 +34,30 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
+    
+    // Get LinkedIn API credentials
+    let LINKEDIN_CLIENT_ID;
+    let LINKEDIN_CLIENT_SECRET;
+    let LINKEDIN_REDIRECT_URI;
+    
+    // Use credentials from request if provided
+    if (credentials) {
+      console.log("Using LinkedIn credentials from request");
+      LINKEDIN_CLIENT_ID = credentials.clientId;
+      LINKEDIN_CLIENT_SECRET = credentials.clientSecret;
+      LINKEDIN_REDIRECT_URI = credentials.redirectUrl;
+    } else {
+      // Otherwise use environment variables
+      console.log("Using LinkedIn credentials from environment");
+      LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
+      LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
+      LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://uzacai.com/';
+    }
+    
+    console.log("LinkedIn OAuth configuration:");
+    console.log("LINKEDIN_CLIENT_ID:", LINKEDIN_CLIENT_ID ? "set" : "not set");
+    console.log("LINKEDIN_CLIENT_SECRET:", LINKEDIN_CLIENT_SECRET ? "set" : "not set");
+    console.log("Using LINKEDIN_REDIRECT_URI:", LINKEDIN_REDIRECT_URI);
     
     // Check if we have the necessary API credentials
     if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
@@ -60,7 +70,7 @@ serve(async (req) => {
     
     // Handle different actions
     if (action === 'auth-url') {
-      // Using ONLY authorized scopes from the image
+      // Using ONLY authorized scopes
       const scopes = ['openid', 'profile', 'w_member_social', 'email'];
       
       // Create LinkedIn authorization URL
@@ -72,6 +82,7 @@ serve(async (req) => {
         `&scope=${encodeURIComponent(scopes.join(' '))}`;
       
       console.log(`Generated LinkedIn auth URL with scopes: ${scopes.join(', ')}`);
+      console.log(`Using redirect URI: ${LINKEDIN_REDIRECT_URI}`);
       
       return new Response(
         JSON.stringify({ success: true, authUrl }),
