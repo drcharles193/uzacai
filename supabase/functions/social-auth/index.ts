@@ -35,23 +35,17 @@ serve(async (req) => {
       );
     }
     
-    // Get LinkedIn API credentials
-    let LINKEDIN_CLIENT_ID;
-    let LINKEDIN_CLIENT_SECRET;
-    let LINKEDIN_REDIRECT_URI;
+    // Get LinkedIn API credentials from Supabase secrets
+    let LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
+    let LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
+    let LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://uzacai.com/';
     
-    // Use credentials from request if provided
-    if (credentials) {
-      console.log("Using LinkedIn credentials from request");
+    // If environment variables aren't set, use credentials from request (fallback)
+    if ((!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) && credentials) {
+      console.log("Using LinkedIn credentials from request as fallback");
       LINKEDIN_CLIENT_ID = credentials.clientId;
       LINKEDIN_CLIENT_SECRET = credentials.clientSecret;
       LINKEDIN_REDIRECT_URI = credentials.redirectUrl;
-    } else {
-      // Otherwise use environment variables
-      console.log("Using LinkedIn credentials from environment");
-      LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
-      LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
-      LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://uzacai.com/';
     }
     
     console.log("LinkedIn OAuth configuration:");
@@ -63,7 +57,7 @@ serve(async (req) => {
     if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
       console.error("LinkedIn API credentials are missing");
       return new Response(
-        JSON.stringify({ error: "LinkedIn API credentials are missing" }),
+        JSON.stringify({ error: "LinkedIn API credentials are missing. Please set them in Supabase secrets." }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }

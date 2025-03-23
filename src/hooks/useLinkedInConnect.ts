@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseLinkedInConnectProps {
@@ -66,42 +66,17 @@ export const useLinkedInConnect = ({
     }
   }, [onSuccess, onError]);
 
-  // Check for authorization code in URL when component mounts
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
-    
-    if (error) {
-      console.error('LinkedIn OAuth error:', error, errorDescription);
-      onError?.(errorDescription || 'LinkedIn authentication failed');
-      // Clean up URL
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-      return;
-    }
-
-    if (code && state) {
-      handleAuthCallback(code);
-      // Clean up URL
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  }, [handleAuthCallback, onError]);
-
   // Function to initiate LinkedIn OAuth flow
   const connectLinkedIn = useCallback(async () => {
     try {
       setIsConnecting(true);
 
-      // Call Supabase Edge Function to get authorization URL
+      // Call Supabase Edge Function to get authorization URL - no credentials needed
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
-          action: 'auth-url',
-          credentials: credentials || undefined
+          action: 'auth-url'
+          // No need to pass credentials here anymore, using the secrets
         }
       });
 
@@ -127,11 +102,12 @@ export const useLinkedInConnect = ({
       onError?.(error.message || 'Failed to initiate LinkedIn connection');
       setIsConnecting(false);
     }
-  }, [onError, credentials]);
+  }, [onError]);
 
   return {
     connectLinkedIn,
     isConnecting,
-    authUrl
+    authUrl,
+    handleAuthCallback
   };
 };
