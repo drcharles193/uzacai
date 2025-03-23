@@ -1,7 +1,10 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+// Configure your specific redirect URI here
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/auth/linkedin/callback";
 
 export type LinkedInConnectionState = {
   isConnecting: boolean;
@@ -9,12 +12,7 @@ export type LinkedInConnectionState = {
   accountName: string | null;
 };
 
-type UseLinkedInConnectOptions = {
-  onSuccess?: (accountName: string) => void;
-  onError?: (error: string) => void;
-};
-
-export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
+export const useLinkedInConnect = () => {
   const { toast } = useToast();
   const [state, setState] = useState<LinkedInConnectionState>({
     isConnecting: false,
@@ -22,50 +20,11 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
     accountName: null
   });
   
-  // Checks if the user has a LinkedIn account connected
-  const checkLinkedInConnection = useCallback(async () => {
-    try {
-      console.log("Checking LinkedIn connection status...");
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log("No session found when checking LinkedIn connection");
-        return false;
-      }
-      
-      const { data, error } = await supabase
-        .from('social_accounts')
-        .select('account_name')
-        .eq('user_id', session.user.id)
-        .eq('platform', 'linkedin')
-        .single();
-      
-      if (error) {
-        if (error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-          console.error("Error checking LinkedIn connection:", error);
-        }
-        return false;
-      }
-      
-      if (data) {
-        console.log("LinkedIn account found:", data.account_name);
-        setState(prev => ({
-          ...prev,
-          isConnected: true,
-          accountName: data.account_name
-        }));
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Error checking LinkedIn connection:", error);
-      return false;
-    }
-  }, []);
-
   useEffect(() => {
+    // Store important config values for the callback page
+    localStorage.setItem('supabaseUrl', import.meta.env.VITE_SUPABASE_URL || "https://gvmiaosmypgxrkjwvtbx.supabase.co");
+    localStorage.setItem('supabaseKey', import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4");
+    
     // Check if the user has already connected LinkedIn
     checkLinkedInConnection();
     
@@ -86,10 +45,6 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
             title: "LinkedIn Connected",
             description: `Your LinkedIn account has been connected successfully.`
           });
-
-          if (options?.onSuccess) {
-            options.onSuccess(event.data.accountName || 'LinkedIn Account');
-          }
           
           // Clear temporary userId from localStorage
           localStorage.removeItem('linkedin_auth_user_id');
@@ -100,16 +55,11 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
             isConnecting: false
           }));
           
-          const errorMessage = event.data.error || "Failed to connect LinkedIn account";
           toast({
             title: "LinkedIn Connection Failed",
-            description: errorMessage,
+            description: event.data.error || "Failed to connect LinkedIn account",
             variant: "destructive"
           });
-
-          if (options?.onError) {
-            options.onError(errorMessage);
-          }
           
           // Clear temporary userId from localStorage
           localStorage.removeItem('linkedin_auth_user_id');
@@ -119,9 +69,34 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
     
     window.addEventListener('message', handleLinkedInCallback);
     return () => window.removeEventListener('message', handleLinkedInCallback);
-  }, [toast, options, checkLinkedInConnection]);
+  }, [toast]);
 
-  const connectLinkedIn = useCallback(async () => {
+  const checkLinkedInConnection = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await supabase
+          .from('social_accounts')
+          .select('account_name')
+          .eq('user_id', session.user.id)
+          .eq('platform', 'linkedin')
+          .single();
+        
+        if (data) {
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            accountName: data.account_name
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error checking LinkedIn connection:", error);
+    }
+  };
+
+  const connectLinkedIn = async () => {
     try {
       setState(prev => ({ ...prev, isConnecting: true }));
       
@@ -139,7 +114,7 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
       // Store the user ID for the callback to use
       localStorage.setItem('linkedin_auth_user_id', session.user.id);
       
-      console.log("Starting LinkedIn OAuth flow");
+      console.log("Starting LinkedIn OAuth flow with redirect URI:", LINKEDIN_REDIRECT_URI);
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -183,14 +158,10 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
         variant: "destructive"
       });
       setState(prev => ({ ...prev, isConnecting: false }));
-      
-      if (options?.onError) {
-        options.onError(error.message || "Failed to connect LinkedIn account");
-      }
     }
-  }, [toast, options]);
+  };
 
-  const disconnectLinkedIn = useCallback(async () => {
+  const disconnectLinkedIn = async () => {
     try {
       setState(prev => ({ ...prev, isConnecting: true }));
       
@@ -233,18 +204,13 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
         description: error.message || "Failed to disconnect account. Please try again.",
         variant: "destructive"
       });
-      
-      if (options?.onError) {
-        options.onError(error.message || "Failed to disconnect account");
-      }
     } finally {
       setState(prev => ({ ...prev, isConnecting: false }));
     }
-  }, [toast, options]);
+  };
 
   return {
     ...state,
-    checkConnection: checkLinkedInConnection,
     connectLinkedIn,
     disconnectLinkedIn
   };

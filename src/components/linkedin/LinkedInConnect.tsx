@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Linkedin } from 'lucide-react';
 import LinkedInButton from './LinkedInButton';
 import { useLinkedInConnect } from '@/hooks/useLinkedInConnect';
@@ -10,14 +10,8 @@ const LinkedInConnect: React.FC = () => {
     isConnected, 
     accountName, 
     connectLinkedIn, 
-    disconnectLinkedIn,
-    checkConnection
+    disconnectLinkedIn 
   } = useLinkedInConnect();
-
-  // Check connection status when component mounts
-  useEffect(() => {
-    checkConnection();
-  }, [checkConnection]);
 
   const handleButtonClick = () => {
     if (isConnected) {
