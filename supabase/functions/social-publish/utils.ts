@@ -48,6 +48,9 @@ export async function processBlobMediaUrls(
     mediaContentTypes.push('image/jpeg'); // Default to image/jpeg if not specified
   }
   
+  console.log(`Processed ${validUrls.length} valid URLs and ${base64Data.length} base64 media items`);
+  console.log(`Media content types: ${mediaContentTypes.join(', ')}`);
+  
   return {
     urls: validUrls,
     base64: base64Data,
@@ -78,6 +81,14 @@ export function isVideoContentType(contentType: string): boolean {
 }
 
 /**
+ * Detects if a URL is pointing to a video file
+ */
+export function isVideoUrl(url: string): boolean {
+  const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
+  return videoExtensions.test(url);
+}
+
+/**
  * Mock function for other platforms that aren't fully implemented yet
  */
 export function mockPublishToOtherPlatform(platform: string, content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
@@ -88,7 +99,7 @@ export function mockPublishToOtherPlatform(platform: string, content: string, me
   
   // Process both direct media URLs and content types
   for (let i = 0; i < mediaUrls.length; i++) {
-    const isVideo = mediaUrls[i].match(/\.(mp4|webm|ogg|mov)$/i) !== null;
+    const isVideo = isVideoUrl(mediaUrls[i]);
     
     mediaItems.push({
       id: `mock-media-${i}`,

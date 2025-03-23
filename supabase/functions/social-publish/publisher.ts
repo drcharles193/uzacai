@@ -27,6 +27,16 @@ export async function publishToTwitter(
     
     // Upload media if provided
     let mediaIds: string[] = [];
+    let hasVideo = false;
+    
+    // Check if any content types indicate video
+    for (const contentType of contentTypes) {
+      if (isVideoContentType(contentType)) {
+        hasVideo = true;
+        console.log("Video content detected in the upload");
+        break;
+      }
+    }
     
     // First, try to upload from URLs
     if (mediaUrls.length > 0) {
@@ -56,9 +66,13 @@ export async function publishToTwitter(
           const contentType = contentTypes[i] || 'image/jpeg'; // Default to image/jpeg if not specified
           console.log(`Uploading base64 media #${i + 1} with content type: ${contentType}`);
           
-          // Use special handling for videos
+          // Check if it's a video
           const isVideo = isVideoContentType(contentType);
           console.log(`Media #${i + 1} is ${isVideo ? 'a video' : 'an image'}`);
+          
+          if (isVideo) {
+            hasVideo = true;
+          }
           
           const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], contentType);
           mediaIds.push(mediaId);
