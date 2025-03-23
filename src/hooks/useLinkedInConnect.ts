@@ -22,6 +22,49 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
     accountName: null
   });
   
+  // Checks if the user has a LinkedIn account connected
+  const checkLinkedInConnection = useCallback(async () => {
+    try {
+      console.log("Checking LinkedIn connection status...");
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log("No session found when checking LinkedIn connection");
+        return false;
+      }
+      
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('account_name')
+        .eq('user_id', session.user.id)
+        .eq('platform', 'linkedin')
+        .single();
+      
+      if (error) {
+        if (error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+          console.error("Error checking LinkedIn connection:", error);
+        }
+        return false;
+      }
+      
+      if (data) {
+        console.log("LinkedIn account found:", data.account_name);
+        setState(prev => ({
+          ...prev,
+          isConnected: true,
+          accountName: data.account_name
+        }));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error checking LinkedIn connection:", error);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     // Check if the user has already connected LinkedIn
     checkLinkedInConnection();
@@ -76,32 +119,7 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
     
     window.addEventListener('message', handleLinkedInCallback);
     return () => window.removeEventListener('message', handleLinkedInCallback);
-  }, [toast, options]);
-
-  const checkLinkedInConnection = useCallback(async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        const { data, error } = await supabase
-          .from('social_accounts')
-          .select('account_name')
-          .eq('user_id', session.user.id)
-          .eq('platform', 'linkedin')
-          .single();
-        
-        if (data) {
-          setState(prev => ({
-            ...prev,
-            isConnected: true,
-            accountName: data.account_name
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("Error checking LinkedIn connection:", error);
-    }
-  }, []);
+  }, [toast, options, checkLinkedInConnection]);
 
   const connectLinkedIn = useCallback(async () => {
     try {
@@ -226,6 +244,7 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
 
   return {
     ...state,
+    checkConnection: checkLinkedInConnection,
     connectLinkedIn,
     disconnectLinkedIn
   };
