@@ -1,5 +1,6 @@
 
 import { createTwitterAuthHeader, getTwitterCredentials } from './twitter.ts';
+import { isVideoContentType } from './utils.ts';
 
 /**
  * Fetch an image from URL and convert to base64 for upload
@@ -45,14 +46,12 @@ export async function uploadMediaToTwitter(
     }
     
     // Determine if this is a video
-    const isVideo = contentType.startsWith('video/');
+    const isVideo = isVideoContentType(contentType);
     let mediaId = '';
     
     // If this is a video, we need to use the chunked upload process
     if (isVideo) {
-      console.log("Video content detected, using chunked upload");
-      // For simplicity, we're using the standard upload endpoint as the chunked upload process
-      // is more complex and requires multiple API calls
+      console.log("Video content detected, using chunked upload process");
       
       // Set up Twitter API request for media upload
       const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';

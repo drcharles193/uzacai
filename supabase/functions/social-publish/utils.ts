@@ -71,18 +71,40 @@ export async function updateLastUsedTimestamp(supabase: any, userId: string, pla
 }
 
 /**
+ * Detects if a content type is a video
+ */
+export function isVideoContentType(contentType: string): boolean {
+  return contentType.startsWith('video/');
+}
+
+/**
  * Mock function for other platforms that aren't fully implemented yet
  */
-export function mockPublishToOtherPlatform(platform: string, content: string, mediaCount: number = 0): any {
+export function mockPublishToOtherPlatform(platform: string, content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
   console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
-  console.log(`Mock publishing ${mediaCount} media items to ${platform}`);
+  console.log(`Mock publishing ${mediaUrls.length} media URLs to ${platform}`);
   
   const mediaItems = [];
-  for (let i = 0; i < mediaCount; i++) {
+  
+  // Process both direct media URLs and content types
+  for (let i = 0; i < mediaUrls.length; i++) {
+    const isVideo = mediaUrls[i].match(/\.(mp4|webm|ogg|mov)$/i) !== null;
+    
     mediaItems.push({
       id: `mock-media-${i}`,
-      type: i % 2 === 0 ? 'image' : 'video',
-      url: `https://example.com/media-${i}`
+      type: isVideo ? 'video' : 'image',
+      url: mediaUrls[i]
+    });
+  }
+  
+  // Process content types (usually from base64 data)
+  for (let i = 0; i < contentTypes.length; i++) {
+    const isVideo = isVideoContentType(contentTypes[i]);
+    
+    mediaItems.push({
+      id: `mock-media-base64-${i}`,
+      type: isVideo ? 'video' : 'image',
+      url: `https://example.com/media-base64-${i}.${isVideo ? 'mp4' : 'jpg'}`
     });
   }
   

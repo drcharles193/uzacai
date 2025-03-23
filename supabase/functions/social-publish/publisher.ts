@@ -1,6 +1,6 @@
 
 import { PlatformResponse } from './types.ts';
-import { updateLastUsedTimestamp, mockPublishToOtherPlatform } from './utils.ts';
+import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType } from './utils.ts';
 import { createTwitterAuthHeader, getTwitterCredentials } from './twitter.ts';
 import { processAndUploadMedia, uploadMediaToTwitter } from './media.ts';
 
@@ -55,6 +55,11 @@ export async function publishToTwitter(
         try {
           const contentType = contentTypes[i] || 'image/jpeg'; // Default to image/jpeg if not specified
           console.log(`Uploading base64 media #${i + 1} with content type: ${contentType}`);
+          
+          // Use special handling for videos
+          const isVideo = isVideoContentType(contentType);
+          console.log(`Media #${i + 1} is ${isVideo ? 'a video' : 'an image'}`);
+          
           const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], contentType);
           mediaIds.push(mediaId);
           console.log(`Successfully uploaded base64 media #${i + 1} with ID: ${mediaId}`);
@@ -136,14 +141,16 @@ export async function publishToPlatform(
 ): Promise<PlatformResponse> {
   try {
     console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media`);
+    console.log(`Content types for base64 media: ${contentTypes.join(', ')}`);
+    
     let result;
     
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
     } else {
       // For other platforms (placeholder for future implementation)
-      // We still pass media information to the mock function for logging purposes
-      result = mockPublishToOtherPlatform(platform, content, mediaUrls.length + base64Media.length);
+      // We pass media information to the mock function
+      result = mockPublishToOtherPlatform(platform, content, mediaUrls, contentTypes);
     }
     
     console.log(`Successfully published to ${platform}`);
