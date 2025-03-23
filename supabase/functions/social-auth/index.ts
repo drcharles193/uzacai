@@ -51,6 +51,7 @@ serve(async (req) => {
     
     // Check if we have the necessary API credentials
     if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+      console.error("LinkedIn API credentials are missing");
       return new Response(
         JSON.stringify({ error: "LinkedIn API credentials are missing" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -177,7 +178,8 @@ serve(async (req) => {
             account_email: email,
             account_type: 'personal',
             refresh_token: tokenData.refresh_token,
-            last_used_at: new Date().toISOString()
+            last_used_at: new Date().toISOString(),
+            connected_at: new Date().toISOString()
           }, {
             onConflict: 'user_id,platform'
           });

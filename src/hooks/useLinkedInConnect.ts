@@ -105,6 +105,9 @@ export const useLinkedInConnect = () => {
         return;
       }
       
+      // Store the user ID for the callback to use
+      localStorage.setItem('linkedin_auth_user_id', session.user.id);
+      
       console.log("Starting LinkedIn OAuth flow with redirect URI:", LINKEDIN_REDIRECT_URI);
       
       const response = await supabase.functions.invoke('social-auth', {

@@ -147,30 +147,44 @@
       // Hardcoded redirect URI - must match exactly what was registered in LinkedIn Developer Console
       // and what was used in the authorization request
       const redirectUri = "https://uzacai.com/linkedin-callback.html";
-      logDebug('Using hardcoded redirect URI:', redirectUri);
+      logDebug('Using redirect URI:', redirectUri);
       
       try {
         // Get the session from local storage
         const sessionStr = localStorage.getItem('supabase.auth.token');
-        if (!sessionStr) {
-          showStatus('Authentication session not found. Please sign in.', 'error');
-          logDebug('No auth session found in localStorage', null);
-          return;
+        let userId = '';
+        
+        if (sessionStr) {
+          try {
+            const session = JSON.parse(sessionStr);
+            userId = session.user?.id;
+            logDebug('Found user session with ID:', userId);
+          } catch (e) {
+            logDebug('Error parsing session:', e);
+          }
         }
         
-        const session = JSON.parse(sessionStr);
-        logDebug('User session:', { 
-          userId: session.user?.id, 
-          hasSession: !!session
-        });
+        if (!userId) {
+          // Fallback to the userId stored directly
+          userId = localStorage.getItem('linkedin_auth_user_id');
+          logDebug('Using fallback userId from localStorage:', userId);
+        }
         
         // Make sure we have the user ID
-        if (!session.user?.id) {
+        if (!userId) {
           showStatus('User ID not found. Please sign in again.', 'error');
+          logDebug('No user ID found in either session or direct storage', null);
+          
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: 'linkedin-oauth-callback',
+              success: false,
+              error: 'User ID not found. Please sign in again.'
+            }, '*');
+          }
+          
           return;
         }
-        
-        const userId = session.user.id;
         
         // Prepare the data to send to the server
         const callbackData = {
@@ -188,6 +202,7 @@
         
         if (!supabaseUrl || !supabaseKey) {
           showStatus('Supabase configuration not found.', 'error');
+          logDebug('Missing Supabase config', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
           return;
         }
         
@@ -242,6 +257,14 @@
           }
         } else {
           showStatus('Connection failed for an unknown reason.', 'error');
+          
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: 'linkedin-oauth-callback',
+              success: false,
+              error: 'Connection failed for an unknown reason.'
+            }, '*');
+          }
         }
       } catch (error) {
         console.error('Error processing callback:', error);
