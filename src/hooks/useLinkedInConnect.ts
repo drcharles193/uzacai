@@ -1,18 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+
+import { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Linkedin } from 'lucide-react';
 
 // Configure your specific redirect URI here
 const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
 
-const LinkedInConnect: React.FC = () => {
-  const { toast } = useToast();
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [accountName, setAccountName] = useState<string | null>(null);
+export type LinkedInConnectionState = {
+  isConnecting: boolean;
+  isConnected: boolean;
+  accountName: string | null;
+};
 
+export const useLinkedInConnect = () => {
+  const { toast } = useToast();
+  const [state, setState] = useState<LinkedInConnectionState>({
+    isConnecting: false,
+    isConnected: false,
+    accountName: null
+  });
+  
   useEffect(() => {
     // Store important config values for the callback page
     localStorage.setItem('supabaseUrl', import.meta.env.VITE_SUPABASE_URL || "https://gvmiaosmypgxrkjwvtbx.supabase.co");
@@ -27,9 +34,12 @@ const LinkedInConnect: React.FC = () => {
         console.log('Received LinkedIn callback:', event.data);
         
         if (event.data.success) {
-          setIsConnected(true);
-          setAccountName(event.data.accountName || 'LinkedIn Account');
-          setIsConnecting(false);
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            accountName: event.data.accountName || 'LinkedIn Account',
+            isConnecting: false
+          }));
           
           toast({
             title: "LinkedIn Connected",
@@ -37,7 +47,10 @@ const LinkedInConnect: React.FC = () => {
           });
         } else if (event.data.error) {
           // Handle error from callback
-          setIsConnecting(false);
+          setState(prev => ({
+            ...prev,
+            isConnecting: false
+          }));
           
           toast({
             title: "LinkedIn Connection Failed",
@@ -50,7 +63,7 @@ const LinkedInConnect: React.FC = () => {
     
     window.addEventListener('message', handleLinkedInCallback);
     return () => window.removeEventListener('message', handleLinkedInCallback);
-  }, []);
+  }, [toast]);
 
   const checkLinkedInConnection = async () => {
     try {
@@ -65,8 +78,11 @@ const LinkedInConnect: React.FC = () => {
           .single();
         
         if (data) {
-          setIsConnected(true);
-          setAccountName(data.account_name);
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            accountName: data.account_name
+          }));
         }
       }
     } catch (error) {
@@ -76,7 +92,7 @@ const LinkedInConnect: React.FC = () => {
 
   const connectLinkedIn = async () => {
     try {
-      setIsConnecting(true);
+      setState(prev => ({ ...prev, isConnecting: true }));
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -85,7 +101,7 @@ const LinkedInConnect: React.FC = () => {
           description: "Please sign in to connect your LinkedIn account.",
           variant: "destructive"
         });
-        setIsConnecting(false);
+        setState(prev => ({ ...prev, isConnecting: false }));
         return;
       }
       
@@ -132,13 +148,13 @@ const LinkedInConnect: React.FC = () => {
         description: error.message || "Failed to connect LinkedIn account. Please try again.",
         variant: "destructive"
       });
-      setIsConnecting(false);
+      setState(prev => ({ ...prev, isConnecting: false }));
     }
   };
 
   const disconnectLinkedIn = async () => {
     try {
-      setIsConnecting(true);
+      setState(prev => ({ ...prev, isConnecting: true }));
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -147,7 +163,7 @@ const LinkedInConnect: React.FC = () => {
           description: "Please sign in to disconnect your LinkedIn account.",
           variant: "destructive"
         });
-        setIsConnecting(false);
+        setState(prev => ({ ...prev, isConnecting: false }));
         return;
       }
       
@@ -161,8 +177,11 @@ const LinkedInConnect: React.FC = () => {
         throw new Error(error.message || "Failed to disconnect account");
       }
       
-      setIsConnected(false);
-      setAccountName(null);
+      setState(prev => ({
+        ...prev,
+        isConnected: false,
+        accountName: null
+      }));
       
       toast({
         title: "LinkedIn Disconnected",
@@ -177,43 +196,13 @@ const LinkedInConnect: React.FC = () => {
         variant: "destructive"
       });
     } finally {
-      setIsConnecting(false);
+      setState(prev => ({ ...prev, isConnecting: false }));
     }
   };
 
-  return (
-    <div className="p-4 border rounded-lg">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#0077B5]/10 text-[#0077B5] flex items-center justify-center">
-            <Linkedin className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-medium">LinkedIn</h3>
-            <p className="text-sm text-muted-foreground">
-              {isConnected 
-                ? `Connected as ${accountName}` 
-                : "Connect your LinkedIn account"}
-            </p>
-          </div>
-        </div>
-        
-        <Button
-          variant={isConnected ? "outline" : "default"}
-          size="sm"
-          onClick={isConnected ? disconnectLinkedIn : connectLinkedIn}
-          disabled={isConnecting}
-        >
-          {isConnecting ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : null}
-          {isConnecting 
-            ? "Processing..." 
-            : (isConnected ? "Disconnect" : "Connect")}
-        </Button>
-      </div>
-    </div>
-  );
+  return {
+    ...state,
+    connectLinkedIn,
+    disconnectLinkedIn
+  };
 };
-
-export default LinkedInConnect;
