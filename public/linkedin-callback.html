@@ -120,6 +120,20 @@
       if (params.error) {
         showStatus(`Authentication error: ${params.error_description || params.error}`, 'error');
         logDebug('LinkedIn auth error:', params.error_description || params.error);
+        
+        // Tell the opener window about the error
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({
+            type: 'linkedin-oauth-callback',
+            success: false,
+            error: params.error_description || params.error
+          }, '*');
+          
+          // Close this window after a short delay
+          setTimeout(() => {
+            window.close();
+          }, 3000);
+        }
         return;
       }
       
@@ -195,6 +209,15 @@
         
         if (result.error) {
           showStatus(`Connection error: ${result.error}`, 'error');
+          
+          // Tell the opener window about the error
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: 'linkedin-oauth-callback',
+              success: false,
+              error: result.error
+            }, '*');
+          }
           return;
         }
         
@@ -224,6 +247,15 @@
         console.error('Error processing callback:', error);
         showStatus(`Error: ${error.message}`, 'error');
         logDebug('Error details:', error.stack || error.message);
+        
+        // Tell the opener window about the error
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({
+            type: 'linkedin-oauth-callback',
+            success: false,
+            error: error.message
+          }, '*');
+        }
       }
     }
     

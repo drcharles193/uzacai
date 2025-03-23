@@ -77,30 +77,13 @@ async function getLinkedInUserProfile(accessToken: string) {
     const userData = await response.json();
     console.log("LinkedIn user data received:", JSON.stringify(userData));
     
-    // Get LinkedIn email address (optional)
-    let email = null;
-    try {
-      const emailResponse = await fetch('https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-      
-      if (emailResponse.ok) {
-        const emailData = await emailResponse.json();
-        if (emailData.elements && emailData.elements.length > 0) {
-          email = emailData.elements[0]['handle~'].emailAddress;
-        }
-      }
-    } catch (emailError) {
-      console.error('Error fetching LinkedIn email:', emailError);
-      // Continue without email
-    }
+    // Get LinkedIn email address (optional) - removed as we no longer request this scope
+    // Instead of trying to fetch the email, we'll just return the basic profile info
     
     return {
       id: userData.id,
       name: `${userData.localizedFirstName} ${userData.localizedLastName}`,
-      email: email
+      email: null // No longer fetching email since we removed the scope
     };
   } catch (error) {
     console.error('Error fetching LinkedIn user profile:', error);
@@ -115,7 +98,7 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action, redirectUri } = await req.json();
+    const { platform, code, userId, action } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
     
     // Only handle LinkedIn OAuth flow
@@ -127,14 +110,16 @@ serve(async (req) => {
                        Math.random().toString(36).substring(2, 15);
           
           // LinkedIn OAuth URL - always use the fixed redirect URI
+          // IMPORTANT: Remove r_emailaddress scope since it's not authorized
           const url = new URL('https://www.linkedin.com/oauth/v2/authorization');
           url.searchParams.append('response_type', 'code');
           url.searchParams.append('client_id', LINKEDIN_CLIENT_ID || '');
           url.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI);
           url.searchParams.append('state', state);
-          url.searchParams.append('scope', 'r_liteprofile r_emailaddress');
+          url.searchParams.append('scope', 'r_liteprofile'); // Removed r_emailaddress scope
           
           console.log("Generated LinkedIn auth URL with redirect URI:", LINKEDIN_REDIRECT_URI);
+          console.log("Using authorized scope: r_liteprofile");
           
           await supabase
             .from('oauth_states')
@@ -188,8 +173,8 @@ serve(async (req) => {
               token_expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
               last_used_at: new Date().toISOString(),
               metadata: { 
-                email: userProfile.email,
                 connection_type: "oauth"
+                // No longer including email since we removed that scope
               }
             }, {
               onConflict: 'user_id, platform, platform_account_id',
@@ -209,8 +194,7 @@ serve(async (req) => {
               success: true, 
               platform: 'linkedin', 
               accountName: userProfile.name || "LinkedIn Account",
-              accountType: "personal",
-              email: userProfile.email
+              accountType: "personal"
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );

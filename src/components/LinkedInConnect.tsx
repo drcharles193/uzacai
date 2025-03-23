@@ -36,6 +36,15 @@ const LinkedInConnect: React.FC = () => {
             title: "LinkedIn Connected",
             description: `Your LinkedIn account has been connected successfully.`
           });
+        } else if (event.data.error) {
+          // Handle error from callback
+          setIsConnecting(false);
+          
+          toast({
+            title: "LinkedIn Connection Failed",
+            description: event.data.error || "Failed to connect LinkedIn account",
+            variant: "destructive"
+          });
         }
       }
     };
