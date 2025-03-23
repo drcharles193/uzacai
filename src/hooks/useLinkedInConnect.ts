@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 // Configure your specific redirect URI here
-const LINKEDIN_REDIRECT_URI = "https://uzacai.com/auth/linkedin/callback";
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/";
 
 export type LinkedInConnectionState = {
   isConnecting: boolean;
