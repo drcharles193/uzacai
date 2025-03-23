@@ -27,6 +27,7 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
   selectedAccounts
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [mediaUrl, setMediaUrl] = useState('');
@@ -35,9 +36,15 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
     setPostContent(content);
   };
 
-  const handleDeviceUpload = () => {
+  const handlePhotoUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+  
+  const handleVideoUpload = () => {
+    if (videoInputRef.current) {
+      videoInputRef.current.click();
     }
   };
 
@@ -93,6 +100,36 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
     });
   };
 
+  const renderMediaPreview = (url: string, index: number) => {
+    // Check if the URL is for a video (either by file extension or mime type)
+    const isVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || 
+                   (mediaFiles[index]?.type && mediaFiles[index].type.startsWith('video/'));
+    
+    return (
+      <div key={index} className="relative group">
+        {isVideo ? (
+          <video 
+            src={url} 
+            className="w-full h-24 object-cover rounded-md border border-gray-200"
+            controls={false}
+          />
+        ) : (
+          <img 
+            src={url} 
+            alt={`Media preview ${index + 1}`} 
+            className="w-full h-24 object-cover rounded-md border border-gray-200" 
+          />
+        )}
+        <button 
+          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" 
+          onClick={() => removeMedia(index)}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="mb-4">
       <div className="font-medium text-lg">Original Draft</div>
@@ -107,21 +144,7 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
       
       {mediaPreviewUrls.length > 0 && (
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {mediaPreviewUrls.map((url, index) => (
-            <div key={index} className="relative group">
-              <img 
-                src={url} 
-                alt={`Media preview ${index + 1}`} 
-                className="w-full h-24 object-cover rounded-md border border-gray-200" 
-              />
-              <button 
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" 
-                onClick={() => removeMedia(index)}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+          {mediaPreviewUrls.map((url, index) => renderMediaPreview(url, index))}
         </div>
       )}
       
@@ -129,7 +152,16 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
         type="file" 
         ref={fileInputRef} 
         onChange={handleFileChange} 
-        accept="image/*,video/*" 
+        accept="image/*" 
+        multiple 
+        className="hidden" 
+      />
+      
+      <input 
+        type="file" 
+        ref={videoInputRef} 
+        onChange={handleFileChange} 
+        accept="video/*" 
         multiple 
         className="hidden" 
       />
@@ -164,11 +196,11 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white border border-[#689675]/20">
-            <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
+            <DropdownMenuItem onClick={handlePhotoUpload} className="hover:bg-[#689675]/10">
               <Image className="h-4 w-4 mr-2" />
               <span>Photo</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
+            <DropdownMenuItem onClick={handleVideoUpload} className="hover:bg-[#689675]/10">
               <Video className="h-4 w-4 mr-2" />
               <span>Video</span>
             </DropdownMenuItem>

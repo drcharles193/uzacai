@@ -5,6 +5,7 @@ export interface PublishingRequest {
   content: string;
   mediaUrls: string[];
   mediaBase64: string[];
+  contentTypes?: string[];
   selectedAccounts: string[];
   platforms: string[];
 }
@@ -26,4 +27,5 @@ export interface PlatformResponse {
 export interface ProcessedMedia {
   urls: string[];
   base64: string[];
+  contentTypes: string[];
 }

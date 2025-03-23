@@ -12,7 +12,8 @@ export async function publishToTwitter(
   userId: string, 
   content: string, 
   mediaUrls: string[] = [],
-  base64Media: string[] = []
+  base64Media: string[] = [],
+  contentTypes: string[] = []
 ): Promise<any> {
   try {
     console.log(`Publishing to Twitter for user ${userId} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media items`);
@@ -51,7 +52,8 @@ export async function publishToTwitter(
       
       for (let i = 0; i < maxBase64Items; i++) {
         try {
-          const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], 'image/jpeg');
+          const contentType = contentTypes[i] || 'image/jpeg'; // Default to image/jpeg if not specified
+          const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], contentType);
           mediaIds.push(mediaId);
         } catch (error) {
           console.error(`Error uploading base64 media #${i + 1}:`, error);
@@ -126,14 +128,15 @@ export async function publishToPlatform(
   userId: string, 
   content: string,
   mediaUrls: string[] = [],
-  base64Media: string[] = []
+  base64Media: string[] = [],
+  contentTypes: string[] = []
 ): Promise<PlatformResponse> {
   try {
     console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media`);
     let result;
     
     if (platform === 'twitter') {
-      result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media);
+      result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
     } else {
       result = mockPublishToOtherPlatform(platform, content);
     }

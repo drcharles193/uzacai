@@ -23,11 +23,12 @@ serve(async (req) => {
   console.log('Received publish request');
   
   try {
-    const { userId, content, mediaUrls, mediaBase64, selectedAccounts, platforms } = await req.json() as PublishingRequest;
+    const { userId, content, mediaUrls, mediaBase64, contentTypes, selectedAccounts, platforms } = await req.json() as PublishingRequest & { contentTypes?: string[] };
     console.log(`Publishing post for user ${userId} to platforms:`, platforms);
     console.log(`Content to publish: ${content.substring(0, 30)}...`);
     console.log(`Media URLs:`, mediaUrls);
     console.log(`Base64 Media count:`, mediaBase64?.length || 0);
+    console.log(`Content Types:`, contentTypes);
     
     // Validate request parameters
     if (!validateRequest(userId, content, selectedAccounts)) {
@@ -46,11 +47,11 @@ serve(async (req) => {
     }
     
     // Process the media URLs and base64 data
-    const processedMedia = await processBlobMediaUrls(mediaUrls || [], mediaBase64 || []);
+    const processedMedia = await processBlobMediaUrls(mediaUrls || [], mediaBase64 || [], contentTypes || []);
     
     // Process publishing for each platform
     const publishingPromises = platforms.map(platform => 
-      publishToPlatform(supabase, platform, userId, content, processedMedia.urls, processedMedia.base64)
+      publishToPlatform(supabase, platform, userId, content, processedMedia.urls, processedMedia.base64, processedMedia.contentTypes)
     );
     
     const publishingResults = await Promise.all(publishingPromises);

@@ -23,11 +23,16 @@ export function validateRequest(userId: string, content: string, selectedAccount
 }
 
 /**
- * Converts a blob URL media to base64
+ * Processes media URLs and base64 data
  */
-export async function processBlobMediaUrls(mediaUrls: string[], mediaBase64: string[] = []): Promise<ProcessedMedia> {
+export async function processBlobMediaUrls(
+  mediaUrls: string[], 
+  mediaBase64: string[] = [],
+  contentTypes: string[] = []
+): Promise<ProcessedMedia> {
   const validUrls: string[] = [];
   const base64Data: string[] = [...mediaBase64];
+  const mediaContentTypes: string[] = [...contentTypes];
   
   for (const url of mediaUrls) {
     // If it's not a blob URL, just add it to valid URLs
@@ -38,9 +43,15 @@ export async function processBlobMediaUrls(mediaUrls: string[], mediaBase64: str
     // No action here as blob URLs can't be processed in edge functions
   }
   
+  // Make sure contentTypes is at least as long as base64Data
+  while (mediaContentTypes.length < base64Data.length) {
+    mediaContentTypes.push('image/jpeg'); // Default to image/jpeg if not specified
+  }
+  
   return {
     urls: validUrls,
-    base64: base64Data
+    base64: base64Data,
+    contentTypes: mediaContentTypes
   };
 }
 

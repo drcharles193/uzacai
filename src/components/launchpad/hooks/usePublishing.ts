@@ -28,6 +28,13 @@ export const usePublishing = (currentUserId: string | null) => {
     });
   };
 
+  /**
+   * Get content type for a file
+   */
+  const getContentType = (file: File): string => {
+    return file.type || 'application/octet-stream';
+  };
+
   const publishNow = async (
     postContent: string,
     mediaPreviewUrls: string[],
@@ -70,11 +77,15 @@ export const usePublishing = (currentUserId: string | null) => {
       
       // Convert media files to base64
       let mediaBase64: string[] = [];
+      let contentTypes: string[] = [];
+      
       if (mediaFiles.length > 0) {
         try {
           const base64Promises = mediaFiles.map(file => fileToBase64(file));
           mediaBase64 = await Promise.all(base64Promises);
+          contentTypes = mediaFiles.map(file => getContentType(file));
           console.log(`Converted ${mediaBase64.length} files to base64`);
+          console.log("Content types:", contentTypes);
         } catch (error) {
           console.error("Error converting files to base64:", error);
         }
@@ -90,6 +101,7 @@ export const usePublishing = (currentUserId: string | null) => {
           content: postContent,
           mediaUrls: validMediaUrls,
           mediaBase64,
+          contentTypes,
           selectedAccounts,
           platforms
         }
