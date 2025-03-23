@@ -144,7 +144,8 @@
         return;
       }
       
-      // Use the fixed redirect URI that matches LinkedIn Developer Console
+      // Hardcoded redirect URI - must match exactly what was registered in LinkedIn Developer Console
+      // and what was used in the authorization request
       const redirectUri = "https://uzacai.com/linkedin-callback.html";
       logDebug('Using hardcoded redirect URI:', redirectUri);
       
@@ -176,13 +177,12 @@
           platform: 'linkedin',
           action: 'callback',
           code: params.code,
-          // Don't send the redirect URI in the request, the server will use the fixed one
           userId: userId
         };
         
         logDebug('Sending callback data to server:', callbackData);
         
-        // Call the social-auth function with the code
+        // Get Supabase configuration from localStorage
         const supabaseUrl = localStorage.getItem('supabaseUrl');
         const supabaseKey = localStorage.getItem('supabaseKey');
         

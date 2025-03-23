@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -97,7 +96,6 @@ const LinkedInConnect: React.FC = () => {
           platform: 'linkedin',
           action: 'auth-url',
           userId: session.user.id
-          // No need to send the redirect URI, the function now uses a fixed one
         }
       });
       
