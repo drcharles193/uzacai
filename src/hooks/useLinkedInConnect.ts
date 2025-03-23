@@ -69,6 +69,10 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
     // Check if the user has already connected LinkedIn
     checkLinkedInConnection();
     
+    // Store Supabase configuration in localStorage for the callback page
+    localStorage.setItem('supabaseUrl', supabase.supabaseUrl);
+    localStorage.setItem('supabaseKey', supabase.supabaseKey);
+    
     // Add listener for the callback message
     const handleLinkedInCallback = (event: MessageEvent) => {
       if (event.data && event.data.type === 'linkedin-oauth-callback') {
