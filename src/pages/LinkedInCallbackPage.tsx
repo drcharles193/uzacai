@@ -77,7 +77,7 @@ const LinkedInCallbackPage = () => {
           throw new Error(`Server error: ${error.message}`);
         }
         
-        if (data.error) {
+        if (data && data.error) {
           throw new Error(data.error);
         }
         
