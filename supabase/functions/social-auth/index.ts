@@ -17,7 +17,7 @@ const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
 
 // LinkedIn OAuth configuration
 // IMPORTANT: This must match exactly what's registered in LinkedIn Developer Console
-const LINKEDIN_REDIRECT_URI = "https://uzacai.com/auth/linkedin/callback";
+const LINKEDIN_REDIRECT_URI = "https://uzaca";
 
 console.log("Edge function environment:");
 console.log("SUPABASE_URL:", SUPABASE_URL ? "set" : "not set");
