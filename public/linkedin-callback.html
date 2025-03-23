@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Authentication</title>
+</head>
+<body>
+  <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
+    <div style="text-align: center;">
+      <h2>LinkedIn Authentication</h2>
+      <p>Processing your LinkedIn authorization...</p>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const statusElement = document.getElementById('status');
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+      
+      if (error) {
+        statusElement.innerHTML = `<p style="color: red;">Error: ${error}</p>
+          <p>${errorDescription || 'No error description provided'}</p>
+          <p>You can close this window.</p>`;
+        return;
+      }
+      
+      if (code) {
+        statusElement.innerHTML = '<p>Successfully authenticated with LinkedIn. You can close this window.</p>';
+        
+        // Send the authorization code back to the opener window
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'LINKEDIN_AUTH_CALLBACK',
+            code: code,
+            state: state
+          }, window.location.origin);
+          
+          // Auto close after a short delay
+          setTimeout(() => {
+            window.close();
+          }, 2000);
+        } else {
+          statusElement.innerHTML += '<p style="color: orange;">Warning: Could not communicate with the parent window.</p>';
+        }
+      } else {
+        statusElement.innerHTML = '<p style="color: red;">Error: No authorization code received from LinkedIn.</p>';
+      }
+    });
+  </script>
+</body>
+</html>
