@@ -130,8 +130,9 @@
         return;
       }
       
+      // Use the fixed redirect URI that matches LinkedIn Developer Console
       const redirectUri = "https://uzacai.com/linkedin-callback.html";
-      logDebug('Using redirect URI:', redirectUri);
+      logDebug('Using hardcoded redirect URI:', redirectUri);
       
       try {
         // Get the session from local storage
@@ -161,7 +162,7 @@
           platform: 'linkedin',
           action: 'callback',
           code: params.code,
-          redirectUri: redirectUri,
+          // Don't send the redirect URI in the request, the server will use the fixed one
           userId: userId
         };
         

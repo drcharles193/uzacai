@@ -87,8 +87,8 @@ const LinkedInConnect: React.FC = () => {
         body: {
           platform: 'linkedin',
           action: 'auth-url',
-          userId: session.user.id,
-          redirectUri: LINKEDIN_REDIRECT_URI
+          userId: session.user.id
+          // No need to send the redirect URI, the function now uses a fixed one
         }
       });
       

@@ -16,9 +16,12 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
 
+// Fixed LinkedIn redirect URI that matches exactly what's registered in LinkedIn Developer Console
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
+
 // LinkedIn token exchange function
-async function exchangeLinkedInCode(code: string, redirectUri: string) {
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET || !redirectUri) {
+async function exchangeLinkedInCode(code: string) {
+  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
@@ -27,12 +30,12 @@ async function exchangeLinkedInCode(code: string, redirectUri: string) {
   const params = new URLSearchParams();
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
-  params.append('redirect_uri', redirectUri);
+  params.append('redirect_uri', LINKEDIN_REDIRECT_URI);
   params.append('client_id', LINKEDIN_CLIENT_ID);
   params.append('client_secret', LINKEDIN_CLIENT_SECRET);
   
   try {
-    console.log("Exchanging LinkedIn code for tokens with redirect URI:", redirectUri);
+    console.log("Exchanging LinkedIn code for tokens with fixed redirect URI:", LINKEDIN_REDIRECT_URI);
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -113,7 +116,7 @@ serve(async (req) => {
 
   try {
     const { platform, code, userId, action, redirectUri } = await req.json();
-    console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}, redirectUri: ${redirectUri}`);
+    console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
     
     // Only handle LinkedIn OAuth flow
     if (platform === 'linkedin') {
@@ -123,13 +126,15 @@ serve(async (req) => {
           const state = Math.random().toString(36).substring(2, 15) + 
                        Math.random().toString(36).substring(2, 15);
           
-          // LinkedIn OAuth URL
+          // LinkedIn OAuth URL - always use the fixed redirect URI
           const url = new URL('https://www.linkedin.com/oauth/v2/authorization');
           url.searchParams.append('response_type', 'code');
           url.searchParams.append('client_id', LINKEDIN_CLIENT_ID || '');
-          url.searchParams.append('redirect_uri', redirectUri);
+          url.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI);
           url.searchParams.append('state', state);
           url.searchParams.append('scope', 'r_liteprofile r_emailaddress');
+          
+          console.log("Generated LinkedIn auth URL with redirect URI:", LINKEDIN_REDIRECT_URI);
           
           await supabase
             .from('oauth_states')
@@ -158,11 +163,11 @@ serve(async (req) => {
       else if (action === 'callback') {
         // Step 2: Handle callback and exchange code for tokens
         try {
-          const providedRedirectUri = redirectUri || req.headers.get('Origin') + '/linkedin-callback.html';
-          console.log("Using callback redirect URI:", providedRedirectUri);
+          console.log("Processing LinkedIn callback with fixed redirect URI:", LINKEDIN_REDIRECT_URI);
           
+          // Always use the fixed redirect URI - ignore any provided in request
           // Exchange code for tokens
-          const tokens = await exchangeLinkedInCode(code, providedRedirectUri);
+          const tokens = await exchangeLinkedInCode(code);
           
           // Get user profile information
           const userProfile = await getLinkedInUserProfile(tokens.access_token);
