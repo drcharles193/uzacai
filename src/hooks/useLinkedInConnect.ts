@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,8 +143,7 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
       
       console.log("Starting LinkedIn OAuth flow");
       
-      // Store the Supabase URL and key in localStorage for the callback page
-      // Using hardcoded values
+      // Hardcoded values for Supabase URL and key
       const supabaseUrl = "https://gvmiaosmypgxrkjwvtbx.supabase.co";
       const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4";
       
@@ -163,7 +161,7 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
           platform: 'linkedin',
           action: 'auth-url',
           userId: session.user.id,
-          redirectUri: LINKEDIN_REDIRECT_URI // Pass the redirect URI explicitly
+          redirectUri: LINKEDIN_REDIRECT_URI
         }
       });
       
