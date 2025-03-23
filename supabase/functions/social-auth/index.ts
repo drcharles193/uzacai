@@ -177,7 +177,8 @@ serve(async (req) => {
             account_name: accountName,
             account_email: email,
             account_type: 'personal',
-            refresh_token: tokenData.refresh_token,
+            refresh_token: tokenData.refresh_token || null,
+            expires_in: tokenData.expires_in || null,
             last_used_at: new Date().toISOString(),
             connected_at: new Date().toISOString()
           }, {

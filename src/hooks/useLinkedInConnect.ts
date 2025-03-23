@@ -45,6 +45,9 @@ export const useLinkedInConnect = () => {
             title: "LinkedIn Connected",
             description: `Your LinkedIn account has been connected successfully.`
           });
+          
+          // Clear temporary userId from localStorage
+          localStorage.removeItem('linkedin_auth_user_id');
         } else if (event.data.error) {
           // Handle error from callback
           setState(prev => ({
@@ -57,6 +60,9 @@ export const useLinkedInConnect = () => {
             description: event.data.error || "Failed to connect LinkedIn account",
             variant: "destructive"
           });
+          
+          // Clear temporary userId from localStorage
+          localStorage.removeItem('linkedin_auth_user_id');
         }
       }
     };
