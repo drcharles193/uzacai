@@ -141,6 +141,13 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
       
       console.log("Starting LinkedIn OAuth flow");
       
+      // Save Supabase configuration to localStorage for the callback page
+      localStorage.setItem('supabaseUrl', supabase.supabaseUrl);
+      localStorage.setItem('supabaseKey', supabase.supabaseKey);
+      
+      // Log the redirect URI being used
+      console.log("Starting LinkedIn OAuth flow with redirect URI: https://www.uzacai.com/auth/linkedin/callback");
+      
       const response = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',

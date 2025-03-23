@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -14,7 +13,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
 const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
-const LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://www.uzacai.com/';
+const LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://www.uzacai.com/auth/linkedin/callback';
 
 console.log("Edge function environment:");
 console.log("SUPABASE_URL:", SUPABASE_URL ? "set" : "not set");
