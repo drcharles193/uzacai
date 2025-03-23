@@ -44,6 +44,11 @@ const PostPreviewTab: React.FC<PostPreviewTabProps> = ({
 
   const selectedPlatform = getSelectedPlatform();
 
+  // Function to check if a media URL is a video
+  const isVideoUrl = (url: string) => {
+    return url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('video');
+  };
+
   return (
     <div className="flex flex-col space-y-4">
       {selectedAccounts.length > 0 ? (
@@ -85,7 +90,7 @@ const PostPreviewTab: React.FC<PostPreviewTabProps> = ({
       <div className="flex flex-col items-center justify-start p-4 border rounded-md h-[500px] overflow-y-auto">
         {postContent ? (
           <>
-            <div className="text-gray-700 whitespace-pre-wrap mb-4">
+            <div className="text-gray-700 whitespace-pre-wrap mb-4 w-full">
               {selectedPlatform === 'twitter' && (
                 <div className="w-full mb-2 flex items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-gray-200"></div>
@@ -119,14 +124,25 @@ const PostPreviewTab: React.FC<PostPreviewTabProps> = ({
               {postContent}
             </div>
             {mediaPreviewUrls.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="grid grid-cols-1 gap-4 w-full">
                 {mediaPreviewUrls.map((url, index) => (
-                  <img 
-                    key={index} 
-                    src={url} 
-                    alt={`Media ${index + 1}`} 
-                    className="w-full h-auto rounded-md" 
-                  />
+                  isVideoUrl(url) ? (
+                    <video 
+                      key={index}
+                      src={url} 
+                      className="w-full h-auto rounded-md" 
+                      controls
+                      muted
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img 
+                      key={index} 
+                      src={url} 
+                      alt={`Media ${index + 1}`} 
+                      className="w-full h-auto rounded-md" 
+                    />
+                  )
                 ))}
               </div>
             )}

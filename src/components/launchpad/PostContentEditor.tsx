@@ -111,7 +111,11 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
           <video 
             src={url} 
             className="w-full h-24 object-cover rounded-md border border-gray-200"
-            controls={false}
+            controls
+            muted
+            autoPlay={false}
+            loop={false}
+            preload="metadata"
           />
         ) : (
           <img 
