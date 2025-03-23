@@ -24,6 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
 
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
+
 interface SocialPlatform {
   id: string;
   name: string;
@@ -166,10 +168,9 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   ]);
 
   useEffect(() => {
-    if (supabase) {
-      localStorage.setItem('supabaseUrl', supabase.supabaseUrl);
-      localStorage.setItem('supabaseKey', supabase.supabaseKey);
-    }
+    localStorage.setItem('supabaseUrl', import.meta.env.VITE_SUPABASE_URL || "https://gvmiaosmypgxrkjwvtbx.supabase.co");
+    localStorage.setItem('supabaseKey', import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4");
+    localStorage.setItem('linkedinRedirectUri', LINKEDIN_REDIRECT_URI);
   }, []);
 
   useEffect(() => {
@@ -394,7 +395,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           body: {
             platform: 'linkedin',
             action: 'auth-url',
-            userId: session.user.id
+            userId: session.user.id,
+            redirectUri: LINKEDIN_REDIRECT_URI
           }
         });
         
