@@ -12,8 +12,8 @@ const corsHeaders = {
 // Get environment variables
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
-const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
+const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '86fqmnnhfquv0s';
+const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || 'WPL_AP1.Sr7VPeLz1sncqQfY.S3l2yA==';
 
 // LinkedIn OAuth configuration
 // IMPORTANT: This must match exactly what's registered in LinkedIn Developer Console
