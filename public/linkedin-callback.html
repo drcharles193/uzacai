@@ -51,6 +51,16 @@
     .error {
       color: #dc2626;
     }
+    #debug {
+      font-family: monospace;
+      text-align: left;
+      background: #f1f5f9;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+      font-size: 12px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -59,12 +69,14 @@
     <p>Processing your LinkedIn authorization...</p>
     <div class="spinner" id="spinner"></div>
     <div id="status"></div>
+    <div id="debug"></div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const statusElement = document.getElementById('status');
       const spinner = document.getElementById('spinner');
+      const debugElement = document.getElementById('debug');
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
@@ -73,11 +85,15 @@
       
       console.log("LinkedIn callback received:", { code, state, error, errorDescription });
       
+      // Show debug info (enable for testing, then comment out)
+      // debugElement.style.display = 'block';
+      // debugElement.innerHTML = `Code: ${code?.substring(0, 10)}...<br>State: ${state}<br>Error: ${error || 'None'}<br>Origin: ${window.location.origin}`;
+      
       if (error) {
         spinner.style.display = 'none';
         statusElement.innerHTML = `<p class="error">Error: ${error}</p>
           <p>${errorDescription || 'No error description provided'}</p>
-          <p>You can close this window.</p>`;
+          <p>You can close this window and try again.</p>`;
         return;
       }
       
@@ -85,7 +101,7 @@
         // Send the authorization code back to the opener window
         try {
           if (window.opener) {
-            console.log("Posting message to parent window");
+            console.log("Posting message to parent window with origin:", window.location.origin);
             window.opener.postMessage({
               type: 'LINKEDIN_AUTH_CALLBACK',
               code: code,

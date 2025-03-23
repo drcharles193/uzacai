@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +31,26 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     };
     
     getUserId();
+    
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) {
+        console.log("Ignoring message from unknown origin:", event.origin);
+        return;
+      }
+      
+      console.log("Message received in parent window:", event.data);
+      
+      if (event.data.type === 'LINKEDIN_AUTH_CALLBACK' && event.data.code) {
+        console.log("LinkedIn callback code received:", event.data.code.substring(0, 10) + "...");
+        await processLinkedInCallback(event.data.code);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const handleConnectAccount = async (platform: string) => {
@@ -44,7 +63,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       setIsLoading(platform);
       
       if (platform === 'twitter') {
-        // Get Twitter auth URL from edge function
         const { data, error } = await supabase.functions.invoke('social-auth', {
           body: {
             platform: 'twitter',
@@ -58,7 +76,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
         
         if (data.authUrl) {
-          // Open Twitter auth URL in a popup
           const width = 600;
           const height = 600;
           const left = window.screenX + (window.innerWidth - width) / 2;
@@ -70,19 +87,12 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
             `width=${width},height=${height},left=${left},top=${top}`
           );
           
-          // Handle the callback with a window message listener
           const handleMessage = async (event: MessageEvent) => {
-            // Verify origin for security
             if (event.origin !== window.location.origin) return;
             
             if (event.data.type === 'TWITTER_AUTH_CALLBACK' && event.data.code) {
-              // Close the popup
               if (popup) popup.close();
-              
-              // Remove the listener
               window.removeEventListener('message', handleMessage);
-              
-              // Process the authorization code
               await processTwitterCallback(event.data.code);
             }
           };
@@ -92,7 +102,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           throw new Error("Failed to get Twitter auth URL");
         }
       } else if (platform === 'linkedin') {
-        // Get LinkedIn auth URL from edge function
+        console.log("Starting LinkedIn connection process...");
         const { data, error } = await supabase.functions.invoke('social-auth', {
           body: {
             platform: 'linkedin',
@@ -108,9 +118,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
         
         if (data && data.authUrl) {
-          console.log("LinkedIn auth URL:", data.authUrl);
+          console.log("LinkedIn auth URL received:", data.authUrl);
           
-          // Open LinkedIn auth URL in a popup
           const width = 600;
           const height = 700;
           const left = window.screenX + (window.innerWidth - width) / 2;
@@ -122,33 +131,15 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
             `width=${width},height=${height},left=${left},top=${top}`
           );
           
-          // Handle the callback with a window message listener
-          const handleMessage = async (event: MessageEvent) => {
-            console.log("Message received:", event.data, "Origin:", event.origin, "Expected:", window.location.origin);
-            
-            // Verify origin for security
-            if (event.origin !== window.location.origin) return;
-            
-            if (event.data.type === 'LINKEDIN_AUTH_CALLBACK' && event.data.code) {
-              console.log("LinkedIn callback code received:", event.data.code);
-              
-              // Close the popup
-              if (popup) popup.close();
-              
-              // Remove the listener
-              window.removeEventListener('message', handleMessage);
-              
-              // Process the authorization code
-              await processLinkedInCallback(event.data.code);
-            }
-          };
+          if (!popup) {
+            throw new Error("Failed to open popup. Please disable popup blocker and try again.");
+          }
           
-          window.addEventListener('message', handleMessage);
+          console.log("LinkedIn auth popup opened");
         } else {
           throw new Error("Failed to get LinkedIn auth URL");
         }
       } else {
-        // Mock other platforms for now
         await handleMockConnect(platform);
       }
     } catch (error: any) {
@@ -187,7 +178,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 
   const processLinkedInCallback = async (code: string) => {
     try {
-      console.log("Processing LinkedIn callback with code:", code);
+      console.log("Processing LinkedIn callback with code:", code.substring(0, 10) + "...");
       
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
@@ -218,7 +209,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 
   const handleMockConnect = async (platform: string) => {
     try {
-      // Call the social-auth function to set up the mock account
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform,

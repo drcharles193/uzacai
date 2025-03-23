@@ -27,6 +27,12 @@ export async function getLinkedInCredentials(supabase: any, userId: string): Pro
       throw new Error("LinkedIn API credentials are missing. Please check your environment variables.");
     }
     
+    console.log("Found LinkedIn credentials:", {
+      accessTokenExists: Boolean(data.access_token),
+      refreshTokenExists: Boolean(data.refresh_token),
+      platformAccountId: data.platform_account_id
+    });
+    
     return {
       clientId,
       clientSecret,
@@ -65,6 +71,8 @@ export async function publishToLinkedIn(
     // Use the actual platform account ID if available, or fall back to 'me'
     const personId = platformAccountId || "me"; 
     const apiUrl = `https://api.linkedin.com/v2/ugcPosts`;
+    
+    console.log(`Using LinkedIn person ID: ${personId}`);
     
     // Prepare the post content
     const postData: any = {
@@ -110,24 +118,44 @@ export async function publishToLinkedIn(
       body: JSON.stringify(postData)
     });
     
+    let responseText = '';
+    try {
+      responseText = await response.text();
+    } catch (error) {
+      console.error("Error reading LinkedIn API response:", error);
+      responseText = "Could not read response";
+    }
+    
     if (!response.ok) {
-      const responseText = await response.text();
       console.error(`LinkedIn API error: ${response.status} - ${responseText}`);
       throw new Error(`LinkedIn API error: ${response.status} - ${responseText}`);
     }
     
-    const responseData = await response.json();
-    console.log("LinkedIn API response:", JSON.stringify(responseData));
+    // Parse response if it's JSON
+    let responseData = {};
+    try {
+      responseData = JSON.parse(responseText);
+      console.log("LinkedIn API response:", JSON.stringify(responseData));
+    } catch (error) {
+      console.log("LinkedIn API response (not JSON):", responseText);
+      responseData = { id: "unknown", text: responseText };
+    }
     
     // Update last_used_at timestamp
     await updateLastUsedTimestamp(supabase, userId, 'linkedin');
     
-    return responseData;
+    return {
+      success: true,
+      platform: 'linkedin',
+      postId: responseData.id || 'unknown',
+      response: responseData
+    };
   } catch (error) {
     console.error("Error publishing to LinkedIn:", error);
     return {
       success: false,
-      error: error.message
+      platform: 'linkedin',
+      error: error.message || "Unknown error occurred"
     };
   }
 }

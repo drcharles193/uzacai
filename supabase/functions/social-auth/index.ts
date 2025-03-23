@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -73,6 +72,7 @@ function getLinkedInAuthUrl(redirectUri: string) {
   url.searchParams.append('state', state);
   url.searchParams.append('scope', 'openid profile email w_member_social');
   
+  console.log("Generated LinkedIn auth URL:", url.toString());
   return { url: url.toString(), state };
 }
 
@@ -132,6 +132,7 @@ async function exchangeLinkedInCode(code: string, redirectUri: string) {
   
   try {
     console.log(`Exchanging LinkedIn code for token with redirect URI: ${redirectUri}`);
+    console.log("Request params:", params.toString());
     
     const response = await fetch(tokenUrl, {
       method: 'POST',
@@ -141,13 +142,15 @@ async function exchangeLinkedInCode(code: string, redirectUri: string) {
       body: params
     });
     
+    const responseText = await response.text();
+    console.log("LinkedIn token response:", responseText);
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('LinkedIn token exchange error:', errorText);
-      throw new Error(`LinkedIn API error: ${response.status} ${errorText}`);
+      console.error('LinkedIn token exchange error:', responseText);
+      throw new Error(`LinkedIn API error: ${response.status} ${responseText}`);
     }
     
-    const tokens = await response.json();
+    const tokens = JSON.parse(responseText);
     return tokens;
   } catch (error) {
     console.error('Error exchanging LinkedIn code for tokens:', error);
@@ -465,6 +468,8 @@ serve(async (req) => {
           }
           
           const decodedRedirectUri = decodeURIComponent(redirectUri);
+          console.log("Generating LinkedIn auth URL with redirect URI:", decodedRedirectUri);
+          
           const { url, state } = getLinkedInAuthUrl(decodedRedirectUri);
           
           // Store the state temporarily
@@ -499,11 +504,20 @@ serve(async (req) => {
             throw new Error("LinkedIn redirect URI is required");
           }
           
+          console.log("Processing LinkedIn callback with code:", code?.substring(0, 10) + "...");
+          console.log("Redirect URI:", redirectUri);
+          
           // Exchange code for tokens
           const tokens = await exchangeLinkedInCode(code, redirectUri);
+          console.log("LinkedIn tokens received:", {
+            accessTokenPresent: !!tokens.access_token,
+            expiresIn: tokens.expires_in,
+            tokenType: tokens.token_type
+          });
           
           // Get user profile information
           const userProfile = await getLinkedInUserProfile(tokens.access_token);
+          console.log("LinkedIn user profile:", JSON.stringify(userProfile));
           
           const userName = userProfile.localizedFirstName && userProfile.localizedLastName 
             ? `${userProfile.localizedFirstName} ${userProfile.localizedLastName}`
@@ -531,7 +545,7 @@ serve(async (req) => {
               onConflict: 'user_id, platform, platform_account_id',
               ignoreDuplicates: false
             });
-            
+          
           if (error) {
             console.error("Error storing LinkedIn connection:", error);
             return new Response(
@@ -540,6 +554,7 @@ serve(async (req) => {
             );
           }
           
+          console.log("Successfully connected LinkedIn account:", userName);
           return new Response(
             JSON.stringify({ 
               success: true, 
