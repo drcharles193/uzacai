@@ -24,7 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
 
-const LINKEDIN_REDIRECT_URI = "https://www.linkedin.com/developers/tools/oauth/redirect";
+const LINKEDIN_REDIRECT_URI = window.location.origin + "/linkedin-callback.html";
 
 interface SocialPlatform {
   id: string;
@@ -389,7 +389,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       else if (id === 'linkedin') {
-        console.log("Starting LinkedIn OAuth flow...");
+        console.log("Starting LinkedIn OAuth flow with redirect URI:", LINKEDIN_REDIRECT_URI);
         
         const response = await supabase.functions.invoke('social-auth', {
           body: {

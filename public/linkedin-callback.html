@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -78,9 +79,6 @@
   </div>
 
   <script>
-    // Hardcoded LinkedIn Redirect URI to match exactly what's registered in LinkedIn Developer Console
-    const LINKEDIN_REDIRECT_URI = "https://www.linkedin.com/developers/tools/oauth/redirect";
-    
     // Function to get URL parameters
     function getUrlParams() {
       const params = {};
@@ -160,8 +158,7 @@
           platform: 'linkedin',
           action: 'callback',
           code: params.code,
-          userId: userId,
-          redirectUri: LINKEDIN_REDIRECT_URI
+          userId: userId
         };
         
         logDebug('Sending callback data to server:', callbackData);

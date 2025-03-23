@@ -20,7 +20,6 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 // LinkedIn OAuth credentials
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
-const LINKEDIN_CALLBACK_URL = Deno.env.get("LINKEDIN_CALLBACK_URL") || "https://www.linkedin.com/developers/tools/oauth/redirect";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -55,11 +54,11 @@ function getTwitterAuthUrl() {
 }
 
 // LinkedIn OAuth URL generator
-function getLinkedInAuthUrl() {
+function getLinkedInAuthUrl(redirectUri: string) {
   console.log("LinkedIn Client ID:", LINKEDIN_CLIENT_ID ? "Exists" : "Missing");
-  console.log("LinkedIn Callback URL:", LINKEDIN_CALLBACK_URL ? "Exists" : "Missing");
+  console.log("LinkedIn Callback URL:", redirectUri ? "Exists" : "Missing");
   
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CALLBACK_URL) {
+  if (!LINKEDIN_CLIENT_ID || !redirectUri) {
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
@@ -69,7 +68,7 @@ function getLinkedInAuthUrl() {
   const url = new URL('https://www.linkedin.com/oauth/v2/authorization');
   url.searchParams.append('response_type', 'code');
   url.searchParams.append('client_id', LINKEDIN_CLIENT_ID);
-  url.searchParams.append('redirect_uri', LINKEDIN_CALLBACK_URL);
+  url.searchParams.append('redirect_uri', redirectUri);
   url.searchParams.append('state', state);
   url.searchParams.append('scope', 'r_liteprofile r_emailaddress w_member_social');
   
@@ -116,8 +115,8 @@ async function exchangeTwitterCode(code: string) {
 }
 
 // LinkedIn token exchange function
-async function exchangeLinkedInCode(code: string) {
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET || !LINKEDIN_CALLBACK_URL) {
+async function exchangeLinkedInCode(code: string, redirectUri: string) {
+  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET || !redirectUri) {
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
@@ -126,12 +125,12 @@ async function exchangeLinkedInCode(code: string) {
   const params = new URLSearchParams();
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
-  params.append('redirect_uri', LINKEDIN_CALLBACK_URL);
+  params.append('redirect_uri', redirectUri);
   params.append('client_id', LINKEDIN_CLIENT_ID);
   params.append('client_secret', LINKEDIN_CLIENT_SECRET);
   
   try {
-    console.log("Exchanging LinkedIn code for tokens");
+    console.log("Exchanging LinkedIn code for tokens with redirect URI:", redirectUri);
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -360,8 +359,8 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action } = await req.json();
-    console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
+    const { platform, code, userId, action, redirectUri } = await req.json();
+    console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}, redirectUri: ${redirectUri}`);
     console.log("Environment variables check:", {
       twitterClientId: TWITTER_CLIENT_ID ? "Exists" : "Missing",
       twitterClientSecret: TWITTER_CLIENT_SECRET ? "Exists" : "Missing",
@@ -474,7 +473,10 @@ serve(async (req) => {
       if (action === 'auth-url') {
         // Step 1: Generate LinkedIn auth URL
         try {
-          const { url, state } = getLinkedInAuthUrl();
+          const providedRedirectUri = redirectUri || null;
+          console.log("Using redirect URI for LinkedIn:", providedRedirectUri);
+          
+          const { url, state } = getLinkedInAuthUrl(providedRedirectUri);
           
           // Store the state temporarily
           await supabase
@@ -504,10 +506,11 @@ serve(async (req) => {
       else if (action === 'callback') {
         // Step 2: Handle callback and exchange code for tokens
         try {
-          console.log("Processing LinkedIn callback with code:", code ? code.substring(0, 5) + "..." : "none");
+          const providedRedirectUri = redirectUri || req.headers.get('Origin') + '/linkedin-callback.html';
+          console.log("Using callback redirect URI:", providedRedirectUri);
           
           // Exchange code for tokens
-          const tokens = await exchangeLinkedInCode(code);
+          const tokens = await exchangeLinkedInCode(code, providedRedirectUri);
           
           // Get user profile information
           const userProfile = await getLinkedInUserProfile(tokens.access_token);
