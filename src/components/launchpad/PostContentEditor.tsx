@@ -1,11 +1,11 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, X } from 'lucide-react';
+import { Image, Link, Upload, Video, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from '../AIPostGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileImage, FileVideo } from 'lucide-react';
+import { Input } from "@/components/ui/input";
 
 interface PostContentEditorProps {
   postContent: string;
@@ -28,6 +28,8 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState('');
 
   const handleContentGenerated = (content: string) => {
     setPostContent(content);
@@ -53,20 +55,41 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
     });
   };
 
-  const handleExternalUpload = (source: string) => {
+  const handleAddMediaUrl = () => {
+    if (!mediaUrl.trim()) {
+      toast({
+        title: "Empty URL",
+        description: "Please enter a valid URL",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Add the URL to preview urls
+    setMediaPreviewUrls(prev => [...prev, mediaUrl]);
+    
     toast({
-      title: "External Upload",
-      description: `Connect to ${source} to select media (coming soon)`
+      title: "Media URL Added",
+      description: "External media URL has been added to your post"
     });
+    
+    // Reset the URL input
+    setMediaUrl('');
+    setShowUrlInput(false);
   };
 
   const removeMedia = (index: number) => {
-    URL.revokeObjectURL(mediaPreviewUrls[index]);
+    // Revoke object URL if it's a blob URL to prevent memory leaks
+    if (mediaPreviewUrls[index].startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreviewUrls[index]);
+    }
+    
     setMediaFiles(prev => prev.filter((_, i) => i !== index));
     setMediaPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    
     toast({
       title: "Media Removed",
-      description: "Media file removed from your post"
+      description: "Media has been removed from your post"
     });
   };
 
@@ -111,6 +134,20 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
         className="hidden" 
       />
       
+      {showUrlInput && (
+        <div className="mt-4 flex gap-2">
+          <Input
+            type="url"
+            placeholder="Enter media URL"
+            value={mediaUrl}
+            onChange={(e) => setMediaUrl(e.target.value)}
+            className="flex-1"
+          />
+          <Button size="sm" onClick={handleAddMediaUrl}>Add</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowUrlInput(false)}>Cancel</Button>
+        </div>
+      )}
+      
       <div className="flex justify-end mt-2 gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -128,20 +165,16 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white border border-[#689675]/20">
             <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
-              <FileImage className="h-4 w-4 mr-2" />
-              <span>My Device</span>
+              <Image className="h-4 w-4 mr-2" />
+              <span>Photo</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExternalUpload('Dropbox')} className="hover:bg-[#689675]/10">
-              <FileVideo className="h-4 w-4 mr-2" />
-              <span>Dropbox</span>
+            <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
+              <Video className="h-4 w-4 mr-2" />
+              <span>Video</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExternalUpload('Google Drive')} className="hover:bg-[#689675]/10">
-              <FileImage className="h-4 w-4 mr-2" />
-              <span>Google Drive</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExternalUpload('Box')} className="hover:bg-[#689675]/10">
-              <FileVideo className="h-4 w-4 mr-2" />
-              <span>Box</span>
+            <DropdownMenuItem onClick={() => setShowUrlInput(true)} className="hover:bg-[#689675]/10">
+              <Link className="h-4 w-4 mr-2" />
+              <span>URL</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
