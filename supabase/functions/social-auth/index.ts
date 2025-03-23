@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -17,11 +18,7 @@ const TWITTER_CLIENT_ID = Deno.env.get("TWITTER_CLIENT_ID");
 const TWITTER_CLIENT_SECRET = Deno.env.get("TWITTER_CLIENT_SECRET");
 const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 
-// LinkedIn OAuth credentials
-const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
-const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
-
-// Generate a random string for OAuth state
+// Generate a random string for Twitter OAuth state
 function generateState() {
   return Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
@@ -50,29 +47,6 @@ function getTwitterAuthUrl() {
   url.searchParams.append('code_challenge', 'challenge'); // In a real implementation, use PKCE
   url.searchParams.append('code_challenge_method', 'plain');
   
-  return { url: url.toString(), state };
-}
-
-// LinkedIn OAuth URL generator
-function getLinkedInAuthUrl(redirectUri: string) {
-  console.log("LinkedIn Client ID:", LINKEDIN_CLIENT_ID ? "Exists" : "Missing");
-  console.log("Redirect URI:", redirectUri);
-  
-  if (!LINKEDIN_CLIENT_ID) {
-    throw new Error("LinkedIn OAuth credentials not configured");
-  }
-  
-  const state = generateState();
-  
-  // Create authorization URL
-  const url = new URL('https://www.linkedin.com/oauth/v2/authorization');
-  url.searchParams.append('response_type', 'code');
-  url.searchParams.append('client_id', LINKEDIN_CLIENT_ID);
-  url.searchParams.append('redirect_uri', redirectUri);
-  url.searchParams.append('state', state);
-  url.searchParams.append('scope', 'openid profile email w_member_social');
-  
-  console.log("Generated LinkedIn auth URL:", url.toString());
   return { url: url.toString(), state };
 }
 
@@ -115,49 +89,6 @@ async function exchangeTwitterCode(code: string) {
   }
 }
 
-// LinkedIn token exchange function
-async function exchangeLinkedInCode(code: string, redirectUri: string) {
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
-    throw new Error("LinkedIn OAuth credentials not configured");
-  }
-  
-  const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
-  
-  const params = new URLSearchParams();
-  params.append('grant_type', 'authorization_code');
-  params.append('code', code);
-  params.append('redirect_uri', redirectUri);
-  params.append('client_id', LINKEDIN_CLIENT_ID);
-  params.append('client_secret', LINKEDIN_CLIENT_SECRET);
-  
-  try {
-    console.log(`Exchanging LinkedIn code for token with redirect URI: ${redirectUri}`);
-    console.log("Request params:", params.toString());
-    
-    const response = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params
-    });
-    
-    const responseText = await response.text();
-    console.log("LinkedIn token response:", responseText);
-    
-    if (!response.ok) {
-      console.error('LinkedIn token exchange error:', responseText);
-      throw new Error(`LinkedIn API error: ${response.status} ${responseText}`);
-    }
-    
-    const tokens = JSON.parse(responseText);
-    return tokens;
-  } catch (error) {
-    console.error('Error exchanging LinkedIn code for tokens:', error);
-    throw error;
-  }
-}
-
 // Get Twitter user profile
 async function getTwitterUserProfile(accessToken: string) {
   try {
@@ -177,50 +108,6 @@ async function getTwitterUserProfile(accessToken: string) {
     return userData.data;
   } catch (error) {
     console.error('Error fetching Twitter user profile:', error);
-    throw error;
-  }
-}
-
-// Get LinkedIn user profile
-async function getLinkedInUserProfile(accessToken: string) {
-  try {
-    // Get basic profile info
-    const response = await fetch('https://api.linkedin.com/v2/me', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('LinkedIn user profile error:', errorText);
-      throw new Error(`LinkedIn API error: ${response.status} ${errorText}`);
-    }
-    
-    const userData = await response.json();
-    
-    // Get email address (requires email scope)
-    let emailData = {};
-    try {
-      const emailResponse = await fetch('https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-      
-      if (emailResponse.ok) {
-        emailData = await emailResponse.json();
-      }
-    } catch (error) {
-      console.error('Error fetching LinkedIn email, continuing without it:', error);
-    }
-    
-    return {
-      ...userData,
-      email: emailData
-    };
-  } catch (error) {
-    console.error('Error fetching LinkedIn user profile:', error);
     throw error;
   }
 }
@@ -349,14 +236,12 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action, redirectUri } = await req.json();
+    const { platform, code, userId, action } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
     console.log("Environment variables check:", {
       twitterClientId: TWITTER_CLIENT_ID ? "Exists" : "Missing",
       twitterClientSecret: TWITTER_CLIENT_SECRET ? "Exists" : "Missing",
-      twitterCallbackUrl: TWITTER_CALLBACK_URL ? "Exists" : "Missing",
-      linkedinClientId: LINKEDIN_CLIENT_ID ? "Exists" : "Missing",
-      linkedinClientSecret: LINKEDIN_CLIENT_SECRET ? "Exists" : "Missing"
+      twitterCallbackUrl: TWITTER_CALLBACK_URL ? "Exists" : "Missing"
     });
     
     // Handle Twitter OAuth flow
@@ -456,173 +341,6 @@ serve(async (req) => {
           JSON.stringify({ error: "Invalid Twitter action" }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
-      }
-    }
-    // Handle LinkedIn OAuth flow
-    else if (platform === 'linkedin') {
-      if (action === 'auth-url') {
-        // Step 1: Generate LinkedIn auth URL
-        try {
-          if (!redirectUri) {
-            throw new Error("LinkedIn redirect URI is required");
-          }
-          
-          const decodedRedirectUri = decodeURIComponent(redirectUri);
-          console.log("Generating LinkedIn auth URL with redirect URI:", decodedRedirectUri);
-          
-          const { url, state } = getLinkedInAuthUrl(decodedRedirectUri);
-          
-          // Store the state temporarily
-          await supabase
-            .from('oauth_states')
-            .insert({
-              user_id: userId,
-              platform: 'linkedin',
-              state: state,
-              created_at: new Date().toISOString()
-            });
-          
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              authUrl: url
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error: any) {
-          console.error("Error generating LinkedIn auth URL:", error);
-          return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-      } 
-      else if (action === 'callback') {
-        // Step 2: Handle callback and exchange code for tokens
-        try {
-          if (!redirectUri) {
-            throw new Error("LinkedIn redirect URI is required");
-          }
-          
-          console.log("Processing LinkedIn callback with code:", code?.substring(0, 10) + "...");
-          console.log("Redirect URI:", redirectUri);
-          
-          // Exchange code for tokens
-          const tokens = await exchangeLinkedInCode(code, redirectUri);
-          console.log("LinkedIn tokens received:", {
-            accessTokenPresent: !!tokens.access_token,
-            expiresIn: tokens.expires_in,
-            tokenType: tokens.token_type
-          });
-          
-          // Get user profile information
-          const userProfile = await getLinkedInUserProfile(tokens.access_token);
-          console.log("LinkedIn user profile:", JSON.stringify(userProfile));
-          
-          const userName = userProfile.localizedFirstName && userProfile.localizedLastName 
-            ? `${userProfile.localizedFirstName} ${userProfile.localizedLastName}`
-            : "LinkedIn Profile";
-            
-          // Store the connection in the database
-          const { data, error } = await supabase
-            .from('social_accounts')
-            .upsert({
-              user_id: userId,
-              platform: 'linkedin',
-              platform_account_id: userProfile.id,
-              account_name: userName,
-              account_type: "personal",
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token || null,
-              token_expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
-              last_used_at: new Date().toISOString(),
-              metadata: { 
-                firstName: userProfile.localizedFirstName,
-                lastName: userProfile.localizedLastName,
-                connection_type: "oauth"
-              }
-            }, {
-              onConflict: 'user_id, platform, platform_account_id',
-              ignoreDuplicates: false
-            });
-          
-          if (error) {
-            console.error("Error storing LinkedIn connection:", error);
-            return new Response(
-              JSON.stringify({ error: error.message }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-            );
-          }
-          
-          console.log("Successfully connected LinkedIn account:", userName);
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              platform: 'linkedin', 
-              accountName: userName,
-              accountType: "personal"
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error: any) {
-          console.error("Error processing LinkedIn callback:", error);
-          return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-      } 
-      else {
-        // For now, use mock connection for LinkedIn
-        try {
-          const result = getMockPlatformResponse('linkedin');
-          
-          // Add a slight delay to simulate API call
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          // Store the connection in the database
-          const { data, error } = await supabase
-            .from('social_accounts')
-            .upsert({
-              user_id: userId,
-              platform: 'linkedin',
-              platform_account_id: result.platformId,
-              account_name: result.accountName,
-              account_type: result.accountType,
-              access_token: result.accessToken,
-              refresh_token: result.refreshToken,
-              token_expires_at: result.expiresAt,
-              last_used_at: new Date().toISOString(),
-              metadata: { connection_type: "oauth" }
-            }, {
-              onConflict: 'user_id, platform, platform_account_id',
-              ignoreDuplicates: false
-            });
-            
-          if (error) {
-            console.error("Error storing LinkedIn connection:", error);
-            return new Response(
-              JSON.stringify({ error: error.message }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-            );
-          }
-          
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              platform: 'linkedin', 
-              accountName: result.accountName,
-              accountType: result.accountType
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error: any) {
-          console.error("Error creating mock LinkedIn connection:", error);
-          return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
       }
     } 
     else {

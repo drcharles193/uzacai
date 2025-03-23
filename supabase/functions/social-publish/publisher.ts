@@ -1,9 +1,8 @@
 
 import { PlatformResponse } from './types.ts';
-import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType, processLinkedInResponse } from './utils.ts';
+import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType } from './utils.ts';
 import { createTwitterAuthHeader, getTwitterCredentials } from './twitter.ts';
 import { processAndUploadMedia, uploadMediaToTwitter } from './media.ts';
-import { publishToLinkedIn } from './linkedin.ts';
 
 /**
  * Publish content and media to Twitter
@@ -162,11 +161,6 @@ export async function publishToPlatform(
     
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
-    } else if (platform === 'linkedin') {
-      // Use the LinkedIn publisher function
-      result = await publishToLinkedIn(supabase, userId, content, mediaUrls, base64Media, contentTypes);
-      // Process LinkedIn response
-      result = processLinkedInResponse(result);
     } else {
       // For other platforms (placeholder for future implementation)
       // We pass media information to the mock function
