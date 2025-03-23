@@ -89,6 +89,25 @@ export function isVideoUrl(url: string): boolean {
 }
 
 /**
+ * Formats content for LinkedIn
+ */
+export function formatLinkedInContent(content: string): string {
+  // LinkedIn doesn't require special formatting, but this function
+  // can be expanded if specific formatting is needed
+  return content;
+}
+
+/**
+ * Mock function for LinkedIn publishing
+ */
+export function mockPublishToLinkedIn(content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
+  console.log(`Mock publishing to LinkedIn: ${content.substring(0, 20)}...`);
+  console.log(`Mock publishing ${mediaUrls.length} media URLs to LinkedIn`);
+  
+  return mockPublishToOtherPlatform('linkedin', content, mediaUrls, contentTypes);
+}
+
+/**
  * Mock function for other platforms that aren't fully implemented yet
  */
 export function mockPublishToOtherPlatform(platform: string, content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
