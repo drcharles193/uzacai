@@ -141,9 +141,13 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
       
       console.log("Starting LinkedIn OAuth flow");
       
-      // Save Supabase configuration to localStorage for the callback page
-      localStorage.setItem('supabaseUrl', supabase.supabaseUrl);
-      localStorage.setItem('supabaseKey', supabase.supabaseKey);
+      // Store the Supabase URL and key in localStorage for the callback page
+      // Using environment variables instead of protected properties
+      const supabaseUrl = "https://gvmiaosmypgxrkjwvtbx.supabase.co";
+      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4";
+      
+      localStorage.setItem('supabaseUrl', supabaseUrl);
+      localStorage.setItem('supabaseKey', supabaseKey);
       
       // Log the redirect URI being used
       console.log("Starting LinkedIn OAuth flow with redirect URI: https://www.uzacai.com/auth/linkedin/callback");
