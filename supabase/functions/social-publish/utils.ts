@@ -73,12 +73,24 @@ export async function updateLastUsedTimestamp(supabase: any, userId: string, pla
 /**
  * Mock function for other platforms that aren't fully implemented yet
  */
-export function mockPublishToOtherPlatform(platform: string, content: string): any {
+export function mockPublishToOtherPlatform(platform: string, content: string, mediaCount: number = 0): any {
   console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
+  console.log(`Mock publishing ${mediaCount} media items to ${platform}`);
+  
+  const mediaItems = [];
+  for (let i = 0; i < mediaCount; i++) {
+    mediaItems.push({
+      id: `mock-media-${i}`,
+      type: i % 2 === 0 ? 'image' : 'video',
+      url: `https://example.com/media-${i}`
+    });
+  }
+  
   return {
     success: true,
     platform,
     id: `mock-post-${Math.random().toString(36).substring(2, 15)}`,
-    message: `Posted to ${platform} successfully`
+    message: `Posted to ${platform} successfully`,
+    media: mediaItems.length > 0 ? mediaItems : undefined
   };
 }

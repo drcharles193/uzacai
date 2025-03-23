@@ -38,6 +38,7 @@ export async function publishToTwitter(
         try {
           const mediaId = await processAndUploadMedia(supabase, userId, mediaUrls[i]);
           mediaIds.push(mediaId);
+          console.log(`Successfully uploaded URL media #${i + 1} with ID: ${mediaId}`);
         } catch (error) {
           console.error(`Error uploading media #${i + 1}:`, error);
           // Continue with the next media item
@@ -53,8 +54,10 @@ export async function publishToTwitter(
       for (let i = 0; i < maxBase64Items; i++) {
         try {
           const contentType = contentTypes[i] || 'image/jpeg'; // Default to image/jpeg if not specified
+          console.log(`Uploading base64 media #${i + 1} with content type: ${contentType}`);
           const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], contentType);
           mediaIds.push(mediaId);
+          console.log(`Successfully uploaded base64 media #${i + 1} with ID: ${mediaId}`);
         } catch (error) {
           console.error(`Error uploading base64 media #${i + 1}:`, error);
           // Continue with the next media item
@@ -138,7 +141,9 @@ export async function publishToPlatform(
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
     } else {
-      result = mockPublishToOtherPlatform(platform, content);
+      // For other platforms (placeholder for future implementation)
+      // We still pass media information to the mock function for logging purposes
+      result = mockPublishToOtherPlatform(platform, content, mediaUrls.length + base64Media.length);
     }
     
     console.log(`Successfully published to ${platform}`);

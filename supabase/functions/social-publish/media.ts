@@ -44,57 +44,179 @@ export async function uploadMediaToTwitter(
       throw new Error("Twitter API credentials are missing. Please check your environment variables.");
     }
     
-    // Set up Twitter API request for media upload
-    const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
-    const method = 'POST';
-    
-    // Create Authorization header
-    const authHeader = createTwitterAuthHeader(
-      method,
-      uploadUrl,
-      apiKey,
-      apiSecret,
-      accessToken,
-      accessTokenSecret
-    );
-    
-    // Prepare form data with base64 encoded media
-    const formData = new FormData();
-    formData.append('media_data', mediaBase64);
-    
     // Determine if this is a video
     const isVideo = contentType.startsWith('video/');
+    let mediaId = '';
     
     // If this is a video, we need to use the chunked upload process
     if (isVideo) {
       console.log("Video content detected, using chunked upload");
-      // This is simplified - actual video uploading requires a multi-step chunked upload process
-      // For brevity, we're using the basic approach, but note this may only work for small videos
-    }
-    
-    // Make API request to Twitter for media upload
-    const uploadResponse = await fetch(uploadUrl, {
-      method: method,
-      headers: {
-        'Authorization': authHeader,
-      },
-      body: formData
-    });
-    
-    const uploadResponseText = await uploadResponse.text();
-    console.log(`Twitter media upload API response status: ${uploadResponse.status}`);
-    console.log(`Twitter media upload API response body: ${uploadResponseText}`);
-    
-    if (!uploadResponse.ok) {
-      throw new Error(`Twitter media upload API error: ${uploadResponse.status} - ${uploadResponseText}`);
-    }
-    
-    // Parse response data to get media id
-    const uploadResponseData = JSON.parse(uploadResponseText);
-    const mediaId = uploadResponseData.media_id_string;
-    
-    if (!mediaId) {
-      throw new Error("Failed to retrieve media_id from Twitter API response");
+      // For simplicity, we're using the standard upload endpoint as the chunked upload process
+      // is more complex and requires multiple API calls
+      
+      // Set up Twitter API request for media upload
+      const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
+      const method = 'POST';
+      
+      // Create Authorization header for INIT
+      const authHeaderInit = createTwitterAuthHeader(
+        method,
+        uploadUrl,
+        apiKey,
+        apiSecret,
+        accessToken,
+        accessTokenSecret
+      );
+      
+      // Prepare form data for INIT
+      const formDataInit = new FormData();
+      formDataInit.append('command', 'INIT');
+      formDataInit.append('media_type', contentType);
+      // Convert base64 to binary to get accurate size
+      const mediaSize = Math.ceil(mediaBase64.length * 0.75); // Approximate size of decoded base64
+      formDataInit.append('total_bytes', mediaSize.toString());
+      
+      // Make INIT request to Twitter
+      const initResponse = await fetch(uploadUrl, {
+        method: method,
+        headers: {
+          'Authorization': authHeaderInit,
+        },
+        body: formDataInit
+      });
+      
+      const initResponseText = await initResponse.text();
+      console.log(`Twitter media upload INIT response status: ${initResponse.status}`);
+      console.log(`Twitter media upload INIT response body: ${initResponseText}`);
+      
+      if (!initResponse.ok) {
+        throw new Error(`Twitter media upload INIT error: ${initResponse.status} - ${initResponseText}`);
+      }
+      
+      // Parse response to get media_id
+      const initResponseData = JSON.parse(initResponseText);
+      mediaId = initResponseData.media_id_string;
+      
+      if (!mediaId) {
+        throw new Error("Failed to retrieve media_id from Twitter API INIT response");
+      }
+      
+      // Now APPEND the media data
+      const authHeaderAppend = createTwitterAuthHeader(
+        method,
+        uploadUrl,
+        apiKey,
+        apiSecret,
+        accessToken,
+        accessTokenSecret
+      );
+      
+      // Prepare form data for APPEND
+      const formDataAppend = new FormData();
+      formDataAppend.append('command', 'APPEND');
+      formDataAppend.append('media_id', mediaId);
+      formDataAppend.append('media_data', mediaBase64);
+      formDataAppend.append('segment_index', '0');
+      
+      // Make APPEND request to Twitter
+      const appendResponse = await fetch(uploadUrl, {
+        method: method,
+        headers: {
+          'Authorization': authHeaderAppend,
+        },
+        body: formDataAppend
+      });
+      
+      const appendResponseText = await appendResponse.text();
+      console.log(`Twitter media upload APPEND response status: ${appendResponse.status}`);
+      console.log(`Twitter media upload APPEND response body: ${appendResponseText}`);
+      
+      if (!appendResponse.ok) {
+        throw new Error(`Twitter media upload APPEND error: ${appendResponse.status} - ${appendResponseText}`);
+      }
+      
+      // Finally, FINALIZE the upload
+      const authHeaderFinalize = createTwitterAuthHeader(
+        method,
+        uploadUrl,
+        apiKey,
+        apiSecret,
+        accessToken,
+        accessTokenSecret
+      );
+      
+      // Prepare form data for FINALIZE
+      const formDataFinalize = new FormData();
+      formDataFinalize.append('command', 'FINALIZE');
+      formDataFinalize.append('media_id', mediaId);
+      
+      // Make FINALIZE request to Twitter
+      const finalizeResponse = await fetch(uploadUrl, {
+        method: method,
+        headers: {
+          'Authorization': authHeaderFinalize,
+        },
+        body: formDataFinalize
+      });
+      
+      const finalizeResponseText = await finalizeResponse.text();
+      console.log(`Twitter media upload FINALIZE response status: ${finalizeResponse.status}`);
+      console.log(`Twitter media upload FINALIZE response body: ${finalizeResponseText}`);
+      
+      if (!finalizeResponse.ok) {
+        throw new Error(`Twitter media upload FINALIZE error: ${finalizeResponse.status} - ${finalizeResponseText}`);
+      }
+      
+      // Parse response to confirm success
+      const finalizeResponseData = JSON.parse(finalizeResponseText);
+      
+      if (finalizeResponseData.processing_info) {
+        console.log("Media is being processed by Twitter:", finalizeResponseData.processing_info);
+      }
+      
+    } else {
+      // Regular image upload process
+      // Set up Twitter API request for media upload
+      const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
+      const method = 'POST';
+      
+      // Create Authorization header
+      const authHeader = createTwitterAuthHeader(
+        method,
+        uploadUrl,
+        apiKey,
+        apiSecret,
+        accessToken,
+        accessTokenSecret
+      );
+      
+      // Prepare form data with base64 encoded media
+      const formData = new FormData();
+      formData.append('media_data', mediaBase64);
+      
+      // Make API request to Twitter for media upload
+      const uploadResponse = await fetch(uploadUrl, {
+        method: method,
+        headers: {
+          'Authorization': authHeader,
+        },
+        body: formData
+      });
+      
+      const uploadResponseText = await uploadResponse.text();
+      console.log(`Twitter media upload API response status: ${uploadResponse.status}`);
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`Twitter media upload API error: ${uploadResponse.status} - ${uploadResponseText}`);
+      }
+      
+      // Parse response data to get media id
+      const uploadResponseData = JSON.parse(uploadResponseText);
+      mediaId = uploadResponseData.media_id_string;
+      
+      if (!mediaId) {
+        throw new Error("Failed to retrieve media_id from Twitter API response");
+      }
     }
     
     console.log(`Successfully uploaded media to Twitter with ID: ${mediaId}`);
