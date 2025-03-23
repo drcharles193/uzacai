@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -164,32 +165,15 @@
       logDebug('Using redirect URI:', redirectUri);
       
       try {
-        // Get user ID from various sources
-        let userId = '';
-        
-        // First try from localStorage direct storage (most reliable method)
-        userId = localStorage.getItem('linkedin_auth_user_id');
-        logDebug('User ID from direct localStorage:', userId);
-        
-        // Try from Supabase auth session if not found directly
-        if (!userId) {
-          try {
-            const sessionStr = localStorage.getItem('supabase.auth.token');
-            if (sessionStr) {
-              const session = JSON.parse(sessionStr);
-              userId = session.user?.id;
-              logDebug('User ID from Supabase session:', userId);
-            }
-          } catch (e) {
-            logDebug('Error parsing Supabase session:', e.message);
-          }
-        }
+        // Get user ID from localStorage
+        let userId = localStorage.getItem('linkedin_auth_user_id');
+        logDebug('User ID from localStorage:', userId);
         
         // Make sure we have the user ID
         if (!userId) {
           const errorMessage = 'User ID not found. Please sign in again.';
           showStatus(errorMessage, 'error');
-          logDebug('No user ID found in any storage', null);
+          logDebug('No user ID found in localStorage', null);
           
           notifyOpener({
             type: 'linkedin-oauth-callback',

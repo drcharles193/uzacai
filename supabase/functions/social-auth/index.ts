@@ -24,7 +24,7 @@ console.log("SUPABASE_URL:", SUPABASE_URL ? "set" : "not set");
 console.log("SUPABASE_ANON_KEY:", SUPABASE_ANON_KEY ? "set" : "not set");
 console.log("LINKEDIN_CLIENT_ID:", LINKEDIN_CLIENT_ID ? "set" : "not set");
 console.log("LINKEDIN_CLIENT_SECRET:", LINKEDIN_CLIENT_SECRET ? "set" : "not set");
-console.log("Using fixed LINKEDIN_REDIRECT_URI:", LINKEDIN_REDIRECT_URI);
+console.log("Using LINKEDIN_REDIRECT_URI:", LINKEDIN_REDIRECT_URI);
 
 serve(async (req) => {
   // Handle CORS

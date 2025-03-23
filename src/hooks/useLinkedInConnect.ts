@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// Configure your specific redirect URI here
+// Configure the redirect URI here
 const LINKEDIN_REDIRECT_URI = "https://uzacai.com/";
 
 export type LinkedInConnectionState = {
@@ -189,7 +189,8 @@ export const useLinkedInConnect = () => {
       setState(prev => ({
         ...prev,
         isConnected: false,
-        accountName: null
+        accountName: null,
+        isConnecting: false
       }));
       
       toast({
@@ -204,7 +205,6 @@ export const useLinkedInConnect = () => {
         description: error.message || "Failed to disconnect account. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setState(prev => ({ ...prev, isConnecting: false }));
     }
   };
