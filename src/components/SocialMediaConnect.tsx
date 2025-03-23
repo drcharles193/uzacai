@@ -22,6 +22,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [userId, setUserId] = useState<string | null>(null);
   const { toast: shadowToast } = useShadcnToast();
 
+  const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
+
   useEffect(() => {
     const getUserId = async () => {
       const { data } = await supabase.auth.getSession();
@@ -104,15 +106,14 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       } else if (platform === 'linkedin') {
         console.log("Starting LinkedIn connection process...");
         
-        const exactRedirectUri = window.location.origin + '/linkedin-callback.html';
-        console.log("Using LinkedIn redirect URI:", exactRedirectUri);
+        console.log("Using LinkedIn redirect URI:", LINKEDIN_REDIRECT_URI);
         
         const { data, error } = await supabase.functions.invoke('social-auth', {
           body: {
             platform: 'linkedin',
             userId,
             action: 'auth-url',
-            redirectUri: exactRedirectUri
+            redirectUri: LINKEDIN_REDIRECT_URI
           }
         });
         
@@ -184,7 +185,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     try {
       console.log("Processing LinkedIn callback with code:", code.substring(0, 10) + "...");
       
-      const exactRedirectUri = redirectUri || window.location.origin + '/linkedin-callback.html';
+      const exactRedirectUri = LINKEDIN_REDIRECT_URI;
       console.log("Using exact redirect URI for token exchange:", exactRedirectUri);
       
       const { data, error } = await supabase.functions.invoke('social-auth', {

@@ -83,6 +83,9 @@
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
       
+      // LinkedIn specific constants
+      const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
+      
       console.log("LinkedIn callback received:", { code, state, error, errorDescription });
       
       // Enable debug info for troubleshooting
@@ -92,7 +95,8 @@
                                 Error: ${error || 'None'}<br>
                                 Error Description: ${errorDescription || 'None'}<br>
                                 Origin: ${window.location.origin}<br>
-                                Full URL: ${window.location.href}`;
+                                Full URL: ${window.location.href}<br>
+                                Hardcoded Redirect URI: ${LINKEDIN_REDIRECT_URI}`;
       
       if (error) {
         spinner.style.display = 'none';
@@ -111,7 +115,7 @@
               type: 'LINKEDIN_AUTH_CALLBACK',
               code: code,
               state: state,
-              redirectUri: window.location.href.split('?')[0] // Include the exact redirect URI used
+              redirectUri: LINKEDIN_REDIRECT_URI // Use the hardcoded redirect URI
             }, window.location.origin);
             
             statusElement.innerHTML = '<p class="success">Successfully authenticated with LinkedIn!</p><p>This window will close automatically.</p>';
