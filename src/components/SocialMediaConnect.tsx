@@ -24,7 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Facebook, Instagram, Linkedin, Youtube, Twitter } from 'lucide-react';
 
-const LINKEDIN_REDIRECT_URI = "https://www.uzacai.com/auth/linkedin/callback";
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/auth/linkedin/callback";
 
 interface SocialPlatform {
   id: string;

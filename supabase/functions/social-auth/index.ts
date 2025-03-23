@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -13,7 +14,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') || '';
 const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET') || '';
-const LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://www.uzacai.com/auth/linkedin/callback';
+const LINKEDIN_REDIRECT_URI = Deno.env.get('LINKEDIN_REDIRECT_URI') || 'https://www.uzacai.com/';
 
 console.log("Edge function environment:");
 console.log("SUPABASE_URL:", SUPABASE_URL ? "set" : "not set");
@@ -33,7 +34,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // Parse request body
-    const { platform, action, code, userId, redirectUri } = await req.json();
+    const { platform, action, code, userId } = await req.json();
     
     console.log(`Processing ${action} request for ${platform} platform`);
     
@@ -59,15 +60,11 @@ serve(async (req) => {
       // Using ONLY authorized scopes from the image
       const scopes = ['openid', 'profile', 'w_member_social', 'email'];
       
-      // Use the redirectUri from the request if provided, fall back to environment variable
-      const finalRedirectUri = redirectUri || LINKEDIN_REDIRECT_URI;
-      console.log("Using redirect URI:", finalRedirectUri);
-      
       // Create LinkedIn authorization URL
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?` +
         `response_type=code` +
         `&client_id=${LINKEDIN_CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(finalRedirectUri)}` +
+        `&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}` +
         `&state=${Math.random().toString(36).substring(2)}` +
         `&scope=${encodeURIComponent(scopes.join(' '))}`;
       
@@ -96,9 +93,8 @@ serve(async (req) => {
       }
       
       try {
-        // Use the redirectUri from the request if provided, fall back to environment variable
-        const finalRedirectUri = redirectUri || LINKEDIN_REDIRECT_URI;
-        console.log("Exchanging code for access token using redirect URI:", finalRedirectUri);
+        // Exchange code for access token
+        console.log("Exchanging code for access token using redirect URI:", LINKEDIN_REDIRECT_URI);
         
         const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
           method: 'POST',
@@ -110,7 +106,7 @@ serve(async (req) => {
             code: code,
             client_id: LINKEDIN_CLIENT_ID,
             client_secret: LINKEDIN_CLIENT_SECRET,
-            redirect_uri: finalRedirectUri
+            redirect_uri: LINKEDIN_REDIRECT_URI
           })
         });
         
