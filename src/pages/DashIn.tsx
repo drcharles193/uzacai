@@ -12,6 +12,7 @@ import PublishingSummary from '@/components/PublishingSummary';
 import ConnectedAccountsList from '@/components/ConnectedAccountsList';
 import LaunchPad from '@/components/LaunchPad';
 import AppSidebar from '@/components/AppSidebar';
+import LinkedInConnect from '@/components/linkedin/LinkedInConnect';
 
 interface SocialAccount {
   platform: string;
@@ -202,9 +203,16 @@ const DashIn = () => {
           {hasConnectedAccounts ? <div className="max-w-5xl mx-auto">
               <div className="flex justify-between items-center mb-6">
                 <h1 className="text-4xl font-bold text-gray-700">Hey, {userName || 'there'}!</h1>
-                <Button variant="outline" className="text-[#689675] border-[#689675] hover:bg-[#689675] hover:text-white" onClick={() => setShowConnectDialog(true)}>
-                  Connect Account
-                </Button>
+                <div className="flex gap-3">
+                  <LinkedInConnect 
+                    buttonText="Connect LinkedIn" 
+                    onSuccess={handleSocialConnectDone}
+                    onError={(error) => toast.error(error)}
+                  />
+                  <Button variant="outline" className="text-[#689675] border-[#689675] hover:bg-[#689675] hover:text-white" onClick={() => setShowConnectDialog(true)}>
+                    Connect Account
+                  </Button>
+                </div>
               </div>
               
               <PublishingSummary />
@@ -224,9 +232,16 @@ const DashIn = () => {
                   Get started by connecting your first account.
                 </p>
                 
-                <Button className="mt-4" onClick={() => setShowConnectDialog(true)}>
-                  <span>Connect Account</span>
-                </Button>
+                <div className="flex gap-3 mt-4">
+                  <LinkedInConnect 
+                    buttonText="Connect LinkedIn" 
+                    onSuccess={handleSocialConnectDone}
+                    onError={(error) => toast.error(error)}
+                  />
+                  <Button onClick={() => setShowConnectDialog(true)}>
+                    <span>Connect Other Accounts</span>
+                  </Button>
+                </div>
               </div>
               
               <div className="w-[300px]">
