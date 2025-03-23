@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Key, Shield, Mail, Twitter } from 'lucide-react';
+import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -86,6 +87,36 @@ const SecuritySettings = () => {
     }
   };
 
+  const connectLinkedIn = async () => {
+    try {
+      setIsConnecting(true);
+      
+      // Get the current URL to use in the redirect
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/settings?tab=security`;
+      
+      console.log("Starting LinkedIn OAuth flow with redirect to:", redirectTo);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'linkedin_oidc',
+        options: {
+          redirectTo: redirectTo,
+          scopes: 'openid profile email w_member_social'
+        }
+      });
+      
+      if (error) throw error;
+      
+      // User will be redirected to LinkedIn for authentication
+      // No need to set isConnecting to false as the page will reload after redirect
+      
+    } catch (error: any) {
+      console.error("Error connecting LinkedIn account:", error);
+      toast.error("Failed to connect LinkedIn account: " + error.message);
+      setIsConnecting(false);
+    }
+  };
+
   const disconnectAccount = async (provider: string) => {
     try {
       setIsDisconnecting(true);
@@ -127,6 +158,7 @@ const SecuritySettings = () => {
 
   const isGoogleConnected = connectedAccounts.includes('google');
   const isTwitterConnected = connectedAccounts.includes('twitter');
+  const isLinkedInConnected = connectedAccounts.includes('linkedin_oidc');
 
   return (
     <div className="space-y-8">
@@ -249,6 +281,42 @@ const SecuritySettings = () => {
                 <Button 
                   variant="outline" 
                   onClick={connectTwitter}
+                  disabled={isConnecting}
+                >
+                  {isConnecting ? "Connecting..." : "Connect"}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Linkedin size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-medium">LinkedIn Account</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {isLinkedInConnected 
+                      ? "Your LinkedIn account is connected" 
+                      : "Connect your LinkedIn account for social publishing"}
+                  </p>
+                </div>
+              </div>
+              {isLinkedInConnected ? (
+                <Button 
+                  variant="outline" 
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                  onClick={() => disconnectAccount('linkedin_oidc')}
+                  disabled={isDisconnecting}
+                >
+                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={connectLinkedIn}
                   disabled={isConnecting}
                 >
                   {isConnecting ? "Connecting..." : "Connect"}

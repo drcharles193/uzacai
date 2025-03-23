@@ -89,6 +89,34 @@ export function isVideoUrl(url: string): boolean {
 }
 
 /**
+ * Process LinkedIn API response
+ */
+export function processLinkedInResponse(response: any): any {
+  if (!response) {
+    return {
+      success: false,
+      platform: 'linkedin',
+      message: 'No response from LinkedIn API'
+    };
+  }
+
+  if (response.id) {
+    return {
+      success: true,
+      platform: 'linkedin',
+      id: response.id,
+      message: 'Posted to LinkedIn successfully'
+    };
+  }
+
+  return {
+    success: false,
+    platform: 'linkedin',
+    message: 'Failed to post to LinkedIn'
+  };
+}
+
+/**
  * Mock function for other platforms that aren't fully implemented yet
  */
 export function mockPublishToOtherPlatform(platform: string, content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
