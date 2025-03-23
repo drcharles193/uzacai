@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -21,7 +20,7 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 // LinkedIn OAuth credentials
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
-const LINKEDIN_CALLBACK_URL = Deno.env.get("LINKEDIN_CALLBACK_URL") || "https://uzacai.com/linkedin-callback.html";
+const LINKEDIN_CALLBACK_URL = Deno.env.get("LINKEDIN_CALLBACK_URL") || "https://www.linkedin.com/developers/tools/oauth/redirect";
 
 // Generate a random string for OAuth state
 function generateState() {
