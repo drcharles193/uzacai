@@ -70,8 +70,9 @@ export const useLinkedInConnect = (options?: UseLinkedInConnectOptions) => {
     checkLinkedInConnection();
     
     // Store Supabase configuration in localStorage for the callback page
-    localStorage.setItem('supabaseUrl', supabase.supabaseUrl);
-    localStorage.setItem('supabaseKey', supabase.supabaseKey);
+    // Using the URL directly from the client.ts import to avoid protected property access
+    localStorage.setItem('supabaseUrl', 'https://gvmiaosmypgxrkjwvtbx.supabase.co');
+    localStorage.setItem('supabaseKey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bWlhb3NteXBneHJrand2dGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODk4MjIsImV4cCI6MjA1NzY2NTgyMn0.g18SHNPhtHZWzvqNe-XIflpXusypIhaPUgweQzYcUg4');
     
     // Add listener for the callback message
     const handleLinkedInCallback = (event: MessageEvent) => {
