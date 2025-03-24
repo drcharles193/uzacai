@@ -56,7 +56,6 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
 
     const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
     setMediaPreviewUrls(prev => [...prev, ...newPreviewUrls]);
-    
     toast({
       title: "Media Added",
       description: `Added ${newFiles.length} media files to your post`
@@ -101,28 +100,10 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
     });
   };
 
-  const isVideoFile = (file: File | null): boolean => {
-    if (!file) return false;
-    return file.type.startsWith('video/');
-  };
-
-  const isVideoUrl = (url: string): boolean => {
-    // Check if it's a direct video URL by extension
-    const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
-    if (videoExtensions.test(url)) return true;
-    
-    // For blob URLs, check the associated file type
-    const fileIndex = mediaPreviewUrls.indexOf(url);
-    if (fileIndex !== -1 && mediaFiles[fileIndex]) {
-      return isVideoFile(mediaFiles[fileIndex]);
-    }
-    
-    return false;
-  };
-
   const renderMediaPreview = (url: string, index: number) => {
-    // Check if the URL is for a video
-    const isVideo = isVideoUrl(url);
+    // Check if the URL is for a video (either by file extension or mime type)
+    const isVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || 
+                   (mediaFiles[index]?.type && mediaFiles[index].type.startsWith('video/'));
     
     return (
       <div key={index} className="relative group">
@@ -131,6 +112,9 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
             src={url} 
             className="w-full h-24 object-cover rounded-md border border-gray-200"
             controls
+            muted
+            autoPlay={false}
+            loop={false}
             preload="metadata"
           />
         ) : (

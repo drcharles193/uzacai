@@ -48,9 +48,6 @@ export async function processBlobMediaUrls(
     mediaContentTypes.push('image/jpeg'); // Default to image/jpeg if not specified
   }
   
-  console.log(`Processed ${validUrls.length} valid URLs and ${base64Data.length} base64 media items`);
-  console.log(`Media content types: ${mediaContentTypes.join(', ')}`);
-  
   return {
     urls: validUrls,
     base64: base64Data,
@@ -74,75 +71,14 @@ export async function updateLastUsedTimestamp(supabase: any, userId: string, pla
 }
 
 /**
- * Detects if a content type is a video
- */
-export function isVideoContentType(contentType: string): boolean {
-  return contentType.startsWith('video/');
-}
-
-/**
- * Detects if a URL is pointing to a video file
- */
-export function isVideoUrl(url: string): boolean {
-  const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
-  return videoExtensions.test(url);
-}
-
-/**
- * Formats content for LinkedIn
- */
-export function formatLinkedInContent(content: string): string {
-  // LinkedIn doesn't require special formatting, but this function
-  // can be expanded if specific formatting is needed
-  return content;
-}
-
-/**
- * Mock function for LinkedIn publishing
- */
-export function mockPublishToLinkedIn(content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
-  console.log(`Mock publishing to LinkedIn: ${content.substring(0, 20)}...`);
-  console.log(`Mock publishing ${mediaUrls.length} media URLs to LinkedIn`);
-  
-  return mockPublishToOtherPlatform('linkedin', content, mediaUrls, contentTypes);
-}
-
-/**
  * Mock function for other platforms that aren't fully implemented yet
  */
-export function mockPublishToOtherPlatform(platform: string, content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
+export function mockPublishToOtherPlatform(platform: string, content: string): any {
   console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
-  console.log(`Mock publishing ${mediaUrls.length} media URLs to ${platform}`);
-  
-  const mediaItems = [];
-  
-  // Process both direct media URLs and content types
-  for (let i = 0; i < mediaUrls.length; i++) {
-    const isVideo = isVideoUrl(mediaUrls[i]);
-    
-    mediaItems.push({
-      id: `mock-media-${i}`,
-      type: isVideo ? 'video' : 'image',
-      url: mediaUrls[i]
-    });
-  }
-  
-  // Process content types (usually from base64 data)
-  for (let i = 0; i < contentTypes.length; i++) {
-    const isVideo = isVideoContentType(contentTypes[i]);
-    
-    mediaItems.push({
-      id: `mock-media-base64-${i}`,
-      type: isVideo ? 'video' : 'image',
-      url: `https://example.com/media-base64-${i}.${isVideo ? 'mp4' : 'jpg'}`
-    });
-  }
-  
   return {
     success: true,
     platform,
     id: `mock-post-${Math.random().toString(36).substring(2, 15)}`,
-    message: `Posted to ${platform} successfully`,
-    media: mediaItems.length > 0 ? mediaItems : undefined
+    message: `Posted to ${platform} successfully`
   };
 }

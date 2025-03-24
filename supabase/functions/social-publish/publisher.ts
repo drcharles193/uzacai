@@ -1,6 +1,6 @@
 
 import { PlatformResponse } from './types.ts';
-import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType, formatLinkedInContent } from './utils.ts';
+import { updateLastUsedTimestamp, mockPublishToOtherPlatform } from './utils.ts';
 import { createTwitterAuthHeader, getTwitterCredentials } from './twitter.ts';
 import { processAndUploadMedia, uploadMediaToTwitter } from './media.ts';
 
@@ -27,16 +27,6 @@ export async function publishToTwitter(
     
     // Upload media if provided
     let mediaIds: string[] = [];
-    let hasVideo = false;
-    
-    // Check if any content types indicate video
-    for (const contentType of contentTypes) {
-      if (isVideoContentType(contentType)) {
-        hasVideo = true;
-        console.log("Video content detected in the upload");
-        break;
-      }
-    }
     
     // First, try to upload from URLs
     if (mediaUrls.length > 0) {
@@ -48,7 +38,6 @@ export async function publishToTwitter(
         try {
           const mediaId = await processAndUploadMedia(supabase, userId, mediaUrls[i]);
           mediaIds.push(mediaId);
-          console.log(`Successfully uploaded URL media #${i + 1} with ID: ${mediaId}`);
         } catch (error) {
           console.error(`Error uploading media #${i + 1}:`, error);
           // Continue with the next media item
@@ -64,19 +53,8 @@ export async function publishToTwitter(
       for (let i = 0; i < maxBase64Items; i++) {
         try {
           const contentType = contentTypes[i] || 'image/jpeg'; // Default to image/jpeg if not specified
-          console.log(`Uploading base64 media #${i + 1} with content type: ${contentType}`);
-          
-          // Check if it's a video
-          const isVideo = isVideoContentType(contentType);
-          console.log(`Media #${i + 1} is ${isVideo ? 'a video' : 'an image'}`);
-          
-          if (isVideo) {
-            hasVideo = true;
-          }
-          
           const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], contentType);
           mediaIds.push(mediaId);
-          console.log(`Successfully uploaded base64 media #${i + 1} with ID: ${mediaId}`);
         } catch (error) {
           console.error(`Error uploading base64 media #${i + 1}:`, error);
           // Continue with the next media item
@@ -142,104 +120,6 @@ export async function publishToTwitter(
 }
 
 /**
- * Publish content and media to LinkedIn
- */
-export async function publishToLinkedIn(
-  supabase: any,
-  userId: string, 
-  content: string, 
-  mediaUrls: string[] = [],
-  base64Media: string[] = [],
-  contentTypes: string[] = []
-): Promise<any> {
-  try {
-    console.log(`Publishing to LinkedIn for user ${userId} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media items`);
-    
-    // Get the LinkedIn credentials from the database
-    const { data, error } = await supabase
-      .from('social_accounts')
-      .select('access_token, platform_account_id')
-      .eq('user_id', userId)
-      .eq('platform', 'linkedin')
-      .single();
-    
-    if (error || !data || !data.access_token) {
-      throw new Error("LinkedIn credentials not found. Please reconnect your LinkedIn account.");
-    }
-    
-    const accessToken = data.access_token;
-    const userId_URN = data.platform_account_id;
-    
-    // Format the content for LinkedIn
-    const formattedContent = formatLinkedInContent(content);
-    
-    // Check if we have the w_member_social scope by attempting to post
-    // If we don't have the scope, the API will return an error
-    // For now, since the LinkedIn integration is still being tested and we've 
-    // verified the authorized scopes, we'll use a mock response
-    console.log("Using w_member_social scope for LinkedIn posting");
-    
-    // Update last_used_at timestamp
-    await updateLastUsedTimestamp(supabase, userId, 'linkedin');
-    
-    return mockPublishToOtherPlatform('linkedin', content, mediaUrls, contentTypes);
-    
-    /* Commented out actual LinkedIn publishing code for future implementation
-    // This is where you would actually post to LinkedIn using the w_member_social scope
-    // LinkedIn API endpoint for sharing
-    const shareEndpoint = 'https://api.linkedin.com/v2/ugcPosts';
-    
-    // Prepare request body for text-only post
-    const requestBody = {
-      author: `urn:li:person:${userId_URN}`,
-      lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: {
-            text: formattedContent
-          },
-          shareMediaCategory: "NONE"
-        }
-      },
-      visibility: {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-      }
-    };
-    
-    // If there are media items, we need to handle them differently
-    // LinkedIn requires uploading media first and then referencing it
-    
-    // Make API request to LinkedIn
-    const response = await fetch(shareEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0'
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('LinkedIn API error:', errorText);
-      throw new Error(`LinkedIn API error: ${response.status} - ${errorText}`);
-    }
-    
-    const responseData = await response.json();
-    
-    // Update last_used_at timestamp
-    await updateLastUsedTimestamp(supabase, userId, 'linkedin');
-    
-    return responseData;
-    */
-  } catch (error: any) {
-    console.error('Error publishing to LinkedIn:', error);
-    throw error;
-  }
-}
-
-/**
  * Process publishing request for a specific platform
  */
 export async function publishToPlatform(
@@ -253,18 +133,12 @@ export async function publishToPlatform(
 ): Promise<PlatformResponse> {
   try {
     console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media`);
-    console.log(`Content types for base64 media: ${contentTypes.join(', ')}`);
-    
     let result;
     
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
-    } else if (platform === 'linkedin') {
-      result = await publishToLinkedIn(supabase, userId, content, mediaUrls, base64Media, contentTypes);
     } else {
-      // For other platforms (placeholder for future implementation)
-      // We pass media information to the mock function
-      result = mockPublishToOtherPlatform(platform, content, mediaUrls, contentTypes);
+      result = mockPublishToOtherPlatform(platform, content);
     }
     
     console.log(`Successfully published to ${platform}`);
