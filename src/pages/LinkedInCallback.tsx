@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 const LinkedInCallback = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,6 +22,7 @@ const LinkedInCallback = () => {
         const errorDescription = params.get('error_description');
 
         // Log the parameters for debugging
+        console.log('LinkedIn callback triggered. Current URL:', window.location.href);
         console.log('LinkedIn callback parameters:', { 
           code: code ? `${code.substring(0, 5)}...` : null,
           state,
@@ -36,8 +38,6 @@ const LinkedInCallback = () => {
           throw new Error('No authorization code received from LinkedIn');
         }
 
-        console.log('LinkedIn callback received. Processing code...');
-
         // Get the current user to associate the LinkedIn account with
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -45,6 +45,8 @@ const LinkedInCallback = () => {
           throw new Error('You must be logged in to connect a LinkedIn account');
         }
 
+        console.log('Calling social-auth edge function with code and state');
+        
         // Call our edge function to exchange the code for tokens and complete the OAuth flow
         const response = await supabase.functions.invoke('social-auth', {
           body: {
@@ -62,12 +64,18 @@ const LinkedInCallback = () => {
           throw new Error(response.error.message || 'Failed to connect LinkedIn account');
         }
 
+        setSuccess(true);
         toast.success('LinkedIn account successfully connected!');
-        navigate('/settings?tab=security', { replace: true });
+        
+        // Wait a bit before redirecting to make sure toast is visible
+        setTimeout(() => {
+          navigate('/settings?tab=security', { replace: true });
+        }, 2000);
       } catch (err: any) {
         console.error('LinkedIn callback error:', err);
         setError(err.message || 'An error occurred while connecting your LinkedIn account');
         toast.error(err.message || 'Failed to connect LinkedIn account');
+        
         // Still navigate away after a delay even if there's an error
         setTimeout(() => navigate('/settings?tab=security', { replace: true }), 3000);
       } finally {
@@ -75,6 +83,7 @@ const LinkedInCallback = () => {
       }
     };
 
+    console.log('LinkedInCallback component mounted');
     handleCallback();
   }, [location, navigate]);
 
@@ -100,13 +109,22 @@ const LinkedInCallback = () => {
     );
   }
 
+  if (success) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md">
+          <h1 className="text-xl font-semibold text-green-700 mb-2">LinkedIn Connected!</h1>
+          <p className="text-gray-600">Your LinkedIn account has been successfully connected.</p>
+          <p className="mt-4 text-gray-600">Redirecting you back to settings page...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center">
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md">
-        <h1 className="text-xl font-semibold text-green-700 mb-2">LinkedIn Connected!</h1>
-        <p className="text-gray-600">Your LinkedIn account has been successfully connected.</p>
-        <p className="mt-4 text-gray-600">Redirecting you back to settings page...</p>
-      </div>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <p className="mt-4 text-lg">Processing LinkedIn authorization...</p>
     </div>
   );
 };

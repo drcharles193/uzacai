@@ -61,7 +61,6 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
-      // Get the current URL to use in the redirect
       const origin = window.location.origin;
       const redirectTo = `${origin}/settings?tab=security`;
       
@@ -77,8 +76,16 @@ const SecuritySettings = () => {
       
       if (error) throw error;
       
-      // User will be redirected to Google for authentication
-      // No need to set isConnecting to false as the page will reload after redirect
+      if (!data.session) {
+        toast.error("Authentication required. Please sign in to connect social accounts.");
+        setIsConnecting(false);
+        return;
+      }
+      
+      toast.success("Google Connected: Your Google account has been connected successfully.");
+      
+      // Refresh the connected accounts list
+      await fetchConnectedIdentities();
       
     } catch (error: any) {
       console.error("Error connecting Google account:", error);
@@ -91,7 +98,6 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
-      // Get the current URL to use in the redirect
       const origin = window.location.origin;
       const redirectTo = `${origin}/settings?tab=security`;
       
@@ -149,11 +155,7 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
-      // Get the current URL to use in the redirect
-      const origin = window.location.origin;
-      const redirectTo = `${origin}/settings?tab=security`;
-      
-      console.log("Starting LinkedIn OAuth flow...");
+      console.log("Starting LinkedIn OAuth flow with origin:", window.location.origin);
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -180,21 +182,7 @@ const SecuritySettings = () => {
         throw new Error("No LinkedIn auth URL returned");
       }
       
-      const width = 600, height = 600;
-      const left = window.innerWidth / 2 - width / 2;
-      const top = window.innerHeight / 2 - height / 2;
-      
-      const linkedinPopup = window.open(
-        response.data.authUrl,
-        'linkedin-oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-      
-      if (!linkedinPopup) {
-        throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
-      }
-      
-      setLinkedInWindow(linkedinPopup);
+      window.location.href = response.data.authUrl;
       
     } catch (error: any) {
       console.error("Error connecting LinkedIn account:", error);
@@ -299,7 +287,6 @@ const SecuritySettings = () => {
     try {
       setIsDisconnecting(true);
       
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("No user found. Please sign in again.");
@@ -307,7 +294,6 @@ const SecuritySettings = () => {
       
       console.log(`Attempting to disconnect ${provider} account for user ${user.id}`);
       
-      // Call the edge function to disconnect the account
       const { data, error } = await supabase.functions.invoke('disconnect-social', {
         body: {
           userId: user.id,
@@ -323,7 +309,6 @@ const SecuritySettings = () => {
       
       toast.success(data.message || `${provider.charAt(0).toUpperCase() + provider.slice(1)} account disconnected successfully`);
       
-      // Refresh the connected accounts list
       await fetchConnectedIdentities();
       
     } catch (error: any) {
@@ -335,7 +320,6 @@ const SecuritySettings = () => {
   };
 
   const openDisconnectConfirmation = (id: string) => {
-    // Implementation of openDisconnectConfirmation
   };
 
   const isGoogleConnected = connectedAccounts.includes('google');

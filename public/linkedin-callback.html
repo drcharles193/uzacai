@@ -116,29 +116,40 @@
         referrer: document.referrer
       };
       
+      console.log('LinkedIn callback debug data:', debugData);
       debugInfo.textContent = JSON.stringify(debugData, null, 2);
+      
+      // Immediately show debug info in production to help diagnose issues
+      debugDiv.style.display = 'block';
       
       if (error) {
         loadingDiv.style.display = 'none';
         statusDiv.className = 'error';
         statusDiv.innerHTML = `<strong>Authentication Error:</strong><br>${errorDescription || error}`;
         continueBtn.style.display = 'inline-block';
-        debugDiv.style.display = 'block';
         continueBtn.addEventListener('click', function() {
-          window.location.href = '/settings';
+          window.location.href = '/settings?tab=security&error=' + encodeURIComponent(error);
         });
       } else if (code) {
-        // If we have a code, we can redirect to our app's callback handler
-        // Make sure to use the absolute path to avoid any routing issues
-        window.location.href = `/linkedin-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+        // If we have a code, we need to redirect to our React app's callback route
+        // We'll do this in a way that works both in development and production
+        const baseUrl = window.location.origin;
+        const callbackUrl = `${baseUrl}/linkedin-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+        
+        console.log('Redirecting to application callback:', callbackUrl);
+        statusDiv.innerHTML = '<strong>Redirecting to application...</strong>';
+        
+        // Use a small delay to ensure the console.log completes
+        setTimeout(() => {
+          window.location.href = callbackUrl;
+        }, 500);
       } else {
         loadingDiv.style.display = 'none';
         statusDiv.className = 'error';
         statusDiv.innerHTML = '<strong>Invalid Request:</strong><br>No authentication code received from LinkedIn.';
         continueBtn.style.display = 'inline-block';
-        debugDiv.style.display = 'block';
         continueBtn.addEventListener('click', function() {
-          window.location.href = '/settings';
+          window.location.href = '/settings?tab=security&error=no_code';
         });
       }
     });
