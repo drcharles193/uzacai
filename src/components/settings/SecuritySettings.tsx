@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -66,6 +67,7 @@ const SecuritySettings = () => {
       
       console.log("Starting Google OAuth flow with redirect to:", redirectTo);
       
+      // Fix: TypeScript error - data does not have session property
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -76,7 +78,10 @@ const SecuritySettings = () => {
       
       if (error) throw error;
       
-      if (!data.session) {
+      // The session check needs to be done separately since it's not part of the return value
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
         toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
         return;
