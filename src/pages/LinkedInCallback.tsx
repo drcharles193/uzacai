@@ -40,7 +40,8 @@ const LinkedInCallback = () => {
             action: 'callback',
             code: code,
             state: state,
-            userId: user.id
+            userId: user.id,
+            redirectUri: window.location.origin + '/auth/linkedin/callback'
           }
         });
 

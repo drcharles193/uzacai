@@ -116,11 +116,11 @@ async function getTwitterUserProfile(accessToken: string) {
 }
 
 // LinkedIn OAuth URL generator
-function getLinkedInAuthUrl() {
+function getLinkedInAuthUrl(redirectUri: string) {
   console.log("LinkedIn Client ID:", LINKEDIN_CLIENT_ID ? "Exists" : "Missing");
-  console.log("LinkedIn Redirect URI:", LINKEDIN_REDIRECT_URI ? "Exists" : "Missing");
+  console.log("LinkedIn Redirect URI from request:", redirectUri);
   
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_REDIRECT_URI) {
+  if (!LINKEDIN_CLIENT_ID) {
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
@@ -131,7 +131,7 @@ function getLinkedInAuthUrl() {
   const url = new URL('https://www.linkedin.com/oauth/v2/authorization');
   url.searchParams.append('response_type', 'code');
   url.searchParams.append('client_id', LINKEDIN_CLIENT_ID);
-  url.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI);
+  url.searchParams.append('redirect_uri', redirectUri);
   url.searchParams.append('scope', 'r_liteprofile r_emailaddress w_member_social');
   url.searchParams.append('state', state);
   
@@ -139,8 +139,8 @@ function getLinkedInAuthUrl() {
 }
 
 // LinkedIn token exchange function
-async function exchangeLinkedInCode(code: string) {
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET || !LINKEDIN_REDIRECT_URI) {
+async function exchangeLinkedInCode(code: string, redirectUri: string) {
+  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
@@ -149,12 +149,12 @@ async function exchangeLinkedInCode(code: string) {
   const params = new URLSearchParams();
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
-  params.append('redirect_uri', LINKEDIN_REDIRECT_URI);
+  params.append('redirect_uri', redirectUri);
   params.append('client_id', LINKEDIN_CLIENT_ID);
   params.append('client_secret', LINKEDIN_CLIENT_SECRET);
   
   try {
-    console.log("Exchanging LinkedIn code for tokens");
+    console.log("Exchanging LinkedIn code for tokens with redirect URI:", redirectUri);
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -349,8 +349,8 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action } = await req.json();
-    console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
+    const { platform, code, userId, action, redirectUri, state } = await req.json();
+    console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}, redirectUri: ${redirectUri || 'not provided'}`);
     
     // Handle Twitter OAuth flow
     if (platform === 'twitter') {
@@ -454,7 +454,14 @@ serve(async (req) => {
       if (action === 'auth-url') {
         // Step 1: Generate LinkedIn auth URL
         try {
-          const { url, state } = getLinkedInAuthUrl();
+          if (!redirectUri) {
+            return new Response(
+              JSON.stringify({ error: "Missing redirectUri parameter" }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          const { url, state } = getLinkedInAuthUrl(redirectUri);
           
           // Store the state temporarily
           await supabase
@@ -484,8 +491,15 @@ serve(async (req) => {
       else if (action === 'callback') {
         // Step 2: Handle callback and exchange code for tokens
         try {
+          if (!redirectUri) {
+            return new Response(
+              JSON.stringify({ error: "Missing redirectUri parameter" }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
           // Exchange code for tokens
-          const tokens = await exchangeLinkedInCode(code);
+          const tokens = await exchangeLinkedInCode(code, redirectUri);
           
           // Get user profile information
           const userProfile = await getLinkedInUserProfile(tokens.access_token);

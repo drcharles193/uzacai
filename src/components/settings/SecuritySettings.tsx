@@ -99,9 +99,9 @@ const SecuritySettings = () => {
       
       // Get the current URL to use in the redirect
       const origin = window.location.origin;
-      const redirectTo = `${origin}/auth/linkedin/callback`;
+      const redirectUri = `${origin}/auth/linkedin/callback`;
       
-      console.log("Starting LinkedIn OAuth flow with redirect to:", redirectTo);
+      console.log("Starting LinkedIn OAuth flow with redirect to:", redirectUri);
       
       // Call the social-auth edge function to get the LinkedIn auth URL
       const { data, error } = await supabase.functions.invoke('social-auth', {
@@ -109,12 +109,18 @@ const SecuritySettings = () => {
           platform: 'linkedin',
           action: 'auth-url',
           userId: user.id,
-          redirectUri: redirectTo
+          redirectUri: redirectUri
         }
       });
       
-      if (error || !data?.authUrl) {
-        throw new Error(error?.message || "Failed to get LinkedIn authorization URL");
+      if (error) {
+        console.error("LinkedIn auth-url error:", error);
+        throw new Error(error.message || "Failed to get LinkedIn authorization URL");
+      }
+      
+      if (!data?.authUrl) {
+        console.error("LinkedIn auth-url missing URL:", data);
+        throw new Error("Failed to get LinkedIn authorization URL");
       }
       
       console.log("Received LinkedIn auth URL:", data.authUrl);
