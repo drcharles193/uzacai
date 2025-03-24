@@ -33,15 +33,19 @@ const LinkedInCallback = () => {
 
         console.log("Processing LinkedIn callback with code:", code);
 
+        // Get the current URL origin for the redirectUri
+        const origin = window.location.origin;
+        const redirectUri = `${origin}/auth/linkedin/callback`;
+
         // Call the social-auth edge function to process the callback
         const response = await supabase.functions.invoke('social-auth', {
           body: {
             platform: 'linkedin',
-            action: 'callback',
+            action: 'callback', // Critical parameter that was missing
             code: code,
             state: state,
             userId: user.id,
-            redirectUri: window.location.origin + '/auth/linkedin/callback'
+            redirectUri: redirectUri // Make sure this matches exactly what was used in auth-url
           }
         });
 

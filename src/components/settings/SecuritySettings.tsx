@@ -107,7 +107,7 @@ const SecuritySettings = () => {
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
-          action: 'auth-url',
+          action: 'auth-url', // Critical parameter that was missing
           userId: user.id,
           redirectUri: redirectUri
         }
