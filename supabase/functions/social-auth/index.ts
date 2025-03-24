@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -20,7 +21,8 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 // LinkedIn OAuth credentials
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
-const LINKEDIN_REDIRECT_URI = Deno.env.get("LINKEDIN_REDIRECT_URI") || "https://uzacai.com/linkedin-callback";
+// IMPORTANT: Use exactly the registered redirect URI without a fallback
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -119,7 +121,7 @@ async function getTwitterUserProfile(accessToken: string) {
 // LinkedIn OAuth URL generator
 function getLinkedInAuthUrl() {
   console.log("LinkedIn Client ID:", LINKEDIN_CLIENT_ID ? "Exists" : "Missing");
-  console.log("LinkedIn Redirect URI:", LINKEDIN_REDIRECT_URI ? "Exists" : "Missing");
+  console.log("LinkedIn Redirect URI:", LINKEDIN_REDIRECT_URI);
   
   if (!LINKEDIN_CLIENT_ID || !LINKEDIN_REDIRECT_URI) {
     throw new Error("LinkedIn OAuth credentials not configured");
@@ -376,6 +378,7 @@ serve(async (req) => {
         // Step 1: Generate LinkedIn auth URL
         try {
           const { url, state } = getLinkedInAuthUrl();
+          console.log("Generated LinkedIn auth URL with redirect to:", LINKEDIN_REDIRECT_URI);
           
           // Store the state temporarily
           await supabase

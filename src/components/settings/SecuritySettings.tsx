@@ -153,7 +153,7 @@ const SecuritySettings = () => {
       const origin = window.location.origin;
       const redirectTo = `${origin}/settings?tab=security`;
       
-      console.log("Starting LinkedIn OAuth flow with redirect to:", redirectTo);
+      console.log("Starting LinkedIn OAuth flow...");
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
