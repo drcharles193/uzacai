@@ -31,15 +31,20 @@ const LinkedInCallback = () => {
         setStatus('loading');
         setErrorMessage(null);
 
+        console.log("Processing LinkedIn callback with code:", code);
+
         // Call the social-auth edge function to process the callback
         const response = await supabase.functions.invoke('social-auth', {
           body: {
             platform: 'linkedin',
             action: 'callback',
             code: code,
+            state: state,
             userId: user.id
           }
         });
+
+        console.log("LinkedIn callback response:", response);
 
         if (response.error) {
           throw new Error(response.error.message || 'Failed to process LinkedIn authentication');

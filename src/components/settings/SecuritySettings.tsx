@@ -91,9 +91,15 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("No authenticated user found. Please sign in again.");
+      }
+      
       // Get the current URL to use in the redirect
       const origin = window.location.origin;
-      const redirectTo = `${origin}/settings?tab=security`;
+      const redirectTo = `${origin}/auth/linkedin/callback`;
       
       console.log("Starting LinkedIn OAuth flow with redirect to:", redirectTo);
       
@@ -102,13 +108,16 @@ const SecuritySettings = () => {
         body: {
           platform: 'linkedin',
           action: 'auth-url',
-          userId: (await supabase.auth.getUser()).data.user?.id
+          userId: user.id,
+          redirectUri: redirectTo
         }
       });
       
       if (error || !data?.authUrl) {
         throw new Error(error?.message || "Failed to get LinkedIn authorization URL");
       }
+      
+      console.log("Received LinkedIn auth URL:", data.authUrl);
       
       // Redirect to LinkedIn for authentication
       window.location.href = data.authUrl;
