@@ -119,7 +119,7 @@
       console.log('LinkedIn callback debug data:', debugData);
       debugInfo.textContent = JSON.stringify(debugData, null, 2);
       
-      // Immediately show debug info in production to help diagnose issues
+      // Immediately show debug info to help diagnose issues
       debugDiv.style.display = 'block';
       
       if (error) {
@@ -128,28 +128,61 @@
         statusDiv.innerHTML = `<strong>Authentication Error:</strong><br>${errorDescription || error}`;
         continueBtn.style.display = 'inline-block';
         continueBtn.addEventListener('click', function() {
-          window.location.href = '/settings?tab=security&error=' + encodeURIComponent(error);
+          window.close();
         });
       } else if (code) {
-        // If we have a code, we need to redirect to our React app's callback route
-        // We'll do this in a way that works both in development and production
-        const baseUrl = window.location.origin;
-        const callbackUrl = `${baseUrl}/linkedin-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+        // CHANGED: Instead of redirecting to the app, send a message to the opener window
+        statusDiv.innerHTML = '<strong>Authentication successful!</strong><br>Communicating with application...';
         
-        console.log('Redirecting to application callback:', callbackUrl);
-        statusDiv.innerHTML = '<strong>Redirecting to application...</strong>';
-        
-        // Use a small delay to ensure the console.log completes
-        setTimeout(() => {
-          window.location.href = callbackUrl;
-        }, 500);
+        try {
+          // Send message to opener (parent) window with the authorization code
+          if (window.opener) {
+            console.log('Sending message to opener window');
+            window.opener.postMessage({
+              type: 'linkedin-oauth-callback',
+              code: code,
+              state: state || ''
+            }, '*');
+            
+            // Update status
+            statusDiv.className = 'success';
+            statusDiv.innerHTML = '<strong>Authentication successful!</strong><br>You can close this window now.';
+            loadingDiv.style.display = 'none';
+            
+            // Auto close after a few seconds
+            setTimeout(() => {
+              window.close();
+            }, 3000);
+          } else {
+            console.error('No opener window found');
+            statusDiv.className = 'error';
+            statusDiv.innerHTML = '<strong>Error:</strong><br>Cannot communicate with the main application.';
+            loadingDiv.style.display = 'none';
+            continueBtn.style.display = 'inline-block';
+            continueBtn.textContent = 'Close Window';
+            continueBtn.addEventListener('click', function() {
+              window.close();
+            });
+          }
+        } catch (err) {
+          console.error('Error sending message to opener:', err);
+          statusDiv.className = 'error';
+          statusDiv.innerHTML = `<strong>Communication Error:</strong><br>${err.message}`;
+          loadingDiv.style.display = 'none';
+          continueBtn.style.display = 'inline-block';
+          continueBtn.textContent = 'Close Window';
+          continueBtn.addEventListener('click', function() {
+            window.close();
+          });
+        }
       } else {
         loadingDiv.style.display = 'none';
         statusDiv.className = 'error';
         statusDiv.innerHTML = '<strong>Invalid Request:</strong><br>No authentication code received from LinkedIn.';
         continueBtn.style.display = 'inline-block';
+        continueBtn.textContent = 'Close Window';
         continueBtn.addEventListener('click', function() {
-          window.location.href = '/settings?tab=security&error=no_code';
+          window.close();
         });
       }
     });
