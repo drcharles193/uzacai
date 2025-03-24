@@ -17,6 +17,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ScheduleCalendar from "./components/schedule/ScheduleCalendar";
 import ComingSoon from "./pages/ComingSoon";
+import LinkedInCallback from "./pages/LinkedInCallback";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +40,7 @@ const App = () => (
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/schedule" element={<ScheduleCalendar />} />
           {/* Callback URLs for OAuth */}
-          <Route path="/linkedin-callback" element={<div>LinkedIn Auth Redirect</div>} />
+          <Route path="/linkedin-callback" element={<LinkedInCallback />} />
           {/* Coming Soon pages */}
           <Route path="/users" element={<ComingSoon />} />
           <Route path="/analytics" element={<ComingSoon />} />
