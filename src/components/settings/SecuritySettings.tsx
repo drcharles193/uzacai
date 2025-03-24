@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -97,9 +96,8 @@ const SecuritySettings = () => {
         throw new Error("No authenticated user found. Please sign in again.");
       }
       
-      // Get the current URL to use in the redirect
-      const origin = window.location.origin;
-      const redirectUri = `${origin}/auth/linkedin/callback`;
+      // Use the hardcoded redirect URI
+      const redirectUri = `https://uzacai.com/`;
       
       console.log("Starting LinkedIn OAuth flow with redirect to:", redirectUri);
       

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,9 +32,8 @@ const LinkedInCallback = () => {
 
         console.log("Processing LinkedIn callback with code:", code);
 
-        // Get the current URL origin for the redirectUri
-        const origin = window.location.origin;
-        const redirectUri = `${origin}/auth/linkedin/callback`;
+        // Use the hardcoded redirect URI
+        const redirectUri = `https://uzacai.com/`;
 
         // Call the social-auth edge function to process the callback
         const response = await supabase.functions.invoke('social-auth', {
