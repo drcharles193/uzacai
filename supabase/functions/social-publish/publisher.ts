@@ -142,6 +142,109 @@ export async function publishToTwitter(
 }
 
 /**
+ * Publish content and media to LinkedIn
+ */
+export async function publishToLinkedIn(
+  supabase: any,
+  userId: string, 
+  content: string, 
+  mediaUrls: string[] = [],
+  base64Media: string[] = [],
+  contentTypes: string[] = []
+): Promise<any> {
+  try {
+    console.log(`Publishing to LinkedIn for user ${userId} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media items`);
+    
+    // Get LinkedIn credentials for this user
+    const { data: accounts, error: accountsError } = await supabase
+      .from('social_accounts')
+      .select('access_token, token_expires_at, platform_account_id')
+      .eq('user_id', userId)
+      .eq('platform', 'linkedin')
+      .order('last_used_at', { ascending: false })
+      .limit(1);
+    
+    if (accountsError || !accounts || accounts.length === 0) {
+      throw new Error("No LinkedIn account found for this user. Please connect your LinkedIn account first.");
+    }
+    
+    const account = accounts[0];
+    const accessToken = account.access_token;
+    const linkedInUserId = account.platform_account_id;
+    
+    if (!accessToken) {
+      throw new Error("LinkedIn access token is missing. Please reconnect your LinkedIn account.");
+    }
+    
+    // Check if token is expired
+    if (account.token_expires_at && new Date(account.token_expires_at) < new Date()) {
+      throw new Error("LinkedIn token has expired. Please reconnect your LinkedIn account.");
+    }
+    
+    // Create a LinkedIn post
+    // First we need to build our request body based on whether we have media or not
+    let requestBody: any = {
+      author: `urn:li:person:${linkedInUserId}`,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: content
+          },
+          shareMediaCategory: "NONE"
+        }
+      },
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+      }
+    };
+    
+    // Handle media if present
+    // LinkedIn requires different approach for media - need to upload to their servers first
+    if (mediaUrls.length > 0 || base64Media.length > 0) {
+      console.log("Media handling for LinkedIn is not fully implemented yet");
+      // In a real implementation, we would:
+      // 1. Upload each media to LinkedIn's media API
+      // 2. Get back the media URNs
+      // 3. Include them in the request body
+      
+      // For demonstration, we'll just include the text content
+      console.log("Proceeding with text-only post to LinkedIn");
+    }
+    
+    // Make API request to LinkedIn
+    const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    const responseText = await response.text();
+    console.log(`LinkedIn API response status: ${response.status}`);
+    console.log(`LinkedIn API response body: ${responseText}`);
+    
+    if (!response.ok) {
+      throw new Error(`LinkedIn API error: ${response.status} - ${responseText}`);
+    }
+    
+    // Parse response data
+    const responseData = responseText ? JSON.parse(responseText) : {};
+    
+    // Update last_used_at timestamp
+    await updateLastUsedTimestamp(supabase, userId, 'linkedin');
+    
+    return responseData;
+  } catch (error: any) {
+    console.error('Error publishing to LinkedIn:', error);
+    throw error;
+  }
+}
+
+/**
  * Process publishing request for a specific platform
  */
 export async function publishToPlatform(
@@ -161,6 +264,8 @@ export async function publishToPlatform(
     
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
+    } else if (platform === 'linkedin') {
+      result = await publishToLinkedIn(supabase, userId, content, mediaUrls, base64Media, contentTypes);
     } else {
       // For other platforms (placeholder for future implementation)
       // We pass media information to the mock function
