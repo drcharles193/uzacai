@@ -20,7 +20,7 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 // LinkedIn OAuth credentials
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
-const LINKEDIN_REDIRECT_URI = Deno.env.get("LINKEDIN_REDIRECT_URI") || "https://uzacai.com/linkedin-callback";
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -615,4 +615,3 @@ serve(async (req) => {
     );
   }
 });
-
