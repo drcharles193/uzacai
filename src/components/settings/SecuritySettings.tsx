@@ -99,11 +99,7 @@ const SecuritySettings = () => {
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
+        toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
         return;
       }
@@ -161,11 +157,7 @@ const SecuritySettings = () => {
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
+        toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
         return;
       }
@@ -217,11 +209,7 @@ const SecuritySettings = () => {
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
+        toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
         return;
       }
@@ -242,10 +230,7 @@ const SecuritySettings = () => {
         throw new Error(response.error.message || "Failed to connect Twitter account");
       }
       
-      toast({
-        title: "Twitter Connected",
-        description: `Your Twitter/X account has been connected successfully.`
-      });
+      toast.success("Twitter Connected: Your Twitter/X account has been connected successfully.");
       
       // Refresh the connected accounts list
       await fetchConnectedIdentities();
@@ -270,11 +255,7 @@ const SecuritySettings = () => {
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
+        toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
         return;
       }
@@ -295,10 +276,7 @@ const SecuritySettings = () => {
         throw new Error(response.error.message || "Failed to connect LinkedIn account");
       }
       
-      toast({
-        title: "LinkedIn Connected",
-        description: `Your LinkedIn account has been connected successfully.`
-      });
+      toast.success("LinkedIn Connected: Your LinkedIn account has been connected successfully.");
       
       // Refresh the connected accounts list
       await fetchConnectedIdentities();
