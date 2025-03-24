@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -225,7 +226,7 @@ async function exchangeLinkedInCode(code: string) {
 }
 
 // Store social credentials in the database
-function storeSocialCredentials(userId: string, platform: string, data: any) {
+async function storeSocialCredentials(userId: string, platform: string, data: any) {
   console.log(`Storing ${platform} credentials for user ${userId}`);
   
   try {

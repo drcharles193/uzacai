@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -20,13 +21,13 @@ const SecuritySettings = () => {
     const handleOAuthCallback = (event: MessageEvent) => {
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received Twitter callback:', code, state);
+        console.log('Received Twitter callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
         
         completeTwitterConnection(code, state);
       }
       else if (event.data && event.data.type === 'linkedin-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received LinkedIn callback:', code, state);
+        console.log('Received LinkedIn callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
         
         completeLinkedInConnection(code, state);
       }
@@ -76,6 +77,7 @@ const SecuritySettings = () => {
       
       if (error) throw error;
       
+      // Session check is done separately after the OAuth flow
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -91,6 +93,7 @@ const SecuritySettings = () => {
     } catch (error: any) {
       console.error("Error connecting Google account:", error);
       toast.error("Failed to connect Google account: " + error.message);
+    } finally {
       setIsConnecting(false);
     }
   };
@@ -110,6 +113,8 @@ const SecuritySettings = () => {
         setIsConnecting(false);
         return;
       }
+      
+      console.log("Calling social-auth edge function for Twitter auth URL");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -148,6 +153,7 @@ const SecuritySettings = () => {
     } catch (error: any) {
       console.error("Error connecting Twitter account:", error);
       toast.error("Failed to connect Twitter account: " + error.message);
+    } finally {
       setIsConnecting(false);
     }
   };
@@ -156,7 +162,7 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
-      console.log("Starting LinkedIn OAuth flow with origin:", window.location.origin);
+      console.log("Starting LinkedIn OAuth flow");
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -164,6 +170,8 @@ const SecuritySettings = () => {
         setIsConnecting(false);
         return;
       }
+      
+      console.log("Calling social-auth edge function for LinkedIn auth URL");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -179,7 +187,7 @@ const SecuritySettings = () => {
         throw new Error(response.error.message || "Failed to start LinkedIn connection");
       }
       
-      if (!response.data.authUrl) {
+      if (!response.data || !response.data.authUrl) {
         throw new Error("No LinkedIn auth URL returned");
       }
       
@@ -202,6 +210,7 @@ const SecuritySettings = () => {
     } catch (error: any) {
       console.error("Error connecting LinkedIn account:", error);
       toast.error("Failed to connect LinkedIn account: " + error.message);
+    } finally {
       setIsConnecting(false);
     }
   };
@@ -330,9 +339,6 @@ const SecuritySettings = () => {
     } finally {
       setIsDisconnecting(false);
     }
-  };
-
-  const openDisconnectConfirmation = (id: string) => {
   };
 
   const isGoogleConnected = connectedAccounts.includes('google');
