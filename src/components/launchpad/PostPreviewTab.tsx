@@ -44,9 +44,14 @@ const PostPreviewTab: React.FC<PostPreviewTabProps> = ({
 
   const selectedPlatform = getSelectedPlatform();
 
-  // Function to check if a media URL is a video
-  const isVideoUrl = (url: string) => {
-    return url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('video');
+  // Function to check if a URL is a video
+  const isVideoUrl = (url: string): boolean => {
+    // Check common video file extensions
+    const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
+    // Check if URL explicitly contains video indicators
+    const videoIndicators = /(video|\.mp4|\.webm|\.ogg|\.mov|\.avi)/i;
+    
+    return videoExtensions.test(url) || videoIndicators.test(url) || url.includes('video');
   };
 
   return (
@@ -124,17 +129,17 @@ const PostPreviewTab: React.FC<PostPreviewTabProps> = ({
               {postContent}
             </div>
             {mediaPreviewUrls.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 {mediaPreviewUrls.map((url, index) => (
                   isVideoUrl(url) ? (
-                    <video 
-                      key={index}
-                      src={url} 
-                      className="w-full h-auto rounded-md" 
-                      controls
-                      muted
-                      preload="metadata"
-                    />
+                    <div key={index} className="w-full rounded-md overflow-hidden">
+                      <video 
+                        src={url} 
+                        controls
+                        preload="metadata"
+                        className="w-full h-auto rounded-md"
+                      />
+                    </div>
                   ) : (
                     <img 
                       key={index} 

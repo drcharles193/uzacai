@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
+import { Key, Shield, Mail, Twitter } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -86,36 +86,6 @@ const SecuritySettings = () => {
     }
   };
 
-  const connectLinkedIn = async () => {
-    try {
-      setIsConnecting(true);
-      
-      // Simulate an API call with a delay
-      setTimeout(async () => {
-        // Call the edge function to simulate the mock connection
-        const { data, error } = await supabase.functions.invoke('social-auth', {
-          body: {
-            platform: 'linkedin',
-            userId: (await supabase.auth.getUser()).data.user?.id
-          }
-        });
-        
-        if (error) {
-          throw new Error(error.message || "Failed to connect LinkedIn account");
-        }
-        
-        toast.success("LinkedIn account connected successfully");
-        await fetchConnectedIdentities();
-        setIsConnecting(false);
-      }, 1500);
-      
-    } catch (error: any) {
-      console.error("Error connecting LinkedIn account:", error);
-      toast.error("Failed to connect LinkedIn account: " + error.message);
-      setIsConnecting(false);
-    }
-  };
-
   const disconnectAccount = async (provider: string) => {
     try {
       setIsDisconnecting(true);
@@ -157,7 +127,6 @@ const SecuritySettings = () => {
 
   const isGoogleConnected = connectedAccounts.includes('google');
   const isTwitterConnected = connectedAccounts.includes('twitter');
-  const isLinkedInConnected = connectedAccounts.includes('linkedin');
 
   return (
     <div className="space-y-8">
@@ -280,42 +249,6 @@ const SecuritySettings = () => {
                 <Button 
                   variant="outline" 
                   onClick={connectTwitter}
-                  disabled={isConnecting}
-                >
-                  {isConnecting ? "Connecting..." : "Connect"}
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="border rounded-md p-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Linkedin size={18} className="text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-medium">LinkedIn Account</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {isLinkedInConnected 
-                      ? "Your LinkedIn account is connected" 
-                      : "Connect your LinkedIn account for social publishing"}
-                  </p>
-                </div>
-              </div>
-              {isLinkedInConnected ? (
-                <Button 
-                  variant="outline" 
-                  className="text-destructive border-destructive hover:bg-destructive/10"
-                  onClick={() => disconnectAccount('linkedin')}
-                  disabled={isDisconnecting}
-                >
-                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={connectLinkedIn}
                   disabled={isConnecting}
                 >
                   {isConnecting ? "Connecting..." : "Connect"}

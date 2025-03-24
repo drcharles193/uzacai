@@ -1,6 +1,6 @@
 
 import { PlatformResponse } from './types.ts';
-import { updateLastUsedTimestamp, mockPublishToOtherPlatform, publishToLinkedIn } from './utils.ts';
+import { updateLastUsedTimestamp, mockPublishToOtherPlatform, isVideoContentType } from './utils.ts';
 import { createTwitterAuthHeader, getTwitterCredentials } from './twitter.ts';
 import { processAndUploadMedia, uploadMediaToTwitter } from './media.ts';
 
@@ -27,6 +27,16 @@ export async function publishToTwitter(
     
     // Upload media if provided
     let mediaIds: string[] = [];
+    let hasVideo = false;
+    
+    // Check if any content types indicate video
+    for (const contentType of contentTypes) {
+      if (isVideoContentType(contentType)) {
+        hasVideo = true;
+        console.log("Video content detected in the upload");
+        break;
+      }
+    }
     
     // First, try to upload from URLs
     if (mediaUrls.length > 0) {
@@ -38,6 +48,7 @@ export async function publishToTwitter(
         try {
           const mediaId = await processAndUploadMedia(supabase, userId, mediaUrls[i]);
           mediaIds.push(mediaId);
+          console.log(`Successfully uploaded URL media #${i + 1} with ID: ${mediaId}`);
         } catch (error) {
           console.error(`Error uploading media #${i + 1}:`, error);
           // Continue with the next media item
@@ -53,8 +64,19 @@ export async function publishToTwitter(
       for (let i = 0; i < maxBase64Items; i++) {
         try {
           const contentType = contentTypes[i] || 'image/jpeg'; // Default to image/jpeg if not specified
+          console.log(`Uploading base64 media #${i + 1} with content type: ${contentType}`);
+          
+          // Check if it's a video
+          const isVideo = isVideoContentType(contentType);
+          console.log(`Media #${i + 1} is ${isVideo ? 'a video' : 'an image'}`);
+          
+          if (isVideo) {
+            hasVideo = true;
+          }
+          
           const mediaId = await uploadMediaToTwitter(supabase, userId, base64Media[i], contentType);
           mediaIds.push(mediaId);
+          console.log(`Successfully uploaded base64 media #${i + 1} with ID: ${mediaId}`);
         } catch (error) {
           console.error(`Error uploading base64 media #${i + 1}:`, error);
           // Continue with the next media item
@@ -133,14 +155,16 @@ export async function publishToPlatform(
 ): Promise<PlatformResponse> {
   try {
     console.log(`Attempting to publish to ${platform} with ${mediaUrls.length} media URLs and ${base64Media.length} base64 media`);
+    console.log(`Content types for base64 media: ${contentTypes.join(', ')}`);
+    
     let result;
     
     if (platform === 'twitter') {
       result = await publishToTwitter(supabase, userId, content, mediaUrls, base64Media, contentTypes);
-    } else if (platform === 'linkedin') {
-      result = await publishToLinkedIn(supabase, userId, content, mediaUrls);
     } else {
-      result = mockPublishToOtherPlatform(platform, content);
+      // For other platforms (placeholder for future implementation)
+      // We pass media information to the mock function
+      result = mockPublishToOtherPlatform(platform, content, mediaUrls, contentTypes);
     }
     
     console.log(`Successfully published to ${platform}`);

@@ -48,6 +48,9 @@ export async function processBlobMediaUrls(
     mediaContentTypes.push('image/jpeg'); // Default to image/jpeg if not specified
   }
   
+  console.log(`Processed ${validUrls.length} valid URLs and ${base64Data.length} base64 media items`);
+  console.log(`Media content types: ${mediaContentTypes.join(', ')}`);
+  
   return {
     urls: validUrls,
     base64: base64Data,
@@ -71,108 +74,56 @@ export async function updateLastUsedTimestamp(supabase: any, userId: string, pla
 }
 
 /**
+ * Detects if a content type is a video
+ */
+export function isVideoContentType(contentType: string): boolean {
+  return contentType.startsWith('video/');
+}
+
+/**
+ * Detects if a URL is pointing to a video file
+ */
+export function isVideoUrl(url: string): boolean {
+  const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
+  return videoExtensions.test(url);
+}
+
+/**
  * Mock function for other platforms that aren't fully implemented yet
  */
-export function mockPublishToOtherPlatform(platform: string, content: string): any {
+export function mockPublishToOtherPlatform(platform: string, content: string, mediaUrls: string[] = [], contentTypes: string[] = []): any {
   console.log(`Mock publishing to ${platform}: ${content.substring(0, 20)}...`);
+  console.log(`Mock publishing ${mediaUrls.length} media URLs to ${platform}`);
+  
+  const mediaItems = [];
+  
+  // Process both direct media URLs and content types
+  for (let i = 0; i < mediaUrls.length; i++) {
+    const isVideo = isVideoUrl(mediaUrls[i]);
+    
+    mediaItems.push({
+      id: `mock-media-${i}`,
+      type: isVideo ? 'video' : 'image',
+      url: mediaUrls[i]
+    });
+  }
+  
+  // Process content types (usually from base64 data)
+  for (let i = 0; i < contentTypes.length; i++) {
+    const isVideo = isVideoContentType(contentTypes[i]);
+    
+    mediaItems.push({
+      id: `mock-media-base64-${i}`,
+      type: isVideo ? 'video' : 'image',
+      url: `https://example.com/media-base64-${i}.${isVideo ? 'mp4' : 'jpg'}`
+    });
+  }
+  
   return {
     success: true,
     platform,
     id: `mock-post-${Math.random().toString(36).substring(2, 15)}`,
-    message: `Posted to ${platform} successfully`
+    message: `Posted to ${platform} successfully`,
+    media: mediaItems.length > 0 ? mediaItems : undefined
   };
-}
-
-/**
- * Publish content to LinkedIn
- */
-export async function publishToLinkedIn(
-  supabase: any,
-  userId: string,
-  content: string,
-  mediaUrls: string[] = []
-): Promise<any> {
-  try {
-    console.log(`Publishing to LinkedIn for user ${userId}`);
-    
-    // Get LinkedIn credentials from social_accounts table
-    const { data: accountData, error: accountError } = await supabase
-      .from('social_accounts')
-      .select('access_token, platform_account_id')
-      .eq('user_id', userId)
-      .eq('platform', 'linkedin')
-      .single();
-    
-    if (accountError || !accountData) {
-      throw new Error(`LinkedIn credentials not found: ${accountError?.message || 'No account data'}`);
-    }
-    
-    const accessToken = accountData.access_token;
-    const profileId = accountData.platform_account_id;
-    
-    if (!accessToken || !profileId) {
-      throw new Error('LinkedIn access token or profile ID is missing');
-    }
-    
-    // First, check if there's media to upload
-    let mediaId = null;
-    if (mediaUrls && mediaUrls.length > 0) {
-      // For now, we'll just use the first media URL
-      const mediaUrl = mediaUrls[0];
-      
-      // LinkedIn requires a more complex media upload process
-      // This is a simplified version for example purposes
-      console.log(`Would upload media from URL: ${mediaUrl}`);
-      
-      // In a real implementation, you would:
-      // 1. Initialize the media upload
-      // 2. Get the upload URL
-      // 3. Upload the binary data
-      // 4. Finalize the upload
-    }
-    
-    // Create the share on LinkedIn
-    // This is using LinkedIn's Shares API
-    const shareUrl = `https://api.linkedin.com/v2/shares`;
-    const shareData = {
-      owner: `urn:li:person:${profileId}`,
-      text: {
-        text: content
-      },
-      distribution: {
-        linkedInDistributionTarget: {}
-      }
-    };
-    
-    // If we have media, add it to the share
-    if (mediaId) {
-      shareData.content = {
-        contentEntities: [
-          {
-            entity: `urn:li:digitalmediaAsset:${mediaId}`
-          }
-        ]
-      };
-    }
-    
-    console.log("Publishing to LinkedIn with data:", JSON.stringify(shareData));
-    
-    // Mock the API call for now
-    // In a real implementation, you would make a fetch call to the LinkedIn API
-    console.log(`Simulating LinkedIn API call to: ${shareUrl}`);
-    
-    // For now, we'll return a mock successful response
-    // Update last used timestamp
-    await updateLastUsedTimestamp(supabase, userId, 'linkedin');
-    
-    return {
-      success: true,
-      platform: 'linkedin',
-      id: `linkedin-post-${Math.random().toString(36).substring(2, 15)}`,
-      message: 'Posted to LinkedIn successfully'
-    };
-  } catch (error: any) {
-    console.error('Error publishing to LinkedIn:', error);
-    throw error;
-  }
 }
