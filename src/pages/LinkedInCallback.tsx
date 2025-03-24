@@ -17,6 +17,20 @@ const LinkedInCallback = () => {
         const params = new URLSearchParams(location.search);
         const code = params.get('code');
         const state = params.get('state');
+        const errorParam = params.get('error');
+        const errorDescription = params.get('error_description');
+
+        // Log the parameters for debugging
+        console.log('LinkedIn callback parameters:', { 
+          code: code ? `${code.substring(0, 5)}...` : null,
+          state,
+          error: errorParam,
+          errorDescription
+        });
+
+        if (errorParam) {
+          throw new Error(`LinkedIn authentication error: ${errorDescription || errorParam}`);
+        }
 
         if (!code) {
           throw new Error('No authorization code received from LinkedIn');
@@ -49,13 +63,13 @@ const LinkedInCallback = () => {
         }
 
         toast.success('LinkedIn account successfully connected!');
-        navigate('/settings');
+        navigate('/settings?tab=security', { replace: true });
       } catch (err: any) {
         console.error('LinkedIn callback error:', err);
         setError(err.message || 'An error occurred while connecting your LinkedIn account');
         toast.error(err.message || 'Failed to connect LinkedIn account');
         // Still navigate away after a delay even if there's an error
-        setTimeout(() => navigate('/settings'), 3000);
+        setTimeout(() => navigate('/settings?tab=security', { replace: true }), 3000);
       } finally {
         setLoading(false);
       }
@@ -69,6 +83,7 @@ const LinkedInCallback = () => {
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         <p className="mt-4 text-lg">Connecting your LinkedIn account...</p>
+        <p className="text-sm text-muted-foreground mt-2">This may take a few seconds</p>
       </div>
     );
   }

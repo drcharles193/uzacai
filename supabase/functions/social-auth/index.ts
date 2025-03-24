@@ -20,7 +20,7 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 // LinkedIn OAuth credentials
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
-const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback";
+const LINKEDIN_REDIRECT_URI = Deno.env.get("LINKEDIN_REDIRECT_URI") || "https://uzacai.com/linkedin-callback";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -154,6 +154,9 @@ async function exchangeLinkedInCode(code: string) {
   params.append('client_secret', LINKEDIN_CLIENT_SECRET);
   
   try {
+    console.log("Exchanging LinkedIn code for tokens...");
+    console.log("Redirect URI:", LINKEDIN_REDIRECT_URI);
+    
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -169,6 +172,7 @@ async function exchangeLinkedInCode(code: string) {
     }
     
     const tokens = await response.json();
+    console.log("LinkedIn tokens obtained successfully");
     return tokens;
   } catch (error) {
     console.error('Error exchanging LinkedIn code for tokens:', error);
@@ -363,7 +367,7 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action } = await req.json();
+    const { platform, code, userId, action, state } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
     
     // Handle LinkedIn OAuth flow
@@ -401,6 +405,12 @@ serve(async (req) => {
       else if (action === 'callback') {
         // Step 2: Handle callback and exchange code for tokens
         try {
+          console.log("Processing LinkedIn callback with code:", code ? "Present" : "Missing");
+          
+          if (!code) {
+            throw new Error("No authorization code provided");
+          }
+          
           // Exchange code for tokens
           const tokens = await exchangeLinkedInCode(code);
           

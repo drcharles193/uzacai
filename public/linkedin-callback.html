@@ -129,6 +129,7 @@
         });
       } else if (code) {
         // If we have a code, we can redirect to our app's callback handler
+        // Make sure to use the absolute path to avoid any routing issues
         window.location.href = `/linkedin-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
       } else {
         loadingDiv.style.display = 'none';
