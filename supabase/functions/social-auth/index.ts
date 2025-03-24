@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -23,7 +22,7 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL") || "https://uz
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
 // IMPORTANT: Use exactly the registered redirect URI - this must match what's configured in LinkedIn
-const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
+const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -226,7 +225,7 @@ async function exchangeLinkedInCode(code: string) {
 }
 
 // Store social credentials in the database
-async function storeSocialCredentials(userId: string, platform: string, data: any) {
+function storeSocialCredentials(userId: string, platform: string, data: any) {
   console.log(`Storing ${platform} credentials for user ${userId}`);
   
   try {
