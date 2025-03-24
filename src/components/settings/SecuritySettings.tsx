@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -91,41 +90,24 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("No authenticated user found. Please sign in again.");
-      }
-      
-      // Use the hardcoded redirect URI
-      const redirectUri = `https://uzacai.com/`;
-      
-      console.log("Starting LinkedIn OAuth flow with redirect to:", redirectUri);
-      
-      // Call the social-auth edge function to get the LinkedIn auth URL
-      const { data, error } = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'linkedin',
-          action: 'auth-url', // Critical parameter that was missing
-          userId: user.id,
-          redirectUri: redirectUri
+      // Simulate an API call with a delay
+      setTimeout(async () => {
+        // Call the edge function to simulate the mock connection
+        const { data, error } = await supabase.functions.invoke('social-auth', {
+          body: {
+            platform: 'linkedin',
+            userId: (await supabase.auth.getUser()).data.user?.id
+          }
+        });
+        
+        if (error) {
+          throw new Error(error.message || "Failed to connect LinkedIn account");
         }
-      });
-      
-      if (error) {
-        console.error("LinkedIn auth-url error:", error);
-        throw new Error(error.message || "Failed to get LinkedIn authorization URL");
-      }
-      
-      if (!data?.authUrl) {
-        console.error("LinkedIn auth-url missing URL:", data);
-        throw new Error("Failed to get LinkedIn authorization URL");
-      }
-      
-      console.log("Received LinkedIn auth URL:", data.authUrl);
-      
-      // Redirect to LinkedIn for authentication
-      window.location.href = data.authUrl;
+        
+        toast.success("LinkedIn account connected successfully");
+        await fetchConnectedIdentities();
+        setIsConnecting(false);
+      }, 1500);
       
     } catch (error: any) {
       console.error("Error connecting LinkedIn account:", error);

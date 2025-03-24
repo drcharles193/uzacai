@@ -39,7 +39,7 @@ const App = () => (
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/schedule" element={<ScheduleCalendar />} />
-          {/* LinkedIn callback route */}
+          {/* LinkedIn callback route - now using simplified mock version */}
           <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
           {/* Coming Soon pages */}
           <Route path="/users" element={<ComingSoon />} />
