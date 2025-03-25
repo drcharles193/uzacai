@@ -363,7 +363,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       if (linkedinWindow && !linkedinWindow.closed) {
         linkedinWindow.close();
-        linkedinWindow = null;
+        setLinkedinWindow(null);
       }
     }
   };
