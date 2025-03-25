@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +54,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
   const [linkedinWindow, setLinkedinWindow] = useState<Window | null>(null);
+  const [facebookWindow, setFacebookWindow] = useState<Window | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
@@ -77,20 +77,20 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       connected: false
     },
     {
-      id: 'instagram',
-      name: 'Instagram',
-      color: '#E1306C',
-      icon: (
-        <Instagram className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
       id: 'facebook',
       name: 'Facebook',
       color: '#4267B2',
       icon: (
         <Facebook className="w-5 h-5" />
+      ),
+      connected: false
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      color: '#E1306C',
+      icon: (
+        <Instagram className="w-5 h-5" />
       ),
       connected: false
     },
@@ -222,6 +222,33 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           setIsConnecting(null);
         }
       }
+      else if (event.data && event.data.type === 'facebook-oauth-callback') {
+        const { code, state } = event.data;
+        console.log('[Facebook] Received auth code:', code);
+        
+        if (code) {
+          completeFacebookConnection(code, state);
+        } else {
+          toast({
+            title: "Facebook Connection Failed",
+            description: "No Facebook code received.",
+            variant: "destructive"
+          });
+          setIsConnecting(null);
+        }
+      }
+      else if (event.data && event.data.type === 'facebook-oauth-callback-error') {
+        const { error, errorDescription } = event.data;
+        console.error('[Facebook] Auth error:', error, errorDescription);
+        
+        toast({
+          title: "Facebook Connection Failed",
+          description: errorDescription || "Failed to connect Facebook account.",
+          variant: "destructive"
+        });
+        setIsConnecting(null);
+        setConnectionError('facebook');
+      }
     };
 
     window.addEventListener('message', handleOAuthCallback);
@@ -233,6 +260,9 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       }
       if (linkedinWindow && !linkedinWindow.closed) {
         linkedinWindow.close();
+      }
+      if (facebookWindow && !facebookWindow.closed) {
+        facebookWindow.close();
       }
     };
   }, []);
@@ -378,6 +408,79 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
+  const completeFacebookConnection = async (code: string, state: string) => {
+    try {
+      setIsConnecting('facebook');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to connect social accounts.",
+          variant: "destructive"
+        });
+        setIsConnecting(null);
+        setConnectionError('facebook');
+        return;
+      }
+      
+      console.log("[SocialMediaConnect] Completing Facebook connection with code:", code.substring(0, 5) + "...");
+      
+      const response = await supabase.functions.invoke('social-auth', {
+        body: {
+          platform: 'facebook',
+          action: 'callback',
+          code: code,
+          userId: session.user.id
+        }
+      });
+      
+      if (response.error) {
+        console.error("Facebook callback error:", response.error);
+        throw new Error(response.error.message || "Failed to connect Facebook account");
+      }
+      
+      setPlatforms(platforms.map(platform => {
+        if (platform.id === 'facebook') {
+          return { 
+            ...platform, 
+            connected: true,
+            accountName: response.data.accountName || 'Facebook Account'
+          };
+        }
+        return platform;
+      }));
+      
+      setConnectionSuccess('facebook');
+      
+      toast({
+        title: "Facebook Connected",
+        description: `Your Facebook account has been connected successfully.`
+      });
+      
+    } catch (error: any) {
+      console.error("Error connecting Facebook:", error);
+      setConnectionError('facebook');
+      toast({
+        title: "Facebook Connection Failed",
+        description: error.message || "Failed to connect Facebook account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsConnecting(null);
+      
+      setTimeout(() => {
+        setConnectionSuccess(null);
+        setConnectionError(null);
+      }, 3000);
+      
+      if (facebookWindow && !facebookWindow.closed) {
+        facebookWindow.close();
+        setFacebookWindow(null);
+      }
+    }
+  };
+
   const connectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
@@ -474,6 +577,45 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
         return;
       }
+      else if (id === 'facebook') {
+        console.log("Starting Facebook OAuth flow...");
+        
+        const response = await supabase.functions.invoke('social-auth', {
+          body: {
+            platform: 'facebook',
+            action: 'auth-url',
+            userId: session.user.id
+          }
+        });
+        
+        console.log("Facebook auth response:", response);
+        
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to start Facebook connection");
+        }
+        
+        if (!response.data?.authUrl) {
+          throw new Error("No Facebook auth URL returned");
+        }
+        
+        const width = 600, height = 600;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.innerHeight / 2 - height / 2;
+        
+        const facebookPopup = window.open(
+          response.data.authUrl,
+          'facebook-oauth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        if (!facebookPopup) {
+          throw new Error("Could not open Facebook auth popup. Please disable popup blocker.");
+        }
+        
+        setFacebookWindow(facebookPopup);
+        
+        return;
+      }
       else {
         const response = await supabase.functions.invoke('social-auth', {
           body: JSON.stringify({
@@ -515,7 +657,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         variant: "destructive"
       });
     } finally {
-      if (id !== 'twitter' && id !== 'linkedin') {
+      if (id !== 'twitter' && id !== 'linkedin' && id !== 'facebook') {
         setIsConnecting(null);
         
         setTimeout(() => {

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -22,6 +21,11 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
 const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback.html";
+
+// Facebook OAuth credentials
+const FACEBOOK_CLIENT_ID = Deno.env.get("FACEBOOK_CLIENT_ID");
+const FACEBOOK_CLIENT_SECRET = Deno.env.get("FACEBOOK_CLIENT_SECRET");
+const FACEBOOK_REDIRECT_URI = "https://uzacai.com/facebook-callback.html";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -71,6 +75,28 @@ function getLinkedInAuthUrl() {
   url.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI);
   url.searchParams.append('scope', 'openid profile email w_member_social');
   url.searchParams.append('state', state);
+  
+  return { url: url.toString(), state };
+}
+
+// Facebook OAuth URL generator
+function getFacebookAuthUrl() {
+  console.log("Facebook Client ID:", FACEBOOK_CLIENT_ID ? "Exists" : "Missing");
+  console.log("Facebook Redirect URI:", FACEBOOK_REDIRECT_URI ? "Exists" : "Missing");
+  
+  if (!FACEBOOK_CLIENT_ID || !FACEBOOK_REDIRECT_URI) {
+    throw new Error("Facebook OAuth credentials not configured");
+  }
+  
+  const state = generateState();
+  
+  // Store state in database temporarily to validate callback
+  const url = new URL('https://www.facebook.com/v20.0/dialog/oauth');
+  url.searchParams.append('client_id', FACEBOOK_CLIENT_ID);
+  url.searchParams.append('redirect_uri', FACEBOOK_REDIRECT_URI);
+  url.searchParams.append('state', state);
+  url.searchParams.append('scope', 'public_profile,email');
+  url.searchParams.append('response_type', 'code');
   
   return { url: url.toString(), state };
 }
@@ -214,6 +240,70 @@ async function getLinkedInUserProfile(accessToken: string) {
     };
   } catch (error) {
     console.error('Error fetching LinkedIn user profile:', error);
+    throw error;
+  }
+}
+
+// Facebook token exchange function
+async function exchangeFacebookCode(code: string) {
+  if (!FACEBOOK_CLIENT_ID || !FACEBOOK_CLIENT_SECRET || !FACEBOOK_REDIRECT_URI) {
+    throw new Error("Facebook OAuth credentials not configured");
+  }
+  
+  try {
+    console.log("Exchanging Facebook code for token...");
+    
+    const tokenUrl = 'https://graph.facebook.com/v20.0/oauth/access_token';
+    
+    const params = new URLSearchParams();
+    params.append('client_id', FACEBOOK_CLIENT_ID);
+    params.append('client_secret', FACEBOOK_CLIENT_SECRET);
+    params.append('redirect_uri', FACEBOOK_REDIRECT_URI);
+    params.append('code', code);
+    
+    const response = await fetch(`${tokenUrl}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Facebook token exchange error:', errorText);
+      throw new Error(`Facebook API error: ${response.status} ${errorText}`);
+    }
+    
+    const tokens = await response.json();
+    return tokens;
+  } catch (error) {
+    console.error('Error exchanging Facebook code for tokens:', error);
+    throw error;
+  }
+}
+
+// Get Facebook user profile
+async function getFacebookUserProfile(accessToken: string) {
+  try {
+    console.log("Fetching Facebook user profile...");
+    
+    const response = await fetch(`https://graph.facebook.com/v20.0/me?fields=id,name,email,picture&access_token=${accessToken}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Facebook profile error:', errorText);
+      throw new Error(`Facebook API error: ${response.status} ${errorText}`);
+    }
+    
+    const userData = await response.json();
+    return userData;
+  } catch (error) {
+    console.error('Error fetching Facebook user profile:', error);
     throw error;
   }
 }
@@ -532,6 +622,104 @@ serve(async (req) => {
         );
       }
     }
+    // Handle Facebook OAuth flow
+    else if (platform === 'facebook') {
+      if (action === 'auth-url') {
+        // Step 1: Generate Facebook auth URL
+        try {
+          const { url, state } = getFacebookAuthUrl();
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'facebook',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating Facebook auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          // Exchange code for tokens
+          const tokens = await exchangeFacebookCode(code);
+          
+          // Get user profile information
+          const userProfile = await getFacebookUserProfile(tokens.access_token);
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'facebook',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.name || 'Facebook User',
+              account_type: "profile",
+              access_token: tokens.access_token,
+              refresh_token: null, // Facebook doesn't use refresh tokens in the same way
+              token_expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                name: userProfile.name,
+                email: userProfile.email,
+                picture: userProfile.picture?.data?.url,
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing Facebook connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'facebook', 
+              accountName: userProfile.name || 'Facebook User',
+              accountType: "profile",
+              name: userProfile.name
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing Facebook callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Facebook action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
     else {
       // For other platforms, continue with mock connections
       const result = getMockPlatformResponse(platform);
@@ -587,3 +775,4 @@ serve(async (req) => {
     );
   }
 });
+
