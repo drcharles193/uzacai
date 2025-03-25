@@ -95,9 +95,8 @@ function getFacebookAuthUrl() {
   url.searchParams.append('client_id', FACEBOOK_CLIENT_ID);
   url.searchParams.append('redirect_uri', FACEBOOK_REDIRECT_URI);
   url.searchParams.append('state', state);
-  url.searchParams.append('scope', 'public_profile,email,pages_show_list,pages_manage_posts');
+  url.searchParams.append('scope', 'public_profile,email');
   url.searchParams.append('response_type', 'code');
-  url.searchParams.append('auth_type', 'rerequest'); // Force re-authentication
   
   return { url: url.toString(), state };
 }
@@ -624,7 +623,7 @@ serve(async (req) => {
       }
     }
     // Handle Facebook OAuth flow
-    else if (platform === 'facebook' || platform === 'facebook_page') {
+    else if (platform === 'facebook') {
       if (action === 'auth-url') {
         // Step 1: Generate Facebook auth URL
         try {
@@ -635,7 +634,7 @@ serve(async (req) => {
             .from('oauth_states')
             .insert({
               user_id: userId,
-              platform: platform,
+              platform: 'facebook',
               state: state,
               created_at: new Date().toISOString()
             });
@@ -648,7 +647,7 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error: any) {
-          console.error(`Error generating ${platform} auth URL:`, error);
+          console.error("Error generating Facebook auth URL:", error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -669,10 +668,10 @@ serve(async (req) => {
             .from('social_accounts')
             .upsert({
               user_id: userId,
-              platform: platform,
+              platform: 'facebook',
               platform_account_id: userProfile.id,
-              account_name: userProfile.name || (platform === 'facebook_page' ? 'Facebook Page' : 'Facebook User'),
-              account_type: platform === 'facebook_page' ? "page" : "profile",
+              account_name: userProfile.name || 'Facebook User',
+              account_type: "profile",
               access_token: tokens.access_token,
               refresh_token: null, // Facebook doesn't use refresh tokens in the same way
               token_expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
@@ -681,8 +680,7 @@ serve(async (req) => {
                 name: userProfile.name,
                 email: userProfile.email,
                 picture: userProfile.picture?.data?.url,
-                connection_type: "oauth",
-                platform_type: platform
+                connection_type: "oauth"
               }
             }, {
               onConflict: 'user_id, platform, platform_account_id',
@@ -690,7 +688,7 @@ serve(async (req) => {
             });
             
           if (error) {
-            console.error(`Error storing ${platform} connection:`, error);
+            console.error("Error storing Facebook connection:", error);
             return new Response(
               JSON.stringify({ error: error.message }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -700,15 +698,15 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: true, 
-              platform: platform, 
-              accountName: userProfile.name || (platform === 'facebook_page' ? 'Facebook Page' : 'Facebook User'),
-              accountType: platform === 'facebook_page' ? "page" : "profile",
+              platform: 'facebook', 
+              accountName: userProfile.name || 'Facebook User',
+              accountType: "profile",
               name: userProfile.name
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error: any) {
-          console.error(`Error processing ${platform} callback:`, error);
+          console.error("Error processing Facebook callback:", error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -717,7 +715,7 @@ serve(async (req) => {
       } 
       else {
         return new Response(
-          JSON.stringify({ error: `Invalid ${platform} action` }),
+          JSON.stringify({ error: "Invalid Facebook action" }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
@@ -777,3 +775,4 @@ serve(async (req) => {
     );
   }
 });
+

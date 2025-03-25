@@ -24,8 +24,7 @@ const SecuritySettings = () => {
       provider: 'facebook',
       options: {
         redirectTo: 'https://uzacai.com/facebook-callback.html',
-        scopes: 'email,public_profile',
-        skipBrowserRedirect: true // Add this to prevent browser redirect
+        scopes: 'email,public_profile'
       }
     });
 

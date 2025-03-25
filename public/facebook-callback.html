@@ -39,7 +39,7 @@
           type: 'facebook-oauth-callback',
           code: code,
           state: state
-        }, '*'); // Use * to ensure the message is received regardless of origin
+        }, window.location.origin);
         
         // Close this window
         setTimeout(() => {
