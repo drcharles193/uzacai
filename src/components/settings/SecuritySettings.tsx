@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 const SecuritySettings = () => {
   const [user, setUser] = useState(null);
   const [connectedAccounts, setConnectedAccounts] = useState([]);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     fetchUserAndConnectedAccounts();
@@ -35,15 +36,31 @@ const SecuritySettings = () => {
   };
 
   const handleDisconnectFacebook = async () => {
-    // Implement Facebook account disconnection logic
-    const { error } = await supabase.auth.unlinkProvider('facebook');
+    // Show loading state
+    setIsDisconnecting(true);
     
-    if (error) {
+    try {
+      // Call the disconnect-social edge function instead of using unlinkProvider
+      const { data, error } = await supabase.functions.invoke('disconnect-social', {
+        body: {
+          userId: user.id,
+          provider: 'facebook'
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Facebook account disconnected');
+      // Refresh user data to update the UI
+      fetchUserAndConnectedAccounts();
+    } catch (error) {
       toast.error('Failed to disconnect Facebook', {
         description: error.message
       });
-    } else {
-      toast.success('Facebook account disconnected');
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
@@ -66,8 +83,9 @@ const SecuritySettings = () => {
                 variant="destructive" 
                 size="sm" 
                 onClick={handleDisconnectFacebook}
+                disabled={isDisconnecting}
               >
-                Disconnect
+                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
               </Button>
             ) : (
               <Button 
