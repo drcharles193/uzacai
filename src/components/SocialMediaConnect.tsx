@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -880,3 +881,22 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
               <AlertDialogAction 
                 onClick={() => platformToDisconnect && disconnectPlatform(platformToDisconnect)}
                 className="bg-[#689675] hover:bg-[#85A88E]"
+              >
+                Disconnect
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
+  // Non-dialog rendering
+  return (
+    <div className="space-y-6">
+      <PlatformList />
+    </div>
+  );
+};
+
+export default SocialMediaConnect;
