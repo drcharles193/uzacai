@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 const SecuritySettings = () => {
   const [user, setUser] = useState(null);
   const [connectedAccounts, setConnectedAccounts] = useState([]);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     fetchUserAndConnectedAccounts();
@@ -24,8 +23,7 @@ const SecuritySettings = () => {
       provider: 'facebook',
       options: {
         redirectTo: 'https://uzacai.com/facebook-callback.html',
-        scopes: 'email,public_profile',
-        skipBrowserRedirect: true // Add this to prevent browser redirect
+        scopes: 'email,public_profile'
       }
     });
 
@@ -37,31 +35,15 @@ const SecuritySettings = () => {
   };
 
   const handleDisconnectFacebook = async () => {
-    // Show loading state
-    setIsDisconnecting(true);
+    // Implement Facebook account disconnection logic
+    const { error } = await supabase.auth.unlinkProvider('facebook');
     
-    try {
-      // Call the disconnect-social edge function instead of using unlinkProvider
-      const { data, error } = await supabase.functions.invoke('disconnect-social', {
-        body: {
-          userId: user.id,
-          provider: 'facebook'
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('Facebook account disconnected');
-      // Refresh user data to update the UI
-      fetchUserAndConnectedAccounts();
-    } catch (error) {
+    if (error) {
       toast.error('Failed to disconnect Facebook', {
         description: error.message
       });
-    } finally {
-      setIsDisconnecting(false);
+    } else {
+      toast.success('Facebook account disconnected');
     }
   };
 
@@ -84,9 +66,8 @@ const SecuritySettings = () => {
                 variant="destructive" 
                 size="sm" 
                 onClick={handleDisconnectFacebook}
-                disabled={isDisconnecting}
               >
-                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                Disconnect
               </Button>
             ) : (
               <Button 
