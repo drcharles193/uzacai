@@ -23,7 +23,7 @@ const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL") || "https://uz
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID");
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET");
 // IMPORTANT: Use exactly the registered redirect URI - this must match what's configured in LinkedIn
-const LINKEDIN_REDIRECT_URI = "https://uzacai.com/linkedin-callback";
+const LINKEDIN_REDIRECT_URI = Deno.env.get("LINKEDIN_REDIRECT_URI") || "https://uzacai.com/linkedin-callback.html";
 
 // Generate a random string for OAuth state
 function generateState() {
@@ -440,12 +440,27 @@ serve(async (req) => {
       if (action === 'callback') {
         try {
           console.log("Processing LinkedIn callback with code:", code ? "present" : "missing");
+          console.log("State:", state || "missing");
+          console.log("User ID:", userId || "missing");
+          
+          if (!code) {
+            throw new Error("No authorization code provided");
+          }
           
           // Exchange auth code for tokens
           const linkedinData = await exchangeLinkedInCode(code);
           
+          if (!linkedinData || !linkedinData.accessToken) {
+            console.error("Failed to exchange LinkedIn code:", linkedinData);
+            throw new Error("Failed to exchange code for LinkedIn tokens");
+          }
+          
+          console.log("Successfully exchanged LinkedIn code for tokens");
+          
           // Store credentials in database
           const result = await storeSocialCredentials(userId, 'linkedin', linkedinData);
+          
+          console.log("LinkedIn credentials stored successfully:", result.accountName);
           
           return new Response(
             JSON.stringify({ success: true, accountName: result.accountName }),

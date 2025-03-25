@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -12,6 +11,8 @@ const SecuritySettings = () => {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [linkedinWindow, setLinkedInWindow] = useState<Window | null>(null);
   const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
+  const [platformToDisconnect, setPlatformToDisconnect] = useState<string>('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchConnectedIdentities();
@@ -19,6 +20,8 @@ const SecuritySettings = () => {
 
   useEffect(() => {
     const handleOAuthCallback = (event: MessageEvent) => {
+      console.log('Received message event:', event.data?.type || 'unknown type');
+      
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
         console.log('Received Twitter callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
@@ -33,10 +36,14 @@ const SecuritySettings = () => {
       }
     };
 
+    console.log('Adding postMessage event listener for OAuth callbacks');
     window.addEventListener('message', handleOAuthCallback);
     
     return () => {
+      console.log('Removing postMessage event listener');
       window.removeEventListener('message', handleOAuthCallback);
+      
+      // Close any open popup windows
       if (twitterWindow && !twitterWindow.closed) {
         twitterWindow.close();
       }
@@ -138,6 +145,8 @@ const SecuritySettings = () => {
       const left = window.innerWidth / 2 - width / 2;
       const top = window.innerHeight / 2 - height / 2;
       
+      console.log("Opening Twitter auth popup with URL:", response.data.authUrl);
+      
       const twitterPopup = window.open(
         response.data.authUrl,
         'twitter-oauth',
@@ -148,6 +157,7 @@ const SecuritySettings = () => {
         throw new Error("Could not open Twitter auth popup. Please disable popup blocker.");
       }
       
+      console.log("Twitter popup opened successfully");
       setTwitterWindow(twitterPopup);
       
     } catch (error: any) {
@@ -195,6 +205,8 @@ const SecuritySettings = () => {
       const left = window.innerWidth / 2 - width / 2;
       const top = window.innerHeight / 2 - height / 2;
       
+      console.log("Opening LinkedIn auth popup with URL:", response.data.authUrl);
+      
       const linkedinPopup = window.open(
         response.data.authUrl,
         'linkedin-oauth',
@@ -205,6 +217,7 @@ const SecuritySettings = () => {
         throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
       }
       
+      console.log("LinkedIn popup opened successfully");
       setLinkedInWindow(linkedinPopup);
       
     } catch (error: any) {
@@ -262,6 +275,7 @@ const SecuritySettings = () => {
 
   const completeLinkedInConnection = async (code: string, state: string) => {
     try {
+      console.log("Starting LinkedIn connection completion with code");
       setIsConnecting(true);
       
       const { data: { session } } = await supabase.auth.getSession();
@@ -271,22 +285,30 @@ const SecuritySettings = () => {
         return;
       }
       
-      console.log("Completing LinkedIn connection with code:", code.substring(0, 5) + "...");
+      console.log("Calling social-auth edge function for LinkedIn callback");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
           action: 'callback',
           code: code,
+          state: state,
           userId: session.user.id
         }
       });
+      
+      console.log("LinkedIn callback response:", response);
       
       if (response.error) {
         console.error("LinkedIn callback error:", response.error);
         throw new Error(response.error.message || "Failed to connect LinkedIn account");
       }
       
+      if (!response.data || !response.data.success) {
+        throw new Error("LinkedIn connection failed");
+      }
+      
+      console.log("LinkedIn connection successful");
       toast.success("LinkedIn Connected: Your LinkedIn account has been connected successfully.");
       
       await fetchConnectedIdentities();
@@ -339,6 +361,11 @@ const SecuritySettings = () => {
     } finally {
       setIsDisconnecting(false);
     }
+  };
+
+  const openDisconnectConfirmation = (id: string) => {
+    setPlatformToDisconnect(id);
+    setConfirmDialogOpen(true);
   };
 
   const isGoogleConnected = connectedAccounts.includes('google');
@@ -518,3 +545,4 @@ const SecuritySettings = () => {
 };
 
 export default SecuritySettings;
+
