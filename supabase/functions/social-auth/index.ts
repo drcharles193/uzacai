@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -128,10 +127,14 @@ async function exchangeTwitterCode(code: string, codeVerifier: string) {
 
 // LinkedIn OAuth URL generator
 function getLinkedInAuthUrl() {
-  console.log("LinkedIn Client ID:", LINKEDIN_CLIENT_ID ? "Exists" : "Missing");
-  console.log("LinkedIn Redirect URI:", LINKEDIN_REDIRECT_URI);
+  console.log("[DIAG] LinkedIn Auth URL Generator:", {
+    clientIdExists: !!LINKEDIN_CLIENT_ID,
+    redirectUri: LINKEDIN_REDIRECT_URI,
+    timestamp: new Date().toISOString()
+  });
   
   if (!LINKEDIN_CLIENT_ID || !LINKEDIN_REDIRECT_URI) {
+    console.error("[DIAG] LinkedIn OAuth credentials not configured");
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
@@ -149,74 +152,152 @@ function getLinkedInAuthUrl() {
     scope: scope,
     state: state
   });
+
+  const url = `https://www.linkedin.com/oauth/v2/authorization?${queryParams.toString()}`;
+  
+  console.log("[DIAG] Generated LinkedIn auth URL:", {
+    urlStart: url.substring(0, 100) + "...",
+    state,
+    scope,
+    redirectUri: LINKEDIN_REDIRECT_URI,
+    timestamp: new Date().toISOString()
+  });
   
   return {
-    url: `https://www.linkedin.com/oauth/v2/authorization?${queryParams.toString()}`,
+    url: url,
     state: state
   };
 }
 
 // Exchange LinkedIn authorization code for tokens
 async function exchangeLinkedInCode(code: string) {
-  console.log("Exchanging LinkedIn code for tokens", 
-    "Client ID present:", !!LINKEDIN_CLIENT_ID,
-    "Client Secret present:", !!LINKEDIN_CLIENT_SECRET,
-    "Redirect URI:", LINKEDIN_REDIRECT_URI);
+  console.log("[DIAG] Exchanging LinkedIn code for tokens", {
+    codeLength: code ? code.length : 0,
+    codeFirstChars: code ? code.substring(0, 5) + "..." : "missing",
+    clientIdExists: !!LINKEDIN_CLIENT_ID,
+    clientSecretExists: !!LINKEDIN_CLIENT_SECRET, 
+    redirectUri: LINKEDIN_REDIRECT_URI,
+    timestamp: new Date().toISOString()
+  });
   
   if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET || !LINKEDIN_REDIRECT_URI) {
+    console.error("[DIAG] LinkedIn OAuth credentials not configured");
     throw new Error("LinkedIn OAuth credentials not configured");
   }
   
   try {
-    const tokenResponse = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+    const tokenRequestUrl = "https://www.linkedin.com/oauth/v2/accessToken";
+    const tokenRequestBody = new URLSearchParams({
+      grant_type: "authorization_code",
+      code: code,
+      client_id: LINKEDIN_CLIENT_ID,
+      client_secret: LINKEDIN_CLIENT_SECRET,
+      redirect_uri: LINKEDIN_REDIRECT_URI
+    });
+    
+    console.log("[DIAG] Making LinkedIn token request to:", {
+      url: tokenRequestUrl,
+      bodyParams: {
+        grant_type: "authorization_code",
+        codeLength: code.length,
+        codeFirstChars: code.substring(0, 5) + "...",
+        client_id: LINKEDIN_CLIENT_ID ? "present" : "missing",
+        client_secret: LINKEDIN_CLIENT_SECRET ? "present" : "missing",
+        redirect_uri: LINKEDIN_REDIRECT_URI
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+    const tokenResponse = await fetch(tokenRequestUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: code,
-        client_id: LINKEDIN_CLIENT_ID,
-        client_secret: LINKEDIN_CLIENT_SECRET,
-        redirect_uri: LINKEDIN_REDIRECT_URI
-      })
+      body: tokenRequestBody
+    });
+    
+    console.log("[DIAG] LinkedIn token response received:", {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      headers: Object.fromEntries(tokenResponse.headers.entries()),
+      timestamp: new Date().toISOString()
     });
     
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error("LinkedIn token exchange error:", errorText);
+      console.error("[DIAG] LinkedIn token exchange error:", {
+        status: tokenResponse.status,
+        error: errorText,
+        timestamp: new Date().toISOString()
+      });
       throw new Error(`LinkedIn error: ${tokenResponse.status} ${errorText}`);
     }
     
     const tokens = await tokenResponse.json();
     
-    // Get user info using the access token with fields that match our approved scopes
-    // Use proper API endpoints for the 'profile' scope
+    console.log("[DIAG] LinkedIn tokens received:", {
+      accessTokenExists: !!tokens.access_token,
+      accessTokenLength: tokens.access_token ? tokens.access_token.length : 0,
+      expiresIn: tokens.expires_in,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log("[DIAG] Fetching LinkedIn user profile data");
     const userResponse = await fetch("https://api.linkedin.com/v2/me", {
       headers: {
         "Authorization": `Bearer ${tokens.access_token}`
       }
     });
     
+    console.log("[DIAG] LinkedIn user data response:", {
+      status: userResponse.status,
+      statusText: userResponse.statusText,
+      timestamp: new Date().toISOString()
+    });
+    
     if (!userResponse.ok) {
+      console.error("[DIAG] Failed to fetch LinkedIn user data:", {
+        status: userResponse.status,
+        timestamp: new Date().toISOString()
+      });
       throw new Error(`Failed to fetch LinkedIn user data: ${userResponse.status}`);
     }
     
     const userData = await userResponse.json();
     
-    // If we have the email scope, fetch the email address
+    console.log("[DIAG] LinkedIn user data received:", {
+      userId: userData.id,
+      hasFirstName: !!userData.localizedFirstName,
+      hasLastName: !!userData.localizedLastName,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log("[DIAG] Fetching LinkedIn email data");
     const emailResponse = await fetch("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))", {
       headers: {
         "Authorization": `Bearer ${tokens.access_token}`
       }
     });
     
+    console.log("[DIAG] LinkedIn email response:", {
+      status: emailResponse.status,
+      statusText: emailResponse.statusText,
+      timestamp: new Date().toISOString()
+    });
+    
     let emailData = null;
     if (emailResponse.ok) {
       emailData = await emailResponse.json();
-      console.log("Successfully fetched LinkedIn email data");
+      console.log("[DIAG] Successfully fetched LinkedIn email data:", {
+        hasElements: !!emailData.elements && emailData.elements.length > 0,
+        timestamp: new Date().toISOString()
+      });
     } else {
-      console.warn("Could not fetch LinkedIn email data:", await emailResponse.text());
+      console.warn("[DIAG] Could not fetch LinkedIn email data:", {
+        status: emailResponse.status,
+        error: await emailResponse.text(),
+        timestamp: new Date().toISOString()
+      });
     }
     
     return {
@@ -226,17 +307,22 @@ async function exchangeLinkedInCode(code: string) {
       emailData: emailData
     };
   } catch (error) {
-    console.error("Error exchanging LinkedIn code:", error);
+    console.error("[DIAG] Error exchanging LinkedIn code:", {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   }
 }
 
 // Store social credentials in the database
 async function storeSocialCredentials(userId: string, platform: string, data: any) {
-  console.log(`Storing ${platform} credentials for user ${userId}`);
+  console.log(`[DIAG] Storing ${platform} credentials for user ${userId}`, {
+    timestamp: new Date().toISOString()
+  });
   
   try {
-    // First check if the user already has credentials for this platform
     const { data: existingCredentials, error: checkError } = await supabase
       .from('social_accounts')
       .select('*')
@@ -245,7 +331,10 @@ async function storeSocialCredentials(userId: string, platform: string, data: an
       .maybeSingle();
     
     if (checkError) {
-      console.error("Error checking existing credentials:", checkError);
+      console.error("[DIAG] Error checking existing credentials:", {
+        error: checkError,
+        timestamp: new Date().toISOString()
+      });
       throw checkError;
     }
     
@@ -282,11 +371,21 @@ async function storeSocialCredentials(userId: string, platform: string, data: an
         email: email
       };
       accountName = `${data.userData.localizedFirstName} ${data.userData.localizedLastName}`;
+      
+      console.log("[DIAG] LinkedIn platform data prepared:", {
+        hasAccessToken: !!data.accessToken,
+        expiresIn: data.expiresIn,
+        userId: data.userData.id,
+        hasFirstName: !!data.userData.localizedFirstName,
+        hasLastName: !!data.userData.localizedLastName,
+        hasEmail: !!email,
+        accountName,
+        timestamp: new Date().toISOString()
+      });
     }
     
-    // Store account details
     if (existingCredentials) {
-      // Update existing credentials
+      console.log("[DIAG] Updating existing credentials for", platform);
       const { error: updateError } = await supabase
         .from('social_accounts')
         .update({
@@ -296,11 +395,16 @@ async function storeSocialCredentials(userId: string, platform: string, data: an
         .eq('id', existingCredentials.id);
       
       if (updateError) {
-        console.error("Error updating credentials:", updateError);
+        console.error("[DIAG] Error updating credentials:", {
+          error: updateError,
+          timestamp: new Date().toISOString()
+        });
         throw updateError;
       }
+      
+      console.log("[DIAG] Successfully updated credentials for", platform);
     } else {
-      // Insert new credentials
+      console.log("[DIAG] Inserting new credentials for", platform);
       const { error: insertError } = await supabase
         .from('social_accounts')
         .insert({
@@ -311,21 +415,34 @@ async function storeSocialCredentials(userId: string, platform: string, data: an
         });
       
       if (insertError) {
-        console.error("Error inserting credentials:", insertError);
+        console.error("[DIAG] Error inserting credentials:", {
+          error: insertError,
+          timestamp: new Date().toISOString()
+        });
         throw insertError;
       }
+      
+      console.log("[DIAG] Successfully inserted credentials for", platform);
     }
     
     return { accountName };
   } catch (error) {
-    console.error(`Error storing ${platform} credentials:`, error);
+    console.error(`[DIAG] Error storing ${platform} credentials:`, {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   }
 }
 
 // Main handler for social auth requests
 serve(async (req) => {
-  console.log("Social auth function invoked");
+  console.log("[DIAG] Social auth function invoked", {
+    method: req.method,
+    url: req.url,
+    timestamp: new Date().toISOString()
+  });
   
   // Handle preflight CORS request
   if (req.method === 'OPTIONS') {
@@ -333,19 +450,26 @@ serve(async (req) => {
   }
   
   try {
-    const { platform, action, code, state, userId, codeVerifier } = await req.json();
+    const requestData = await req.json();
+    const { platform, action, code, state, userId, codeVerifier } = requestData;
     
-    console.log(`Processing ${platform} auth request with action: ${action}`);
+    console.log(`[DIAG] Processing ${platform} auth request with action: ${action}`, {
+      platform,
+      action,
+      hasCode: !!code,
+      codeLength: code ? code.length : 0,
+      hasState: !!state,
+      hasUserId: !!userId,
+      hasCodeVerifier: !!codeVerifier,
+      timestamp: new Date().toISOString()
+    });
     
-    // Twitter OAuth flow
     if (platform === 'twitter') {
-      // Generate Twitter auth URL
       if (action === 'auth-url') {
         try {
           const { url, state, codeVerifier } = getTwitterAuthUrl();
           
-          // Store the state and code verifier temporarily
-          await supabase
+          const { error: stateError } = await supabase
             .from('oauth_states')
             .upsert({
               state: state,
@@ -355,12 +479,25 @@ serve(async (req) => {
               created_at: new Date().toISOString()
             });
           
+          if (stateError) {
+            console.error("[DIAG] Error storing Twitter oauth state:", {
+              error: stateError,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            console.log("[DIAG] Successfully stored Twitter oauth state");
+          }
+          
           return new Response(
             JSON.stringify({ authUrl: url }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
-          console.error("Error generating Twitter auth URL:", error);
+          console.error("[DIAG] Error generating Twitter auth URL:", {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          });
           return new Response(
             JSON.stringify({ error: { message: error.message } }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -368,12 +505,10 @@ serve(async (req) => {
         }
       }
       
-      // Handle Twitter callback
       if (action === 'callback') {
         try {
           let verifier = codeVerifier;
           
-          // If no code verifier was passed, look it up from the state
           if (!verifier && state) {
             const { data: stateData } = await supabase
               .from('oauth_states')
@@ -391,10 +526,8 @@ serve(async (req) => {
             throw new Error("No code verifier found for Twitter OAuth");
           }
           
-          // Exchange auth code for tokens
           const twitterData = await exchangeTwitterCode(code, verifier);
           
-          // Store credentials in database
           const result = await storeSocialCredentials(userId, 'twitter', twitterData);
           
           return new Response(
@@ -402,7 +535,11 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
-          console.error("Error in Twitter callback:", error);
+          console.error("[DIAG] Error in Twitter callback:", {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          });
           return new Response(
             JSON.stringify({ error: { message: error.message } }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -411,16 +548,12 @@ serve(async (req) => {
       }
     }
     
-    // LinkedIn OAuth flow
     if (platform === 'linkedin') {
-      // Generate LinkedIn auth URL
       if (action === 'auth-url') {
         try {
           const { url, state } = getLinkedInAuthUrl();
-          console.log("Generated LinkedIn auth URL with redirect to:", LINKEDIN_REDIRECT_URI);
           
-          // Store the state temporarily
-          await supabase
+          const { error: stateError } = await supabase
             .from('oauth_states')
             .upsert({
               state: state,
@@ -429,12 +562,25 @@ serve(async (req) => {
               created_at: new Date().toISOString()
             });
           
+          if (stateError) {
+            console.error("[DIAG] Error storing LinkedIn oauth state:", {
+              error: stateError,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            console.log("[DIAG] Successfully stored LinkedIn oauth state");
+          }
+          
           return new Response(
             JSON.stringify({ authUrl: url }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
-          console.error("Error generating LinkedIn auth URL:", error);
+          console.error("[DIAG] Error generating LinkedIn auth URL:", {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          });
           return new Response(
             JSON.stringify({ error: { message: error.message } }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -442,38 +588,55 @@ serve(async (req) => {
         }
       }
       
-      // Handle LinkedIn callback
       if (action === 'callback') {
         try {
-          console.log("Processing LinkedIn callback with code:", code ? "present" : "missing");
-          console.log("State:", state || "missing");
-          console.log("User ID:", userId || "missing");
+          console.log("[DIAG] Processing LinkedIn callback", {
+            hasCode: !!code,
+            codeLength: code ? code.length : 0,
+            codeFirstChars: code ? code.substring(0, 5) + "..." : "missing",
+            state: state || "missing",
+            userId: userId || "missing",
+            timestamp: new Date().toISOString()
+          });
           
           if (!code) {
+            console.error("[DIAG] No authorization code provided for LinkedIn callback");
             throw new Error("No authorization code provided");
           }
           
-          // Exchange auth code for tokens
           const linkedinData = await exchangeLinkedInCode(code);
           
           if (!linkedinData || !linkedinData.accessToken) {
-            console.error("Failed to exchange LinkedIn code:", linkedinData);
+            console.error("[DIAG] Failed to exchange LinkedIn code:", {
+              dataReceived: !!linkedinData,
+              hasAccessToken: linkedinData ? !!linkedinData.accessToken : false,
+              timestamp: new Date().toISOString()
+            });
             throw new Error("Failed to exchange code for LinkedIn tokens");
           }
           
-          console.log("Successfully exchanged LinkedIn code for tokens");
+          console.log("[DIAG] Successfully exchanged LinkedIn code for tokens", {
+            hasAccessToken: !!linkedinData.accessToken,
+            timestamp: new Date().toISOString()
+          });
           
-          // Store credentials in database
           const result = await storeSocialCredentials(userId, 'linkedin', linkedinData);
           
-          console.log("LinkedIn credentials stored successfully:", result.accountName);
+          console.log("[DIAG] LinkedIn credentials stored successfully:", {
+            accountName: result.accountName,
+            timestamp: new Date().toISOString()
+          });
           
           return new Response(
             JSON.stringify({ success: true, accountName: result.accountName }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
-          console.error("Error in LinkedIn callback:", error);
+          console.error("[DIAG] Error in LinkedIn callback:", {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          });
           return new Response(
             JSON.stringify({ error: { message: error.message } }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -482,14 +645,23 @@ serve(async (req) => {
       }
     }
     
-    // If we reach here, the request was invalid
+    console.error("[DIAG] Invalid request:", {
+      platform,
+      action,
+      timestamp: new Date().toISOString()
+    });
+    
     return new Response(
       JSON.stringify({ error: { message: `Invalid request: Unknown platform '${platform}' or action '${action}'` } }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error("[DIAG] Error processing request:", {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     
     return new Response(
       JSON.stringify({ error: { message: error.message } }),

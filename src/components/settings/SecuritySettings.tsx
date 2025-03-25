@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
@@ -14,38 +14,84 @@ const SecuritySettings = () => {
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string>('');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [linkedInCallbackReceived, setLinkedInCallbackReceived] = useState(false);
+  const linkedInStartTime = useRef<number | null>(null);
+  const [linkedInCallbackStatus, setLinkedInCallbackStatus] = useState<string>('');
 
   useEffect(() => {
+    console.log('[DIAG] SecuritySettings component mounted', {
+      timestamp: new Date().toISOString(),
+      location: window.location.href,
+      contextPath: 'settings/security'
+    });
+    
     fetchConnectedIdentities();
   }, []);
 
   useEffect(() => {
+    console.log('[DIAG] Setting up postMessage event listener in SecuritySettings', {
+      timestamp: new Date().toISOString()
+    });
+    
     const handleOAuthCallback = (event: MessageEvent) => {
-      console.log('Received message event:', event.origin, event.data?.type || 'unknown type');
+      console.log('[DIAG] SecuritySettings received message event:', {
+        origin: event.origin,
+        eventType: event.data?.type || 'unknown type',
+        hasData: !!event.data,
+        timestamp: new Date().toISOString(),
+        timeElapsed: linkedInStartTime.current ? `${Date.now() - linkedInStartTime.current}ms` : 'unknown'
+      });
       
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received Twitter callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
+        console.log('[DIAG] Received Twitter callback:', {
+          codePrefix: code ? code.substring(0, 5) + '...' : 'missing',
+          state,
+          timestamp: new Date().toISOString()
+        });
         
         completeTwitterConnection(code, state);
       }
       else if (event.data && event.data.type === 'linkedin-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('Received LinkedIn callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
-        setLinkedInCallbackReceived(true);
+        const { code, state, timestamp } = event.data;
         
-        completeLinkedInConnection(code, state);
+        console.log('[DIAG] Received LinkedIn callback in SecuritySettings:', {
+          codePrefix: code ? code.substring(0, 5) + '...' : 'missing',
+          codeLength: code ? code.length : 0,
+          state,
+          messageTimestamp: timestamp,
+          receivedAt: new Date().toISOString(),
+          timeElapsed: linkedInStartTime.current ? `${Date.now() - linkedInStartTime.current}ms` : 'unknown'
+        });
+        
+        setLinkedInCallbackReceived(true);
+        setLinkedInCallbackStatus('received');
+        
+        try {
+          if (linkedinWindow && !linkedinWindow.closed) {
+            linkedinWindow.postMessage({ 
+              type: 'linkedin-callback-received',
+              timestamp: new Date().toISOString()
+            }, '*');
+            console.log('[DIAG] Sent acknowledgment to LinkedIn popup');
+          }
+        } catch (e) {
+          console.error('[DIAG] Error sending acknowledgment to LinkedIn popup:', e);
+        }
+        
+        setTimeout(() => {
+          setLinkedInCallbackStatus('processing');
+          completeLinkedInConnection(code, state);
+        }, 100);
       }
     };
 
-    console.log('Adding postMessage event listener for OAuth callbacks');
+    console.log('[DIAG] Adding postMessage event listener for OAuth callbacks');
     window.addEventListener('message', handleOAuthCallback);
     
     return () => {
-      console.log('Removing postMessage event listener');
+      console.log('[DIAG] Removing postMessage event listener');
       window.removeEventListener('message', handleOAuthCallback);
       
-      // Close any open popup windows
       if (twitterWindow && !twitterWindow.closed) {
         twitterWindow.close();
       }
@@ -53,7 +99,7 @@ const SecuritySettings = () => {
         linkedinWindow.close();
       }
     };
-  }, []);
+  }, [linkedinWindow]);
 
   const fetchConnectedIdentities = async () => {
     try {
@@ -61,9 +107,14 @@ const SecuritySettings = () => {
       if (user && user.identities) {
         const providers = user.identities.map(identity => identity.provider);
         setConnectedAccounts(providers);
+        
+        console.log('[DIAG] User connected accounts:', {
+          providers,
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error) {
-      console.error("Error fetching connected identities:", error);
+      console.error("[DIAG] Error fetching connected identities:", error);
     }
   };
 
@@ -86,7 +137,6 @@ const SecuritySettings = () => {
       
       if (error) throw error;
       
-      // Session check is done separately after the OAuth flow
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -223,11 +273,46 @@ const SecuritySettings = () => {
       console.log("LinkedIn popup opened successfully");
       setLinkedInWindow(linkedinPopup);
       
-      // Add a safety timeout to stop the connecting spinner if we don't get a callback
+      linkedInStartTime.current = Date.now();
+      
+      const popupChecker = setInterval(() => {
+        if (linkedinPopup.closed) {
+          console.log("[DIAG] LinkedIn popup was closed by user", {
+            timestamp: new Date().toISOString(),
+            timeElapsed: `${Date.now() - linkedInStartTime.current}ms`,
+            callbackReceived: linkedInCallbackReceived
+          });
+          
+          clearInterval(popupChecker);
+          
+          if (!linkedInCallbackReceived) {
+            console.log("[DIAG] LinkedIn popup closed without callback", {
+              timestamp: new Date().toISOString()
+            });
+            setIsConnecting(false);
+            setLinkedInCallbackStatus('popup-closed-no-callback');
+          }
+        } else {
+          try {
+            const url = linkedinPopup.location.href;
+            console.log("[DIAG] LinkedIn popup URL (unlikely to work due to CORS):", url);
+          } catch (e) {
+          }
+        }
+      }, 1000);
+      
       setTimeout(() => {
         if (isConnecting && !linkedInCallbackReceived) {
-          console.log("LinkedIn connection timeout - no callback received");
+          console.log("[DIAG] LinkedIn connection timeout - no callback received", {
+            timestamp: new Date().toISOString(),
+            timeElapsed: `${Date.now() - linkedInStartTime.current}ms`
+          });
+          
           setIsConnecting(false);
+          setLinkedInCallbackStatus('timeout');
+          
+          clearInterval(popupChecker);
+          
           toast.error("LinkedIn connection timed out. Please try again.");
         }
       }, 90000); // 90-second timeout
@@ -236,6 +321,7 @@ const SecuritySettings = () => {
       console.error("Error connecting LinkedIn account:", error);
       toast.error("Failed to connect LinkedIn account: " + error.message);
       setIsConnecting(false);
+      setLinkedInCallbackStatus('error-' + error.message.substring(0, 20));
     }
   };
 
@@ -286,17 +372,21 @@ const SecuritySettings = () => {
 
   const completeLinkedInConnection = async (code: string, state: string) => {
     try {
-      console.log("Starting LinkedIn connection completion with code:", code ? code.substring(0, 5) + "..." : "missing");
+      setLinkedInCallbackStatus('completing');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.error("No session found for LinkedIn callback");
+        console.error("[DIAG] No session found for LinkedIn callback");
         toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
+        setLinkedInCallbackStatus('complete-no-session');
         return;
       }
       
-      console.log("Calling social-auth edge function for LinkedIn callback");
+      console.log("[DIAG] Session found for LinkedIn callback completion", {
+        userId: session.user.id,
+        timestamp: new Date().toISOString()
+      });
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -308,10 +398,20 @@ const SecuritySettings = () => {
         }
       });
       
-      console.log("LinkedIn callback response:", response);
+      console.log("LinkedIn callback edge function response:", {
+        success: !response.error && response.data?.success,
+        error: response.error,
+        dataError: response.data?.error,
+        timestamp: new Date().toISOString(),
+        timeElapsed: linkedInStartTime.current ? `${Date.now() - linkedInStartTime.current}ms` : 'unknown'
+      });
       
       if (response.error) {
-        console.error("LinkedIn callback error:", response.error);
+        console.error("[DIAG] LinkedIn callback error from edge function:", {
+          error: response.error,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(response.error.message || "Failed to connect LinkedIn account");
       }
       
@@ -325,20 +425,32 @@ const SecuritySettings = () => {
       await fetchConnectedIdentities();
       
     } catch (error: any) {
-      console.error("Error connecting LinkedIn:", error);
+      console.error("[DIAG] Error completing LinkedIn connection:", {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+        timeElapsed: linkedInStartTime.current ? `${Date.now() - linkedInStartTime.current}ms` : 'unknown'
+      });
+      
+      setLinkedInCallbackStatus('complete-error');
       toast.error("Failed to connect LinkedIn account: " + error.message);
     } finally {
       setIsConnecting(false);
       
-      // Close the popup window
       if (linkedinWindow && !linkedinWindow.closed) {
         try {
+          console.log("[DIAG] Closing LinkedIn popup", {
+            timestamp: new Date().toISOString()
+          });
+          
           linkedinWindow.close();
         } catch (e) {
-          console.error("Error closing LinkedIn popup:", e);
+          console.error("[DIAG] Error closing LinkedIn popup:", e);
         }
       }
+      
       setLinkedInWindow(null);
+      linkedInStartTime.current = null;
     }
   };
 
@@ -386,6 +498,15 @@ const SecuritySettings = () => {
   const isGoogleConnected = connectedAccounts.includes('google');
   const isTwitterConnected = connectedAccounts.includes('twitter');
   const isLinkedInConnected = connectedAccounts.includes('linkedin');
+
+  useEffect(() => {
+    console.log('[DIAG] LinkedIn connection state changed:', {
+      isConnecting,
+      linkedInCallbackReceived,
+      linkedInCallbackStatus,
+      timestamp: new Date().toISOString()
+    });
+  }, [isConnecting, linkedInCallbackReceived, linkedInCallbackStatus]);
 
   return (
     <div className="space-y-8">
@@ -529,6 +650,11 @@ const SecuritySettings = () => {
                       ? "Your LinkedIn account is connected" 
                       : "Connect your LinkedIn account for professional networking"}
                   </p>
+                  {linkedInCallbackStatus && isConnecting && (
+                    <p className="text-xs text-blue-500 mt-1">
+                      Status: {linkedInCallbackStatus} {linkedInStartTime.current ? `(${Math.floor((Date.now() - linkedInStartTime.current)/1000)}s)` : ''}
+                    </p>
+                  )}
                 </div>
               </div>
               {isLinkedInConnected ? (
