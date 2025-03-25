@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -137,9 +138,8 @@ function getLinkedInAuthUrl() {
   // Generate an OAuth state for security
   const state = generateState();
   
-  // IMPORTANT: Updated scope to use what's actually authorized for your LinkedIn app
-  // Removed r_emailaddress and using r_liteprofile and w_member_social only
-  const scope = "r_liteprofile w_member_social";
+  // Updated scope to match what's approved in the LinkedIn Developer Console
+  const scope = "openid profile email w_member_social";
   
   const queryParams = new URLSearchParams({
     response_type: "code",
@@ -189,7 +189,7 @@ async function exchangeLinkedInCode(code: string) {
     
     const tokens = await tokenResponse.json();
     
-    // Get user info using the access token
+    // Get user info using the access token with fields that match our scopes
     const userResponse = await fetch("https://api.linkedin.com/v2/me?projection=(id,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))", {
       headers: {
         "Authorization": `Bearer ${tokens.access_token}`
@@ -202,14 +202,26 @@ async function exchangeLinkedInCode(code: string) {
     
     const userData = await userResponse.json();
     
-    // Since r_emailaddress is not available, we're no longer fetching email
-    // Just return user profile data that's available with r_liteprofile scope
+    // Now that we have the email scope, fetch the email address
+    const emailResponse = await fetch("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))", {
+      headers: {
+        "Authorization": `Bearer ${tokens.access_token}`
+      }
+    });
+    
+    let emailData = null;
+    if (emailResponse.ok) {
+      emailData = await emailResponse.json();
+      console.log("Successfully fetched LinkedIn email data");
+    } else {
+      console.warn("Could not fetch LinkedIn email data:", await emailResponse.text());
+    }
     
     return {
       accessToken: tokens.access_token,
       expiresIn: tokens.expires_in,
       userData: userData,
-      emailData: null // Email data will be null since we can't access it
+      emailData: emailData
     };
   } catch (error) {
     console.error("Error exchanging LinkedIn code:", error);
