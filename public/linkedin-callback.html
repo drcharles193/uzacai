@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LinkedIn OAuth Callback</title>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; }
+    .status { margin-top: 2rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h2>LinkedIn Authentication</h2>
+  <div class="status" id="status">Processing your connection...</div>
+
+  <script>
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    const code = getQueryParam('code');
+    const state = getQueryParam('state');
+    const statusEl = document.getElementById('status');
+
+    try {
+      if (window.opener && !window.opener.closed) {
+        const message = {
+          type: 'linkedin-oauth-callback',
+          code,
+          state,
+          timestamp: new Date().toISOString()
+        };
+
+        window.opener.postMessage(message, '*');
+        statusEl.innerText = 'Connected! Closing...';
+
+        setTimeout(() => {
+          window.close();
+        }, 1000);
+      } else {
+        statusEl.innerText = 'Failed to communicate with app.';
+      }
+    } catch (err) {
+      statusEl.innerText = 'An error occurred.';
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
