@@ -198,7 +198,9 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     
     fetchConnectedAccounts();
 
-    const handleOAuthCallback = (event: MessageEvent) => {
+    const handleOAuthCallback = (event) => {
+      console.log("[SocialMediaConnect] Received message:", event.data);
+      
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
         console.log('Received Twitter callback:', code, state);
@@ -433,6 +435,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
       });
       
+      console.log("[SocialMediaConnect] Facebook callback response:", response);
+      
       if (response.error) {
         console.error("Facebook callback error:", response.error);
         throw new Error(response.error.message || "Failed to connect Facebook account");
@@ -456,7 +460,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         description: `Your Facebook account has been connected successfully.`
       });
       
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error connecting Facebook:", error);
       setConnectionError('facebook');
       toast({
@@ -615,6 +619,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         const checkClosed = setInterval(() => {
           if (facebookPopup.closed) {
             clearInterval(checkClosed);
+            console.log("[SocialMediaConnect] Facebook popup was closed");
             if (isConnecting === 'facebook') {
               setIsConnecting(null);
             }
@@ -993,4 +998,3 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 };
 
 export default SocialMediaConnect;
-

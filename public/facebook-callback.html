@@ -7,6 +7,8 @@
   <title>Facebook Authentication</title>
   <script>
     window.onload = function() {
+      console.log("Facebook callback page loaded");
+      
       // Extract code and state from URL
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
@@ -19,11 +21,17 @@
         document.getElementById('status').textContent = "Authentication failed: " + (errorDescription || error);
         document.getElementById('status').className = "error-message";
         
-        window.opener.postMessage({
-          type: 'facebook-oauth-callback-error',
-          error: error,
-          errorDescription: errorDescription
-        }, '*'); // Use wildcard to ensure message delivery
+        // Send error message to parent window
+        if (window.opener) {
+          console.log("Sending error message to parent window");
+          window.opener.postMessage({
+            type: 'facebook-oauth-callback-error',
+            error: error,
+            errorDescription: errorDescription
+          }, '*');
+        } else {
+          console.error("No opener window found");
+        }
         
         // Close this window after a short delay
         setTimeout(() => {
@@ -35,16 +43,25 @@
       if (code) {
         console.log("Facebook auth successful, sending code to parent window");
         // Send code and state back to parent window
-        window.opener.postMessage({
-          type: 'facebook-oauth-callback',
-          code: code,
-          state: state
-        }, '*'); // Use wildcard to ensure message delivery
-        
-        // Close this window
-        setTimeout(() => {
-          window.close();
-        }, 1000);
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'facebook-oauth-callback',
+            code: code,
+            state: state
+          }, '*');
+          
+          document.getElementById('status').textContent = "Authentication successful! You may close this window.";
+          document.getElementById('status').className = "success-message";
+          
+          // Close this window after a short delay
+          setTimeout(() => {
+            window.close();
+          }, 2000);
+        } else {
+          console.error("No opener window found");
+          document.getElementById('status').textContent = "Authentication successful, but unable to communicate with parent window.";
+          document.getElementById('status').className = "error-message";
+        }
       } else {
         document.getElementById('status').textContent = "Authentication failed. No authorization code received.";
         document.getElementById('status').className = "error-message";
@@ -82,6 +99,10 @@
       color: #d32f2f;
       font-weight: 500;
     }
+    .success-message {
+      color: #2e7d32;
+      font-weight: 500;
+    }
     .loader {
       border: 3px solid #f3f3f3;
       border-radius: 50%;
@@ -100,7 +121,7 @@
 <body>
   <div class="container">
     <h1>Facebook Authentication</h1>
-    <p id="status">Authentication successful! Processing your request...</p>
+    <p id="status">Processing your authentication...</p>
     <div class="loader"></div>
     <p>This window will close automatically.</p>
   </div>

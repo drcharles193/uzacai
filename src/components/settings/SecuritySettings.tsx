@@ -15,6 +15,8 @@ const SecuritySettings = () => {
     fetchUserAndConnectedAccounts();
 
     const handleOAuthCallback = (event) => {
+      console.log("[SecuritySettings] Received message:", event.data);
+      
       if (event.data && event.data.type === 'facebook-oauth-callback') {
         const { code, state } = event.data;
         console.log('[SecuritySettings] Received Facebook code:', code);
@@ -101,7 +103,11 @@ const SecuritySettings = () => {
       const checkClosed = setInterval(() => {
         if (fbWindow.closed) {
           clearInterval(checkClosed);
-          setIsConnecting(false);
+          console.log("[SecuritySettings] Facebook popup was closed");
+          // Only reset isConnecting if we haven't received a successful callback
+          if (isConnecting) {
+            setIsConnecting(false);
+          }
         }
       }, 500);
     } catch (error) {
@@ -125,6 +131,8 @@ const SecuritySettings = () => {
           userId: user.id
         }
       });
+      
+      console.log("[SecuritySettings] Facebook callback response:", response);
       
       if (response.error) {
         console.error("Facebook callback error:", response.error);
