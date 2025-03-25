@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -21,13 +20,13 @@ const SecuritySettings = () => {
     const handleOAuthCallback = (event: MessageEvent) => {
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received Twitter callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
+        console.log('Received Twitter callback:', code, state);
         
         completeTwitterConnection(code, state);
       }
       else if (event.data && event.data.type === 'linkedin-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received LinkedIn callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
+        console.log('Received LinkedIn callback:', code, state);
         
         completeLinkedInConnection(code, state);
       }
@@ -62,6 +61,7 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
+      // Get the current URL to use in the redirect
       const origin = window.location.origin;
       const redirectTo = `${origin}/settings?tab=security`;
       
@@ -77,23 +77,12 @@ const SecuritySettings = () => {
       
       if (error) throw error;
       
-      // Session check is done separately after the OAuth flow
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        toast.error("Authentication required. Please sign in to connect social accounts.");
-        setIsConnecting(false);
-        return;
-      }
-      
-      toast.success("Google Connected: Your Google account has been connected successfully.");
-      
-      await fetchConnectedIdentities();
+      // User will be redirected to Google for authentication
+      // No need to set isConnecting to false as the page will reload after redirect
       
     } catch (error: any) {
       console.error("Error connecting Google account:", error);
       toast.error("Failed to connect Google account: " + error.message);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -102,6 +91,7 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
+      // Get the current URL to use in the redirect
       const origin = window.location.origin;
       const redirectTo = `${origin}/settings?tab=security`;
       
@@ -113,8 +103,6 @@ const SecuritySettings = () => {
         setIsConnecting(false);
         return;
       }
-      
-      console.log("Calling social-auth edge function for Twitter auth URL");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -153,7 +141,6 @@ const SecuritySettings = () => {
     } catch (error: any) {
       console.error("Error connecting Twitter account:", error);
       toast.error("Failed to connect Twitter account: " + error.message);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -162,7 +149,11 @@ const SecuritySettings = () => {
     try {
       setIsConnecting(true);
       
-      console.log("Starting LinkedIn OAuth flow");
+      // Get the current URL to use in the redirect
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/settings?tab=security`;
+      
+      console.log("Starting LinkedIn OAuth flow with redirect to:", redirectTo);
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -170,8 +161,6 @@ const SecuritySettings = () => {
         setIsConnecting(false);
         return;
       }
-      
-      console.log("Calling social-auth edge function for LinkedIn auth URL");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -187,7 +176,7 @@ const SecuritySettings = () => {
         throw new Error(response.error.message || "Failed to start LinkedIn connection");
       }
       
-      if (!response.data || !response.data.authUrl) {
+      if (!response.data.authUrl) {
         throw new Error("No LinkedIn auth URL returned");
       }
       
@@ -210,7 +199,6 @@ const SecuritySettings = () => {
     } catch (error: any) {
       console.error("Error connecting LinkedIn account:", error);
       toast.error("Failed to connect LinkedIn account: " + error.message);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -244,6 +232,7 @@ const SecuritySettings = () => {
       
       toast.success("Twitter Connected: Your Twitter/X account has been connected successfully.");
       
+      // Refresh the connected accounts list
       await fetchConnectedIdentities();
       
     } catch (error: any) {
@@ -289,6 +278,7 @@ const SecuritySettings = () => {
       
       toast.success("LinkedIn Connected: Your LinkedIn account has been connected successfully.");
       
+      // Refresh the connected accounts list
       await fetchConnectedIdentities();
       
     } catch (error: any) {
@@ -309,6 +299,7 @@ const SecuritySettings = () => {
     try {
       setIsDisconnecting(true);
       
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("No user found. Please sign in again.");
@@ -316,6 +307,7 @@ const SecuritySettings = () => {
       
       console.log(`Attempting to disconnect ${provider} account for user ${user.id}`);
       
+      // Call the edge function to disconnect the account
       const { data, error } = await supabase.functions.invoke('disconnect-social', {
         body: {
           userId: user.id,
@@ -331,6 +323,7 @@ const SecuritySettings = () => {
       
       toast.success(data.message || `${provider.charAt(0).toUpperCase() + provider.slice(1)} account disconnected successfully`);
       
+      // Refresh the connected accounts list
       await fetchConnectedIdentities();
       
     } catch (error: any) {
@@ -339,6 +332,10 @@ const SecuritySettings = () => {
     } finally {
       setIsDisconnecting(false);
     }
+  };
+
+  const openDisconnectConfirmation = (id: string) => {
+    // Implementation of openDisconnectConfirmation
   };
 
   const isGoogleConnected = connectedAccounts.includes('google');

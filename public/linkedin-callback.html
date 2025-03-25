@@ -4,188 +4,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinkedIn Authentication</title>
+  <title>LinkedIn Authentication Callback</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.6;
+      background-color: #f9f9f9;
       color: #333;
-      margin: 0;
-      padding: 0;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      background-color: #f9fafb;
-    }
-    .container {
-      max-width: 600px;
-      padding: 2rem;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      height: 100vh;
+      margin: 0;
+      padding: 0;
       text-align: center;
     }
-    h1 {
-      color: #4f46e5;
-      margin-bottom: 1rem;
+    .container {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
     }
-    .loading {
-      display: inline-block;
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(79, 70, 229, 0.2);
+    h1 {
+      color: #0077B5;
+      margin-top: 0;
+    }
+    p {
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 119, 181, 0.2);
       border-radius: 50%;
-      border-top-color: #4f46e5;
-      animation: spin 1s ease-in-out infinite;
-      margin-bottom: 1rem;
+      border-top: 4px solid #0077B5;
+      width: 40px;
+      height: 40px;
+      margin: 20px auto;
+      animation: spin 1s linear infinite;
     }
     @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    #status {
-      margin-top: 1rem;
-      padding: 1rem;
-      border-radius: 4px;
-    }
-    .success {
-      background-color: #ecfdf5;
-      color: #047857;
-    }
-    .error {
-      background-color: #fef2f2;
-      color: #b91c1c;
-    }
-    button {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      background-color: #4f46e5;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    button:hover {
-      background-color: #4338ca;
-    }
-    pre {
-      text-align: left;
-      background-color: #f1f5f9;
-      padding: 1rem;
-      border-radius: 4px;
-      overflow-x: auto;
-      margin-top: 1rem;
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="loading" id="loading"></div>
     <h1>LinkedIn Authentication</h1>
-    <p>Processing your LinkedIn authentication...</p>
-    <div id="status"></div>
-    <div id="debug" style="display: none;">
-      <h3>Debug Information</h3>
-      <pre id="debug-info"></pre>
-    </div>
-    <button id="continue-btn" style="display: none;">Continue to App</button>
+    <p>Authentication in progress. Please don't close this window.</p>
+    <div class="spinner"></div>
+    <p id="status">Completing connection to LinkedIn...</p>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    window.onload = function() {
+      // Extract code and state from URL
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
       
-      const statusDiv = document.getElementById('status');
-      const loadingDiv = document.getElementById('loading');
-      const continueBtn = document.getElementById('continue-btn');
-      const debugDiv = document.getElementById('debug');
-      const debugInfo = document.getElementById('debug-info');
-      
-      // For debugging
-      const debugData = {
-        code: code ? 'present' : 'missing',
-        state: state ? 'present' : 'missing',
-        error: error,
-        errorDescription: errorDescription,
-        fullUrl: window.location.href,
-        referrer: document.referrer
-      };
-      
-      console.log('LinkedIn callback debug data:', debugData);
-      debugInfo.textContent = JSON.stringify(debugData, null, 2);
-      
-      // Immediately show debug info to help diagnose issues
-      debugDiv.style.display = 'block';
+      // Update status message
+      const statusElement = document.getElementById('status');
       
       if (error) {
-        loadingDiv.style.display = 'none';
-        statusDiv.className = 'error';
-        statusDiv.innerHTML = `<strong>Authentication Error:</strong><br>${errorDescription || error}`;
-        continueBtn.style.display = 'inline-block';
-        continueBtn.addEventListener('click', function() {
-          window.close();
-        });
-      } else if (code) {
-        // CHANGED: Instead of redirecting to the app, send a message to the opener window
-        statusDiv.innerHTML = '<strong>Authentication successful!</strong><br>Communicating with application...';
+        statusElement.innerHTML = `Error: ${errorDescription || error}`;
+        statusElement.style.color = 'red';
         
-        try {
-          // Send message to opener (parent) window with the authorization code
-          if (window.opener) {
-            console.log('Sending message to opener window');
-            window.opener.postMessage({
-              type: 'linkedin-oauth-callback',
-              code: code,
-              state: state || ''
-            }, '*');
-            
-            // Update status
-            statusDiv.className = 'success';
-            statusDiv.innerHTML = '<strong>Authentication successful!</strong><br>You can close this window now.';
-            loadingDiv.style.display = 'none';
-            
-            // Auto close after a few seconds
-            setTimeout(() => {
-              window.close();
-            }, 3000);
-          } else {
-            console.error('No opener window found');
-            statusDiv.className = 'error';
-            statusDiv.innerHTML = '<strong>Error:</strong><br>Cannot communicate with the main application.';
-            loadingDiv.style.display = 'none';
-            continueBtn.style.display = 'inline-block';
-            continueBtn.textContent = 'Close Window';
-            continueBtn.addEventListener('click', function() {
-              window.close();
-            });
-          }
-        } catch (err) {
-          console.error('Error sending message to opener:', err);
-          statusDiv.className = 'error';
-          statusDiv.innerHTML = `<strong>Communication Error:</strong><br>${err.message}`;
-          loadingDiv.style.display = 'none';
-          continueBtn.style.display = 'inline-block';
-          continueBtn.textContent = 'Close Window';
-          continueBtn.addEventListener('click', function() {
-            window.close();
-          });
-        }
-      } else {
-        loadingDiv.style.display = 'none';
-        statusDiv.className = 'error';
-        statusDiv.innerHTML = '<strong>Invalid Request:</strong><br>No authentication code received from LinkedIn.';
-        continueBtn.style.display = 'inline-block';
-        continueBtn.textContent = 'Close Window';
-        continueBtn.addEventListener('click', function() {
+        // Close window after a delay
+        setTimeout(() => {
           window.close();
-        });
+        }, 5000);
+        return;
       }
-    });
+      
+      if (!code) {
+        statusElement.innerHTML = 'Error: No authorization code received';
+        statusElement.style.color = 'red';
+        return;
+      }
+      
+      // Send the code and state to the parent window
+      window.opener.postMessage({
+        type: 'linkedin-oauth-callback',
+        code,
+        state
+      }, '*');
+      
+      // Update status
+      statusElement.innerHTML = 'Connection successful! You can close this window.';
+      
+      // Close window after a delay
+      setTimeout(() => {
+        window.close();
+      }, 3000);
+    };
   </script>
 </body>
 </html>
