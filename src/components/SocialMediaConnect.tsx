@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -208,9 +209,18 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       }
       else if (event.data && event.data.type === 'linkedin-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received LinkedIn callback:', code, state);
+        console.log('[LinkedIn] Received auth code:', code);
         
-        completeLinkedInConnection(code, state);
+        if (code) {
+          completeLinkedInConnection(code, state);
+        } else {
+          toast({
+            title: "LinkedIn Connection Failed",
+            description: "No LinkedIn code received.",
+            variant: "destructive"
+          });
+          setIsConnecting(null);
+        }
       }
     };
 
