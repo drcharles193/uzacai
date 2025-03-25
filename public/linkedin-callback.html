@@ -71,12 +71,11 @@
     }
     pre {
       text-align: left;
-      background: #f1f1f1;
-      padding: 10px;
+      background-color: #f1f5f9;
+      padding: 1rem;
       border-radius: 4px;
-      font-size: 12px;
-      overflow: auto;
-      margin-top: 10px;
+      overflow-x: auto;
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -86,16 +85,15 @@
     <h1>LinkedIn Authentication</h1>
     <p>Processing your LinkedIn authentication...</p>
     <div id="status"></div>
-    <button id="close-btn" style="display: none;">Close Window</button>
-    <div id="debug" style="display: block;"></div>
+    <div id="debug" style="display: none;">
+      <h3>Debug Information</h3>
+      <pre id="debug-info"></pre>
+    </div>
+    <button id="continue-btn" style="display: none;">Continue to App</button>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // DIAGNOSTIC STEP 1: Log page load with timestamp
-      const pageLoadTime = new Date().toISOString();
-      console.log('[DIAG-STEP1] LinkedIn callback page loaded at:', pageLoadTime);
-      
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
@@ -104,218 +102,86 @@
       
       const statusDiv = document.getElementById('status');
       const loadingDiv = document.getElementById('loading');
-      const closeBtn = document.getElementById('close-btn');
+      const continueBtn = document.getElementById('continue-btn');
       const debugDiv = document.getElementById('debug');
+      const debugInfo = document.getElementById('debug-info');
       
-      // DIAGNOSTIC STEP 1: Log parsed code and state
-      console.log('[DIAG-STEP1] LinkedIn callback parameters:', { 
-        code: code ? `${code.substring(0, 5)}...${code.substring(code.length - 5)}` : 'missing',
-        codeLength: code ? code.length : 0,
-        state: state || 'missing',
-        error: error || 'none',
-        errorDescription: errorDescription || 'none',
-        url: window.location.href,
-        openerExists: !!window.opener,
-        pageLoadTime: pageLoadTime
-      });
-      
-      // Add debug info on page
-      function logToPage(message, data) {
-        const logEntry = document.createElement('div');
-        logEntry.innerHTML = `<strong>${message}</strong>: ${JSON.stringify(data)}`;
-        debugDiv.appendChild(logEntry);
-        console.log('[DIAG-PAGE]', message, data);
-      }
-      
-      // DIAGNOSTIC STEP 1: Display debug info for all query parameters
-      logToPage('URL Parameters', {
-        code: code ? `${code.substring(0, 5)}...${code.substring(code.length - 5)}` : 'missing',
-        codeLength: code ? code.length : 0,
-        state: state || 'missing',
-        error: error || 'none',
-        errorDescription: errorDescription || 'none',
-        origin: window.location.origin,
+      // For debugging
+      const debugData = {
+        code: code ? 'present' : 'missing',
+        state: state ? 'present' : 'missing',
+        error: error,
+        errorDescription: errorDescription,
         fullUrl: window.location.href,
-        timestamp: pageLoadTime,
-        openerExists: !!window.opener
-      });
+        referrer: document.referrer
+      };
+      
+      console.log('LinkedIn callback debug data:', debugData);
+      debugInfo.textContent = JSON.stringify(debugData, null, 2);
+      
+      // Immediately show debug info to help diagnose issues
+      debugDiv.style.display = 'block';
       
       if (error) {
-        // DIAGNOSTIC: Log error
-        console.error('[DIAG-STEP1] LinkedIn authentication error:', error, errorDescription);
-        
         loadingDiv.style.display = 'none';
         statusDiv.className = 'error';
         statusDiv.innerHTML = `<strong>Authentication Error:</strong><br>${errorDescription || error}`;
-        closeBtn.style.display = 'inline-block';
-        debugDiv.style.display = 'block';
-        closeBtn.addEventListener('click', function() {
+        continueBtn.style.display = 'inline-block';
+        continueBtn.addEventListener('click', function() {
           window.close();
         });
       } else if (code) {
+        // CHANGED: Instead of redirecting to the app, send a message to the opener window
         statusDiv.innerHTML = '<strong>Authentication successful!</strong><br>Communicating with application...';
         
         try {
-          // DIAGNOSTIC STEP 1: Check if opener exists
-          logToPage('Window opener check before sending message', {
-            exists: !!window.opener,
-            closed: window.opener ? window.opener.closed : 'N/A',
-            openerType: window.opener ? typeof window.opener : 'undefined',
-            timestamp: new Date().toISOString()
-          });
-          
-          console.log('[DIAG-STEP1] Window opener check:', {
-            exists: !!window.opener,
-            closed: window.opener ? window.opener.closed : 'N/A',
-            openerType: window.opener ? typeof window.opener : 'undefined',
-            timestamp: new Date().toISOString()
-          });
-          
-          // Send message to opener window with the authorization code
+          // Send message to opener (parent) window with the authorization code
           if (window.opener) {
-            // DIAGNOSTIC STEP 1: Log message sending attempt with timestamp
-            const messageSendTime = new Date().toISOString();
-            console.log('[DIAG-STEP1] About to send message to opener window at:', messageSendTime);
-            logToPage('About to send message', {
-              timestamp: messageSendTime,
-              openerExists: !!window.opener,
-              openerClosed: window.opener.closed
-            });
-            
-            // Prepare the message payload
-            const message = {
+            console.log('Sending message to opener window');
+            window.opener.postMessage({
               type: 'linkedin-oauth-callback',
               code: code,
-              state: state || '',
-              timestamp: messageSendTime
-            };
+              state: state || ''
+            }, '*');
             
-            // DIAGNOSTIC STEP 1: Log the actual message being sent (partial code for security)
-            console.log('[DIAG-STEP1] Sending message to opener:', {
-              type: message.type,
-              code: `${code.substring(0, 5)}...${code.substring(code.length - 5)}`,
-              codeLength: code.length,
-              state: message.state,
-              timestamp: message.timestamp
-            });
-            
-            logToPage('Message content (partial)', {
-              type: message.type,
-              code: `${code.substring(0, 5)}...${code.substring(code.length - 5)}`,
-              codeLength: code.length,
-              state: message.state,
-              timestamp: message.timestamp
-            });
-            
-            // DIAGNOSTIC STEP 1: Attempt to send the message with try/catch
-            try {
-              // First, try to access opener to confirm it's still valid right before posting
-              if (window.opener && !window.opener.closed) {
-                window.opener.postMessage(message, '*');
-                const postMessageTime = new Date().toISOString();
-                console.log('[DIAG-STEP1] postMessage sent successfully at:', postMessageTime);
-                logToPage('Message sent', {
-                  success: true,
-                  timestamp: postMessageTime
-                });
-                
-                // Try sending a simple test message as well
-                window.opener.postMessage({type: 'test-message', time: postMessageTime}, '*');
-                console.log('[DIAG-STEP1] Test message also sent');
-              } else {
-                throw new Error('Opener was null or closed when trying to send message');
-              }
-            } catch (postMessageError) {
-              console.error('[DIAG-STEP1] Error in postMessage:', postMessageError);
-              logToPage('postMessage error', {
-                error: postMessageError.toString(),
-                stack: postMessageError.stack,
-                timestamp: new Date().toISOString()
-              });
-              
-              // Show error on page
-              loadingDiv.style.display = 'none';
-              statusDiv.className = 'error';
-              statusDiv.innerHTML = `<strong>Communication Error:</strong><br>Failed to send authentication data back to application. ${postMessageError.message}`;
-              closeBtn.style.display = 'inline-block';
-              return;
-            }
-            
-            // Update status and auto-close
+            // Update status
             statusDiv.className = 'success';
             statusDiv.innerHTML = '<strong>Authentication successful!</strong><br>You can close this window now.';
             loadingDiv.style.display = 'none';
-            closeBtn.style.display = 'inline-block';
-            closeBtn.textContent = 'Close Window';
-            closeBtn.addEventListener('click', function() {
-              window.close();
-            });
-            
-            // Set up message listener to detect if main window acknowledges receipt
-            window.addEventListener('message', function(event) {
-              console.log('[DIAG-STEP1] Callback window received message:', event.data);
-              logToPage('Received acknowledgment', event.data);
-              
-              if (event.data && event.data.type === 'linkedin-callback-received') {
-                logToPage('Main window acknowledged receipt', { 
-                  timestamp: new Date().toISOString() 
-                });
-              }
-            });
             
             // Auto close after a few seconds
             setTimeout(() => {
-              if (!window.closed) {
-                logToPage('Auto-closing', {
-                  timestamp: new Date().toISOString(),
-                  message: 'Window will close in 1 second'
-                });
-                setTimeout(() => {
-                  try {
-                    window.close();
-                  } catch (closeError) {
-                    console.error('[DIAG-STEP1] Error closing window:', closeError);
-                    logToPage('Close error', closeError.toString());
-                  }
-                }, 1000);
-              }
-            }, 8000); // Extended to 8 seconds to give more time for debugging
+              window.close();
+            }, 3000);
           } else {
-            // DIAGNOSTIC STEP 1: Log error when opener doesn't exist
-            console.error('[DIAG-STEP1] No opener window found');
-            logToPage('Error', 'No opener window found');
+            console.error('No opener window found');
             statusDiv.className = 'error';
-            statusDiv.innerHTML = '<strong>Error:</strong><br>Cannot communicate with the main application. The opener window is missing.';
+            statusDiv.innerHTML = '<strong>Error:</strong><br>Cannot communicate with the main application.';
             loadingDiv.style.display = 'none';
-            closeBtn.style.display = 'inline-block';
-            debugDiv.style.display = 'block';
-            closeBtn.addEventListener('click', function() {
+            continueBtn.style.display = 'inline-block';
+            continueBtn.textContent = 'Close Window';
+            continueBtn.addEventListener('click', function() {
               window.close();
             });
           }
         } catch (err) {
-          // DIAGNOSTIC STEP 1: Log any general errors
-          console.error('[DIAG-STEP1] General error in callback page:', err);
-          logToPage('Error', `Failed to process: ${err.message}`);
-          logToPage('Error stack', err.stack);
+          console.error('Error sending message to opener:', err);
           statusDiv.className = 'error';
           statusDiv.innerHTML = `<strong>Communication Error:</strong><br>${err.message}`;
           loadingDiv.style.display = 'none';
-          closeBtn.style.display = 'inline-block';
-          debugDiv.style.display = 'block';
-          closeBtn.addEventListener('click', function() {
+          continueBtn.style.display = 'inline-block';
+          continueBtn.textContent = 'Close Window';
+          continueBtn.addEventListener('click', function() {
             window.close();
           });
         }
       } else {
-        // DIAGNOSTIC STEP 1: Log error when no code is present
-        console.error('[DIAG-STEP1] No code parameter found in URL');
         loadingDiv.style.display = 'none';
         statusDiv.className = 'error';
         statusDiv.innerHTML = '<strong>Invalid Request:</strong><br>No authentication code received from LinkedIn.';
-        closeBtn.style.display = 'inline-block';
-        debugDiv.style.display = 'block';
-        closeBtn.addEventListener('click', function() {
+        continueBtn.style.display = 'inline-block';
+        continueBtn.textContent = 'Close Window';
+        continueBtn.addEventListener('click', function() {
           window.close();
         });
       }
