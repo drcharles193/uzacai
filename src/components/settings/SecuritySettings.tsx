@@ -29,7 +29,12 @@ const SecuritySettings = () => {
   }, []);
 
   useEffect(() => {
-    console.log('[DIAG-STEP2] Setting up postMessage event listener in SecuritySettings', {
+    if (messageListenerRef.current) {
+      window.removeEventListener('message', messageListenerRef.current);
+      console.log('[DIAG-STEP2] Removed existing postMessage event listener');
+    }
+
+    console.log('[DIAG-STEP2] Setting up new postMessage event listener in SecuritySettings', {
       timestamp: new Date().toISOString()
     });
     
@@ -113,7 +118,7 @@ const SecuritySettings = () => {
         linkedinWindow.close();
       }
     };
-  }, [linkedinWindow]);
+  }, []);
 
   const fetchConnectedIdentities = async () => {
     try {
@@ -324,15 +329,17 @@ const SecuritySettings = () => {
               timeElapsed: `${Date.now() - (linkedInStartTime.current || 0)}ms`
             });
           } catch (e) {
+            // Cannot access location due to cross-origin restrictions - this is normal
           }
         }
       }, 1000);
       
       setTimeout(() => {
-        if (isConnecting && !linkedInCallbackReceived) {
+        if (isConnecting) {
           console.log("[DIAG-STEP2] LinkedIn connection timeout - no callback received", {
             timestamp: new Date().toISOString(),
-            timeElapsed: `${Date.now() - (linkedInStartTime.current || 0)}ms`
+            timeElapsed: `${Date.now() - (linkedInStartTime.current || 0)}ms`,
+            callbackReceived: linkedInCallbackReceived
           });
           
           setIsConnecting(false);
