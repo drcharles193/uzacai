@@ -46,11 +46,14 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    .debug {
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: #9ca3af;
-      display: none;
+    pre {
+      text-align: left;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+      font-size: 12px;
+      max-height: 200px;
     }
   </style>
 </head>
@@ -59,23 +62,46 @@
     <div class="spinner"></div>
     <h1>Connecting your Twitter account</h1>
     <p>Please wait while we complete the connection process...</p>
-    <div class="debug" id="debug"></div>
+    <div id="status"></div>
+    <pre id="logs" style="display: none;"></pre>
   </div>
 
   <script>
+    // Helper function for logging
+    function log(message) {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Twitter Callback: ${message}`);
+      
+      const logsElement = document.getElementById('logs');
+      if (logsElement) {
+        logsElement.textContent += `[${timestamp}] ${message}\n`;
+      }
+    }
+
+    // Toggle debug logs visibility
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'D' && e.ctrlKey) {
+        const logsElement = document.getElementById('logs');
+        logsElement.style.display = logsElement.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
+      log("Page loaded");
+      
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
       
-      const debugEl = document.getElementById('debug');
+      log(`URL parameters - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}`);
+      if (error) log(`Error: ${error}, Description: ${errorDescription}`);
+      
+      const statusEl = document.getElementById('status');
       
       if (error || errorDescription) {
-        debugEl.style.display = 'block';
-        debugEl.textContent = `Error: ${error || ''} ${errorDescription || ''}`;
-        
+        log(`Error received: ${error} - ${errorDescription}`);
         document.body.innerHTML = `
           <div class="card">
             <h1>Authentication Error</h1>
@@ -87,35 +113,49 @@
       }
       
       if (code && state) {
-        // Log for debugging
-        debugEl.style.display = 'block';
-        debugEl.textContent = `Code: ${code.substring(0, 5)}... State: ${state.substring(0, 5)}...`;
+        log(`Got code and state: ${code.substring(0, 5)}... ${state.substring(0, 5)}...`);
         
-        // Send message to parent window with the code and state
-        if (window.opener) {
-          try {
-            window.opener.postMessage({
-              type: 'twitter-oauth-callback',
-              code: code,
-              state: state
-            }, '*');
-            
-            // Close this window after a short delay
-            setTimeout(function() {
-              window.close();
-            }, 2000);
-          } catch (err) {
-            debugEl.textContent += ` Error sending message: ${err.message}`;
-          }
-        } else {
+        // Check if window.opener exists
+        if (!window.opener) {
+          log("ERROR: window.opener is null. Cannot communicate with parent window.");
           document.body.innerHTML = `
             <div class="card">
               <h1>Error</h1>
               <p>Could not communicate with the main window. Please try again or close this window and start over.</p>
             </div>
           `;
+          return;
+        }
+        
+        try {
+          log("Attempting to send message to parent window");
+          // Send message to parent window with the code and state
+          window.opener.postMessage({
+            type: 'twitter-oauth-callback',
+            code: code,
+            state: state
+          }, '*');
+          
+          log("Message sent successfully to parent window");
+          statusEl.textContent = "Twitter connection information sent. You can close this window.";
+          
+          // Close this window after a short delay
+          setTimeout(function() {
+            log("Closing window automatically");
+            window.close();
+          }, 3000);
+        } catch (err) {
+          log(`ERROR sending message: ${err.message}`);
+          document.body.innerHTML = `
+            <div class="card">
+              <h1>Error</h1>
+              <p>Error sending data to main window: ${err.message}</p>
+              <p>Please close this window and try again.</p>
+            </div>
+          `;
         }
       } else {
+        log("Missing required parameters");
         document.body.innerHTML = `
           <div class="card">
             <h1>Error</h1>

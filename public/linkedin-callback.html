@@ -47,6 +47,14 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    pre {
+      text-align: left;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -55,10 +63,32 @@
     <p>Authentication in progress. Please don't close this window.</p>
     <div class="spinner"></div>
     <p id="status">Completing connection to LinkedIn...</p>
+    <pre id="logs" style="display: none;"></pre>
   </div>
 
   <script>
+    // Helper function for logging
+    function log(message) {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] LinkedIn Callback: ${message}`);
+      
+      const logsElement = document.getElementById('logs');
+      if (logsElement) {
+        logsElement.textContent += `[${timestamp}] ${message}\n`;
+      }
+    }
+
+    // Toggle debug logs visibility
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'D' && e.ctrlKey) {
+        const logsElement = document.getElementById('logs');
+        logsElement.style.display = logsElement.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+
     window.onload = function() {
+      log("Page loaded");
+      
       // Extract code and state from URL
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
@@ -66,40 +96,64 @@
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
       
+      log(`URL parameters - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}`);
+      if (error) log(`Error: ${error}, Description: ${errorDescription}`);
+      
       // Update status message
       const statusElement = document.getElementById('status');
       
       if (error) {
+        log(`Error received: ${error} - ${errorDescription}`);
         statusElement.innerHTML = `Error: ${errorDescription || error}`;
         statusElement.style.color = 'red';
         
         // Close window after a delay
         setTimeout(() => {
+          log("Closing window after error");
           window.close();
         }, 5000);
         return;
       }
       
       if (!code) {
+        log("No authorization code received");
         statusElement.innerHTML = 'Error: No authorization code received';
         statusElement.style.color = 'red';
         return;
       }
       
-      // Send the code and state to the parent window
-      window.opener.postMessage({
-        type: 'linkedin-oauth-callback',
-        code,
-        state
-      }, '*');
+      // Check if window.opener exists
+      if (!window.opener) {
+        log("ERROR: window.opener is null. Cannot communicate with parent window.");
+        statusElement.innerHTML = 'Error: Cannot communicate with the main window. Please try again.';
+        statusElement.style.color = 'red';
+        return;
+      }
       
-      // Update status
-      statusElement.innerHTML = 'Connection successful! You can close this window.';
-      
-      // Close window after a delay
-      setTimeout(() => {
-        window.close();
-      }, 3000);
+      try {
+        log("Attempting to send message to parent window");
+        // Send the code and state to the parent window
+        window.opener.postMessage({
+          type: 'linkedin-oauth-callback',
+          code,
+          state
+        }, '*');
+        
+        log("Message sent successfully to parent window");
+        
+        // Update status
+        statusElement.innerHTML = 'Connection successful! You can close this window.';
+        
+        // Close window after a delay
+        setTimeout(() => {
+          log("Closing window automatically");
+          window.close();
+        }, 3000);
+      } catch (err) {
+        log(`ERROR sending message: ${err.message}`);
+        statusElement.innerHTML = `Error: ${err.message}. Please close this window and try again.`;
+        statusElement.style.color = 'red';
+      }
     };
   </script>
 </body>
