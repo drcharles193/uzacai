@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -68,7 +69,7 @@ function getLinkedInAuthUrl() {
   url.searchParams.append('response_type', 'code');
   url.searchParams.append('client_id', LINKEDIN_CLIENT_ID);
   url.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI);
-  url.searchParams.append('scope', 'r_liteprofile r_emailaddress w_member_social');
+  url.searchParams.append('scope', 'openid profile email w_member_social');
   url.searchParams.append('state', state);
   
   return { url: url.toString(), state };
