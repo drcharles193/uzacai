@@ -40,8 +40,6 @@ function getTwitterAuthUrl() {
   const state = generateState();
   
   // Store state in database temporarily to validate callback
-  // In a real implementation, you'd store this state and check it when the callback returns
-  
   const url = new URL('https://twitter.com/i/oauth2/authorize');
   url.searchParams.append('response_type', 'code');
   url.searchParams.append('client_id', TWITTER_CLIENT_ID);
