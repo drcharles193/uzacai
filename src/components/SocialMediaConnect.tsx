@@ -155,12 +155,12 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       connected: false
     },
     {
-      id: 'tumblr',
-      name: 'Tumblr',
-      color: '#36465D',
+      id: 'facebook_page',
+      name: 'Facebook Page',
+      color: '#4267B2',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M9 3c-4 0-5 4-5 4v3h2v4H4v5c4 2 7 1 8-1v-8h3v-3s-3-1-3-3v2c0 0-0-3-3-3z"></path>
+          <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
         </svg>
       ),
       connected: false
@@ -616,6 +616,45 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
         return;
       }
+      else if (id === 'facebook_page') {
+        console.log("Starting Facebook Page OAuth flow...");
+        
+        const response = await supabase.functions.invoke('social-auth', {
+          body: {
+            platform: 'facebook_page',
+            action: 'auth-url',
+            userId: session.user.id
+          }
+        });
+        
+        console.log("Facebook Page auth response:", response);
+        
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to start Facebook Page connection");
+        }
+        
+        if (!response.data?.authUrl) {
+          throw new Error("No Facebook Page auth URL returned");
+        }
+        
+        const width = 600, height = 600;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.innerHeight / 2 - height / 2;
+        
+        const facebookPopup = window.open(
+          response.data.authUrl,
+          'facebook-page-oauth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        if (!facebookPopup) {
+          throw new Error("Could not open Facebook Page auth popup. Please disable popup blocker.");
+        }
+        
+        setFacebookWindow(facebookPopup);
+        
+        return;
+      }
       else {
         const response = await supabase.functions.invoke('social-auth', {
           body: JSON.stringify({
@@ -657,7 +696,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         variant: "destructive"
       });
     } finally {
-      if (id !== 'twitter' && id !== 'linkedin' && id !== 'facebook') {
+      if (id !== 'twitter' && id !== 'linkedin' && id !== 'facebook' && id !== 'facebook_page') {
         setIsConnecting(null);
         
         setTimeout(() => {
