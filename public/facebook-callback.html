@@ -15,29 +15,39 @@
       const errorDescription = urlParams.get('error_description');
       
       if (error) {
+        console.error("Facebook auth error:", error, errorDescription);
+        document.getElementById('status').textContent = "Authentication failed: " + (errorDescription || error);
+        document.getElementById('status').className = "error-message";
+        
         window.opener.postMessage({
           type: 'facebook-oauth-callback-error',
           error: error,
           errorDescription: errorDescription
         }, window.location.origin);
-        window.close();
+        
+        // Close this window after a short delay
+        setTimeout(() => {
+          window.close();
+        }, 3000);
         return;
       }
       
       if (code) {
+        console.log("Facebook auth successful, sending code to parent window");
         // Send code and state back to parent window
         window.opener.postMessage({
           type: 'facebook-oauth-callback',
           code: code,
           state: state
-        }, window.location.origin);
+        }, '*'); // Use * to ensure the message is received regardless of origin
         
         // Close this window
         setTimeout(() => {
           window.close();
         }, 1000);
       } else {
-        document.getElementById('status').textContent = "Authentication failed. No code received.";
+        document.getElementById('status').textContent = "Authentication failed. No authorization code received.";
+        document.getElementById('status').className = "error-message";
       }
     };
   </script>
@@ -67,6 +77,10 @@
     p {
       color: #333;
       line-height: 1.5;
+    }
+    .error-message {
+      color: #d32f2f;
+      font-weight: 500;
     }
     .loader {
       border: 3px solid #f3f3f3;
