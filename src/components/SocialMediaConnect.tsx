@@ -360,6 +360,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         setConnectionSuccess(null);
         setConnectionError(null);
       }, 3000);
+      
+      if (linkedinWindow && !linkedinWindow.closed) {
+        linkedinWindow.close();
+        linkedinWindow = null;
+      }
     }
   };
 
