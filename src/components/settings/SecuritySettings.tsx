@@ -13,6 +13,7 @@ const SecuritySettings = () => {
   const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string>('');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [linkedInCallbackReceived, setLinkedInCallbackReceived] = useState(false);
 
   useEffect(() => {
     fetchConnectedIdentities();
@@ -20,7 +21,7 @@ const SecuritySettings = () => {
 
   useEffect(() => {
     const handleOAuthCallback = (event: MessageEvent) => {
-      console.log('Received message event:', event.data?.type || 'unknown type');
+      console.log('Received message event:', event.origin, event.data?.type || 'unknown type');
       
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
@@ -31,6 +32,7 @@ const SecuritySettings = () => {
       else if (event.data && event.data.type === 'linkedin-oauth-callback') {
         const { code, state } = event.data;
         console.log('Received LinkedIn callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
+        setLinkedInCallbackReceived(true);
         
         completeLinkedInConnection(code, state);
       }
@@ -206,6 +208,7 @@ const SecuritySettings = () => {
       const top = window.innerHeight / 2 - height / 2;
       
       console.log("Opening LinkedIn auth popup with URL:", response.data.authUrl);
+      setLinkedInCallbackReceived(false);
       
       const linkedinPopup = window.open(
         response.data.authUrl,
@@ -220,10 +223,18 @@ const SecuritySettings = () => {
       console.log("LinkedIn popup opened successfully");
       setLinkedInWindow(linkedinPopup);
       
+      // Add a safety timeout to stop the connecting spinner if we don't get a callback
+      setTimeout(() => {
+        if (isConnecting && !linkedInCallbackReceived) {
+          console.log("LinkedIn connection timeout - no callback received");
+          setIsConnecting(false);
+          toast.error("LinkedIn connection timed out. Please try again.");
+        }
+      }, 90000); // 90-second timeout
+      
     } catch (error: any) {
       console.error("Error connecting LinkedIn account:", error);
       toast.error("Failed to connect LinkedIn account: " + error.message);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -275,11 +286,11 @@ const SecuritySettings = () => {
 
   const completeLinkedInConnection = async (code: string, state: string) => {
     try {
-      console.log("Starting LinkedIn connection completion with code");
-      setIsConnecting(true);
+      console.log("Starting LinkedIn connection completion with code:", code ? code.substring(0, 5) + "..." : "missing");
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.error("No session found for LinkedIn callback");
         toast.error("Authentication required. Please sign in to connect social accounts.");
         setIsConnecting(false);
         return;
@@ -319,11 +330,15 @@ const SecuritySettings = () => {
     } finally {
       setIsConnecting(false);
       
-      setTimeout(() => {
-        if (linkedinWindow && !linkedinWindow.closed) {
+      // Close the popup window
+      if (linkedinWindow && !linkedinWindow.closed) {
+        try {
           linkedinWindow.close();
+        } catch (e) {
+          console.error("Error closing LinkedIn popup:", e);
         }
-      }, 1000);
+      }
+      setLinkedInWindow(null);
     }
   };
 
@@ -531,7 +546,12 @@ const SecuritySettings = () => {
                   onClick={connectLinkedIn}
                   disabled={isConnecting}
                 >
-                  {isConnecting ? "Connecting..." : "Connect"}
+                  {isConnecting === true ? (
+                    <>
+                      <span className="animate-spin mr-2">⭮</span> 
+                      Connecting...
+                    </>
+                  ) : "Connect"}
                 </Button>
               )}
             </div>

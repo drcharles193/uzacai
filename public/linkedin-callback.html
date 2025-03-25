@@ -69,6 +69,15 @@
     button:hover {
       background-color: #4338ca;
     }
+    pre {
+      text-align: left;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      overflow: auto;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -78,6 +87,7 @@
     <p>Processing your LinkedIn authentication...</p>
     <div id="status"></div>
     <button id="close-btn" style="display: none;">Close Window</button>
+    <div id="debug" style="display: none;"></div>
   </div>
 
   <script>
@@ -91,7 +101,9 @@
       const statusDiv = document.getElementById('status');
       const loadingDiv = document.getElementById('loading');
       const closeBtn = document.getElementById('close-btn');
+      const debugDiv = document.getElementById('debug');
       
+      // Log params for debugging
       console.log('LinkedIn callback parameters:', { 
         code: code ? 'present' : 'missing',
         state: state ? 'present' : 'missing',
@@ -99,11 +111,30 @@
         errorDescription: errorDescription
       });
       
+      // Add debug info on page
+      function logToPage(message, data) {
+        const logEntry = document.createElement('div');
+        logEntry.innerHTML = `<strong>${message}</strong>: ${JSON.stringify(data)}`;
+        debugDiv.appendChild(logEntry);
+      }
+      
+      // Display debug info for all query parameters
+      logToPage('URL Parameters', {
+        code: code ? `${code.substring(0, 5)}...` : 'missing',
+        state: state || 'missing',
+        error: error || 'none',
+        errorDescription: errorDescription || 'none',
+        origin: window.location.origin,
+        fullUrl: window.location.href,
+        hardcodedRedirectUri: 'https://uzacai.com/linkedin-callback.html'
+      });
+      
       if (error) {
         loadingDiv.style.display = 'none';
         statusDiv.className = 'error';
         statusDiv.innerHTML = `<strong>Authentication Error:</strong><br>${errorDescription || error}`;
         closeBtn.style.display = 'inline-block';
+        debugDiv.style.display = 'block';
         closeBtn.addEventListener('click', function() {
           window.close();
         });
@@ -114,11 +145,20 @@
           // Send message to opener window with the authorization code
           if (window.opener) {
             console.log('Sending message to opener window');
-            window.opener.postMessage({
+            logToPage('Sending message to opener', {
+              type: 'linkedin-oauth-callback',
+              code: `${code.substring(0, 5)}...`,
+              state: state || ''
+            });
+            
+            const message = {
               type: 'linkedin-oauth-callback',
               code: code,
               state: state || ''
-            }, '*');
+            };
+            
+            window.opener.postMessage(message, '*');
+            logToPage('Message sent', 'Successfully sent postMessage to parent window');
             
             // Update status and auto-close
             statusDiv.className = 'success';
@@ -132,24 +172,31 @@
             
             // Auto close after a few seconds
             setTimeout(() => {
-              window.close();
-            }, 3000);
+              if (!window.closed) {
+                logToPage('Auto-closing', 'Window will close in 1 second');
+                setTimeout(() => window.close(), 1000);
+              }
+            }, 2000);
           } else {
             console.error('No opener window found');
+            logToPage('Error', 'No opener window found');
             statusDiv.className = 'error';
             statusDiv.innerHTML = '<strong>Error:</strong><br>Cannot communicate with the main application.';
             loadingDiv.style.display = 'none';
             closeBtn.style.display = 'inline-block';
+            debugDiv.style.display = 'block';
             closeBtn.addEventListener('click', function() {
               window.close();
             });
           }
         } catch (err) {
           console.error('Error sending message to opener:', err);
+          logToPage('Error', `Failed to send message: ${err.message}`);
           statusDiv.className = 'error';
           statusDiv.innerHTML = `<strong>Communication Error:</strong><br>${err.message}`;
           loadingDiv.style.display = 'none';
           closeBtn.style.display = 'inline-block';
+          debugDiv.style.display = 'block';
           closeBtn.addEventListener('click', function() {
             window.close();
           });
@@ -159,6 +206,7 @@
         statusDiv.className = 'error';
         statusDiv.innerHTML = '<strong>Invalid Request:</strong><br>No authentication code received from LinkedIn.';
         closeBtn.style.display = 'inline-block';
+        debugDiv.style.display = 'block';
         closeBtn.addEventListener('click', function() {
           window.close();
         });

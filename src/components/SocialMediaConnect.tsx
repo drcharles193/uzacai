@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -57,6 +56,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [linkedinWindow, setLinkedInWindow] = useState<Window | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
+  const [linkedInCallbackReceived, setLinkedInCallbackReceived] = useState(false);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
     {
       id: 'twitter',
@@ -201,27 +201,32 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     fetchConnectedAccounts();
 
     const handleOAuthCallback = (event: MessageEvent) => {
-      console.log('Received message:', event.origin, event.data?.type || 'unknown type');
+      console.log('SocialMediaConnect received message:', event.origin, event.data?.type || 'unknown type');
       
       if (event.data && event.data.type === 'twitter-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received Twitter callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
+        console.log('Received Twitter callback in SocialMediaConnect:', 
+          code ? code.substring(0, 5) + '...' : 'missing', 
+          state);
         
         completeTwitterConnection(code, state);
       }
       else if (event.data && event.data.type === 'linkedin-oauth-callback') {
         const { code, state } = event.data;
-        console.log('Received LinkedIn callback:', code ? code.substring(0, 5) + '...' : 'missing', state);
+        console.log('Received LinkedIn callback in SocialMediaConnect:', 
+          code ? code.substring(0, 5) + '...' : 'missing', 
+          state);
         
+        setLinkedInCallbackReceived(true);
         completeLinkedInConnection(code, state);
       }
     };
 
-    console.log('Adding postMessage event listener for OAuth callbacks');
+    console.log('SocialMediaConnect: Adding postMessage event listener for OAuth callbacks');
     window.addEventListener('message', handleOAuthCallback);
     
     return () => {
-      console.log('Removing postMessage event listener');
+      console.log('SocialMediaConnect: Removing postMessage event listener');
       window.removeEventListener('message', handleOAuthCallback);
       
       // Close any open popup windows
@@ -304,11 +309,13 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 
   const completeLinkedInConnection = async (code: string, state: string) => {
     try {
-      console.log("Starting LinkedIn connection completion with code");
+      console.log("SocialMediaConnect: Starting LinkedIn connection completion with code:", 
+        code ? code.substring(0, 5) + "..." : "missing");
       setIsConnecting('linkedin');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.error("SocialMediaConnect: No session found for LinkedIn callback");
         toast({
           title: "Authentication required",
           description: "Please sign in to connect social accounts.",
@@ -319,7 +326,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      console.log("Calling social-auth edge function for LinkedIn callback");
+      console.log("SocialMediaConnect: Calling social-auth edge function for LinkedIn callback");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -331,18 +338,19 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
       });
       
-      console.log("LinkedIn callback response:", response);
+      console.log("SocialMediaConnect: LinkedIn callback response:", response);
       
       if (response.error) {
-        console.error("LinkedIn callback error:", response.error);
+        console.error("SocialMediaConnect: LinkedIn callback error:", response.error);
         throw new Error(response.error.message || "Failed to connect LinkedIn account");
       }
       
       if (!response.data || !response.data.success) {
+        console.error("SocialMediaConnect: LinkedIn connection failed", response.data);
         throw new Error("LinkedIn connection failed");
       }
       
-      console.log("LinkedIn connection successful");
+      console.log("SocialMediaConnect: LinkedIn connection successful");
       
       setPlatforms(platforms.map(platform => {
         if (platform.id === 'linkedin') {
@@ -365,7 +373,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       if (onDone) onDone();
       
     } catch (error: any) {
-      console.error("Error connecting LinkedIn:", error);
+      console.error("SocialMediaConnect: Error connecting LinkedIn:", error);
       setConnectionError('linkedin');
       toast({
         title: "LinkedIn Connection Failed",
@@ -376,9 +384,16 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       setIsConnecting(null);
       
       // Close the popup window
-      if (linkedinWindow && !linkedinWindow.closed) {
-        linkedinWindow.close();
-      }
+      setTimeout(() => {
+        if (linkedinWindow && !linkedinWindow.closed) {
+          try {
+            linkedinWindow.close();
+          } catch (e) {
+            console.error("Error closing LinkedIn popup:", e);
+          }
+        }
+        setLinkedInWindow(null);
+      }, 1000);
       
       setTimeout(() => {
         setConnectionSuccess(null);
@@ -687,8 +702,10 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const connectLinkedIn = async () => {
     try {
       setIsConnecting('linkedin');
+      setConnectionSuccess(null);
+      setConnectionError(null);
       
-      console.log("Starting LinkedIn OAuth flow");
+      console.log("SocialMediaConnect: Starting LinkedIn OAuth flow");
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -702,7 +719,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      console.log("Calling social-auth edge function for LinkedIn auth URL");
+      console.log("SocialMediaConnect: Calling social-auth edge function for LinkedIn auth URL");
       
       const response = await supabase.functions.invoke('social-auth', {
         body: {
@@ -712,7 +729,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
       });
       
-      console.log("LinkedIn auth response:", response);
+      console.log("SocialMediaConnect: LinkedIn auth response:", response);
       
       if (response.error) {
         throw new Error(response.error.message || "Failed to start LinkedIn connection");
@@ -726,7 +743,8 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       const left = window.innerWidth / 2 - width / 2;
       const top = window.innerHeight / 2 - height / 2;
       
-      console.log("Opening LinkedIn auth popup with URL:", response.data.authUrl);
+      console.log("SocialMediaConnect: Opening LinkedIn auth popup with URL:", response.data.authUrl);
+      setLinkedInCallbackReceived(false);
       
       const linkedinPopup = window.open(
         response.data.authUrl,
@@ -738,11 +756,25 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
       }
       
-      console.log("LinkedIn popup opened successfully");
+      console.log("SocialMediaConnect: LinkedIn popup opened successfully");
       setLinkedInWindow(linkedinPopup);
       
+      // Add a safety timeout to stop the connecting spinner if we don't get a callback
+      setTimeout(() => {
+        if (isConnecting === 'linkedin' && !linkedInCallbackReceived) {
+          console.log("SocialMediaConnect: LinkedIn connection timeout - no callback received");
+          setIsConnecting(null);
+          setConnectionError('linkedin');
+          toast({
+            title: "LinkedIn Connection Failed",
+            description: "Connection timed out. Please try again.",
+            variant: "destructive"
+          });
+        }
+      }, 90000); // 90-second timeout
+      
     } catch (error: any) {
-      console.error("Error connecting LinkedIn account:", error);
+      console.error("SocialMediaConnect: Error connecting LinkedIn account:", error);
       setIsConnecting(null);
       setConnectionError('linkedin');
       toast({
