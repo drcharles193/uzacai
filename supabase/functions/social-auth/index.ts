@@ -138,7 +138,8 @@ function getLinkedInAuthUrl() {
   // Generate an OAuth state for security
   const state = generateState();
   
-  // Updated scope to match what's approved in the LinkedIn Developer Console
+  // IMPORTANT: Only use scopes that are approved in the LinkedIn Developer Console
+  // Based on user's approved scopes: openid, profile, email, w_member_social
   const scope = "openid profile email w_member_social";
   
   const queryParams = new URLSearchParams({
@@ -189,8 +190,9 @@ async function exchangeLinkedInCode(code: string) {
     
     const tokens = await tokenResponse.json();
     
-    // Get user info using the access token with fields that match our scopes
-    const userResponse = await fetch("https://api.linkedin.com/v2/me?projection=(id,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))", {
+    // Get user info using the access token with fields that match our approved scopes
+    // Use proper API endpoints for the 'profile' scope
+    const userResponse = await fetch("https://api.linkedin.com/v2/me", {
       headers: {
         "Authorization": `Bearer ${tokens.access_token}`
       }
@@ -202,7 +204,7 @@ async function exchangeLinkedInCode(code: string) {
     
     const userData = await userResponse.json();
     
-    // Now that we have the email scope, fetch the email address
+    // If we have the email scope, fetch the email address
     const emailResponse = await fetch("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))", {
       headers: {
         "Authorization": `Bearer ${tokens.access_token}`
