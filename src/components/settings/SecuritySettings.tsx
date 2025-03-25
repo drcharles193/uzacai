@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
+import { Key, Shield, Mail, Twitter, Linkedin, Facebook } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ const SecuritySettings = () => {
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const twitterWindowRef = useRef<Window | null>(null);
   const linkedinWindowRef = useRef<Window | null>(null);
+  const facebookWindowRef = useRef<Window | null>(null);
   const listenersSetupRef = useRef(false);
 
   useEffect(() => {
@@ -46,6 +47,22 @@ const SecuritySettings = () => {
             setIsConnecting(false);
           }
         }
+        else if (event.data && event.data.type === 'facebook-oauth-callback') {
+          console.log("[SecuritySettings] Processing Facebook callback:", event.data);
+          const { code, state } = event.data;
+          if (code && state) {
+            completeFacebookConnection(code, state);
+          } else {
+            console.error("[SecuritySettings] Invalid Facebook callback data:", event.data);
+            toast.error("Invalid Facebook callback data received");
+            setIsConnecting(false);
+          }
+        }
+        else if (event.data && event.data.type === 'facebook-oauth-callback-error') {
+          console.error("[SecuritySettings] Facebook OAuth error:", event.data);
+          toast.error(`Facebook authentication error: ${event.data.errorDescription || event.data.error || "Unknown error"}`);
+          setIsConnecting(false);
+        }
       };
 
       window.addEventListener('message', handleOAuthCallback);
@@ -65,6 +82,9 @@ const SecuritySettings = () => {
     }
     if (linkedinWindowRef.current && !linkedinWindowRef.current.closed) {
       linkedinWindowRef.current.close();
+    }
+    if (facebookWindowRef.current && !facebookWindowRef.current.closed) {
+      facebookWindowRef.current.close();
     }
   };
 
@@ -249,6 +269,76 @@ const SecuritySettings = () => {
     }
   };
 
+  const connectFacebook = async () => {
+    try {
+      setIsConnecting(true);
+      
+      const origin = window.location.origin;
+      
+      console.log("[SecuritySettings] Starting Facebook OAuth flow");
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication required. Please sign in to connect social accounts.");
+        setIsConnecting(false);
+        return;
+      }
+      
+      console.log("[SecuritySettings] Invoking social-auth edge function for Facebook");
+      const response = await supabase.functions.invoke('social-auth', {
+        body: {
+          platform: 'facebook',
+          action: 'auth-url',
+          userId: session.user.id
+        }
+      });
+      
+      console.log("[SecuritySettings] Facebook auth response:", response);
+      
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to start Facebook connection");
+      }
+      
+      if (!response.data || !response.data.authUrl) {
+        throw new Error("No Facebook auth URL returned");
+      }
+      
+      const width = 600, height = 600;
+      const left = window.innerWidth / 2 - width / 2;
+      const top = window.innerHeight / 2 - height / 2;
+      
+      console.log("[SecuritySettings] Opening Facebook popup with URL:", response.data.authUrl);
+      if (facebookWindowRef.current && !facebookWindowRef.current.closed) {
+        facebookWindowRef.current.close();
+      }
+      
+      const facebookPopup = window.open(
+        response.data.authUrl,
+        'facebook-oauth',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+      
+      if (!facebookPopup) {
+        throw new Error("Could not open Facebook auth popup. Please disable popup blocker.");
+      }
+      
+      facebookWindowRef.current = facebookPopup;
+      
+      const checkPopupInterval = setInterval(() => {
+        if (facebookPopup.closed) {
+          clearInterval(checkPopupInterval);
+          console.log("[SecuritySettings] Facebook popup was closed by user");
+          setIsConnecting(false);
+        }
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error("[SecuritySettings] Error connecting Facebook account:", error);
+      toast.error("Failed to connect Facebook account: " + error.message);
+      setIsConnecting(false);
+    }
+  };
+
   const completeTwitterConnection = async (code: string, state: string) => {
     try {
       console.log("[SecuritySettings] Starting Twitter connection completion with code:", code.substring(0, 5) + "...");
@@ -339,6 +429,51 @@ const SecuritySettings = () => {
     }
   };
 
+  const completeFacebookConnection = async (code: string, state: string) => {
+    try {
+      console.log("[SecuritySettings] Starting Facebook connection completion with code:", code.substring(0, 5) + "...");
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication required. Please sign in to connect social accounts.");
+        setIsConnecting(false);
+        return;
+      }
+      
+      console.log("[SecuritySettings] Invoking social-auth callback for Facebook");
+      const response = await supabase.functions.invoke('social-auth', {
+        body: {
+          platform: 'facebook',
+          action: 'callback',
+          code: code,
+          userId: session.user.id
+        }
+      });
+      
+      console.log("[SecuritySettings] Facebook callback response:", response);
+      
+      if (response.error) {
+        console.error("[SecuritySettings] Facebook callback error:", response.error);
+        throw new Error(response.error.message || "Failed to connect Facebook account");
+      }
+      
+      toast.success("Facebook Connected: Your Facebook account has been connected successfully.");
+      
+      await fetchConnectedIdentities();
+      
+    } catch (error: any) {
+      console.error("[SecuritySettings] Error connecting Facebook:", error);
+      toast.error("Failed to connect Facebook account: " + error.message);
+    } finally {
+      setIsConnecting(false);
+      
+      if (facebookWindowRef.current && !facebookWindowRef.current.closed) {
+        facebookWindowRef.current.close();
+        facebookWindowRef.current = null;
+      }
+    }
+  };
+
   const disconnectAccount = async (provider: string) => {
     try {
       setIsDisconnecting(true);
@@ -378,6 +513,7 @@ const SecuritySettings = () => {
   const isGoogleConnected = connectedAccounts.includes('google');
   const isTwitterConnected = connectedAccounts.includes('twitter');
   const isLinkedInConnected = connectedAccounts.includes('linkedin');
+  const isFacebookConnected = connectedAccounts.includes('facebook');
 
   return (
     <div className="space-y-8">
@@ -543,6 +679,42 @@ const SecuritySettings = () => {
               )}
             </div>
           </div>
+          
+          <div className="border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Facebook size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Facebook Account</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {isFacebookConnected 
+                      ? "Your Facebook account is connected" 
+                      : "Connect your Facebook account for social sharing"}
+                  </p>
+                </div>
+              </div>
+              {isFacebookConnected ? (
+                <Button 
+                  variant="outline" 
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                  onClick={() => disconnectAccount('facebook')}
+                  disabled={isDisconnecting}
+                >
+                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={connectFacebook}
+                  disabled={isConnecting}
+                >
+                  {isConnecting ? "Connecting..." : "Connect"}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </section>
       
@@ -552,3 +724,4 @@ const SecuritySettings = () => {
 };
 
 export default SecuritySettings;
+
