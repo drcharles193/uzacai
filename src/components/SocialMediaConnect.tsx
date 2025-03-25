@@ -155,13 +155,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       connected: false
     },
     {
-      id: 'tumblr',
-      name: 'Tumblr',
+      id: 'facebook_page',
+      name: 'Facebook Page',
       color: '#36465D',
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M9 3c-4 0-5 4-5 4v3h2v4H4v5c4 2 7 1 8-1v-8h3v-3s-3-1-3-3v2c0 0-0-3-3-3z"></path>
-        </svg>
+        <Facebook className="w-5 h-5" />
       ),
       connected: false
     }
@@ -224,7 +222,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       }
       else if (event.data && event.data.type === 'facebook-oauth-callback') {
         const { code, state } = event.data;
-        console.log('[Facebook] Received auth code:', code);
+        console.log('[SocialMediaConnect] Received Facebook auth code:', code);
         
         if (code) {
           completeFacebookConnection(code, state);
@@ -614,6 +612,15 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
         setFacebookWindow(facebookPopup);
         
+        const checkClosed = setInterval(() => {
+          if (facebookPopup.closed) {
+            clearInterval(checkClosed);
+            if (isConnecting === 'facebook') {
+              setIsConnecting(null);
+            }
+          }
+        }, 500);
+        
         return;
       }
       else {
@@ -986,3 +993,4 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
 };
 
 export default SocialMediaConnect;
+

@@ -23,7 +23,7 @@
           type: 'facebook-oauth-callback-error',
           error: error,
           errorDescription: errorDescription
-        }, window.location.origin);
+        }, '*'); // Use wildcard to ensure message delivery
         
         // Close this window after a short delay
         setTimeout(() => {
@@ -39,7 +39,7 @@
           type: 'facebook-oauth-callback',
           code: code,
           state: state
-        }, window.location.origin);
+        }, '*'); // Use wildcard to ensure message delivery
         
         // Close this window
         setTimeout(() => {
