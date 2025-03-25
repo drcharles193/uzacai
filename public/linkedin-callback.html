@@ -96,7 +96,7 @@
       const error = urlParams.get('error');
       const errorDescription = urlParams.get('error_description');
       
-      log(`URL parameters - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}`);
+      log(`URL parameters - code: ${code ? code.substring(0, 5) + '...' : 'missing'}, state: ${state ? state.substring(0, 5) + '...' : 'missing'}`);
       if (error) log(`Error: ${error}, Description: ${errorDescription}`);
       
       // Update status message
@@ -132,12 +132,18 @@
       
       try {
         log("Attempting to send message to parent window");
+        
         // Send the code and state to the parent window
-        window.opener.postMessage({
+        const message = {
           type: 'linkedin-oauth-callback',
-          code,
-          state
-        }, '*');
+          code: code,
+          state: state
+        };
+        
+        log(`Sending message: ${JSON.stringify(message)}`);
+        
+        // Send with explicit origin - use wildcard for development
+        window.opener.postMessage(message, '*');
         
         log("Message sent successfully to parent window");
         

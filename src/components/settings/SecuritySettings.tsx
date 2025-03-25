@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
@@ -217,10 +218,13 @@ const SecuritySettings = () => {
       const top = window.innerHeight / 2 - height / 2;
       
       console.log("[SecuritySettings] Opening LinkedIn popup with URL:", response.data.authUrl);
+      
+      // Close any existing LinkedIn popup
       if (linkedinWindowRef.current && !linkedinWindowRef.current.closed) {
         linkedinWindowRef.current.close();
       }
       
+      // Open the LinkedIn authorization window
       const linkedinPopup = window.open(
         response.data.authUrl,
         'linkedin-oauth',
@@ -233,6 +237,7 @@ const SecuritySettings = () => {
       
       linkedinWindowRef.current = linkedinPopup;
       
+      // Monitor the popup window status
       const checkPopupInterval = setInterval(() => {
         if (linkedinPopup.closed) {
           clearInterval(checkPopupInterval);
@@ -304,14 +309,19 @@ const SecuritySettings = () => {
         return;
       }
       
-      console.log("[SecuritySettings] Invoking social-auth callback for LinkedIn");
+      console.log("[SecuritySettings] Invoking social-auth callback for LinkedIn with userId:", session.user.id);
+      
+      const payload = {
+        platform: 'linkedin',
+        action: 'callback',
+        code: code,
+        userId: session.user.id
+      };
+      
+      console.log("[SecuritySettings] LinkedIn callback payload:", payload);
+      
       const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'linkedin',
-          action: 'callback',
-          code: code,
-          userId: session.user.id
-        }
+        body: payload
       });
       
       console.log("[SecuritySettings] LinkedIn callback response:", response);
@@ -331,6 +341,7 @@ const SecuritySettings = () => {
     } finally {
       setIsConnecting(false);
       
+      // Ensure popup is closed
       if (linkedinWindowRef.current && !linkedinWindowRef.current.closed) {
         linkedinWindowRef.current.close();
         linkedinWindowRef.current = null;
