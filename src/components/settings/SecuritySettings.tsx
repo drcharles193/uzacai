@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Key, Shield, Mail, Twitter, Linkedin } from 'lucide-react';
+import { Key, Shield, Mail, Twitter } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,7 +10,8 @@ const SecuritySettings = () => {
   const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const linkedinWindowRef = useRef<Window | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const twitterWindowRef = useRef<Window | null>(null);
   const listenersSetupRef = useRef(false);
 
@@ -34,17 +35,6 @@ const SecuritySettings = () => {
             setIsConnecting(false);
           }
         }
-        else if (event.data && event.data.type === 'linkedin-oauth-callback') {
-          console.log("[SecuritySettings] Processing LinkedIn callback:", event.data);
-          const { code, state } = event.data;
-          if (code && state) {
-            completeLinkedInConnection(code, state);
-          } else {
-            console.error("[SecuritySettings] Invalid LinkedIn callback data:", event.data);
-            toast.error("Invalid LinkedIn callback data received");
-            setIsConnecting(false);
-          }
-        }
       };
 
       window.addEventListener('message', handleOAuthCallback);
@@ -61,9 +51,6 @@ const SecuritySettings = () => {
   const closePopups = () => {
     if (twitterWindowRef.current && !twitterWindowRef.current.closed) {
       twitterWindowRef.current.close();
-    }
-    if (linkedinWindowRef.current && !linkedinWindowRef.current.closed) {
-      linkedinWindowRef.current.close();
     }
   };
 
@@ -178,81 +165,6 @@ const SecuritySettings = () => {
     }
   };
 
-  const connectLinkedIn = async () => {
-    try {
-      setIsConnecting(true);
-      
-      const origin = window.location.origin;
-      const redirectTo = `${origin}/settings?tab=security`;
-      
-      console.log("[SecuritySettings] Starting LinkedIn OAuth flow with redirect to:", redirectTo);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Authentication required. Please sign in to connect social accounts.");
-        setIsConnecting(false);
-        return;
-      }
-      
-      console.log("[SecuritySettings] Invoking social-auth edge function for LinkedIn");
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'linkedin',
-          action: 'auth-url',
-          userId: session.user.id
-        }
-      });
-      
-      console.log("[SecuritySettings] LinkedIn auth response:", response);
-      
-      if (response.error) {
-        throw new Error(response.error.message || "Failed to start LinkedIn connection");
-      }
-      
-      if (!response.data || !response.data.authUrl) {
-        throw new Error("No LinkedIn auth URL returned");
-      }
-      
-      const width = 600, height = 600;
-      const left = window.innerWidth / 2 - width / 2;
-      const top = window.innerHeight / 2 - height / 2;
-      
-      console.log("[SecuritySettings] Opening LinkedIn popup with URL:", response.data.authUrl);
-      
-      // Close any existing LinkedIn popup
-      if (linkedinWindowRef.current && !linkedinWindowRef.current.closed) {
-        linkedinWindowRef.current.close();
-      }
-      
-      // Open the LinkedIn authorization window
-      const linkedinPopup = window.open(
-        response.data.authUrl,
-        'linkedin-oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-      
-      if (!linkedinPopup) {
-        throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
-      }
-      
-      linkedinWindowRef.current = linkedinPopup;
-      
-      // Monitor the popup window status
-      const checkPopupInterval = setInterval(() => {
-        if (linkedinPopup.closed) {
-          clearInterval(checkPopupInterval);
-          console.log("[SecuritySettings] LinkedIn popup was closed by user");
-          setIsConnecting(false);
-        }
-      }, 1000);
-      
-    } catch (error: any) {
-      console.error("[SecuritySettings] Error connecting LinkedIn account:", error);
-      toast.error("Failed to connect LinkedIn account: " + error.message);
-      setIsConnecting(false);
-    }
-  };
-
   const completeTwitterConnection = async (code: string, state: string) => {
     try {
       console.log("[SecuritySettings] Starting Twitter connection completion with code:", code.substring(0, 5) + "...");
@@ -298,57 +210,6 @@ const SecuritySettings = () => {
     }
   };
 
-  const completeLinkedInConnection = async (code: string, state: string) => {
-    try {
-      console.log("[SecuritySettings] Starting LinkedIn connection completion with code:", code.substring(0, 5) + "...");
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Authentication required. Please sign in to connect social accounts.");
-        setIsConnecting(false);
-        return;
-      }
-      
-      console.log("[SecuritySettings] Invoking social-auth callback for LinkedIn with userId:", session.user.id);
-      
-      const payload = {
-        platform: 'linkedin',
-        action: 'callback',
-        code: code,
-        userId: session.user.id
-      };
-      
-      console.log("[SecuritySettings] LinkedIn callback payload:", payload);
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: payload
-      });
-      
-      console.log("[SecuritySettings] LinkedIn callback response:", response);
-      
-      if (response.error) {
-        console.error("[SecuritySettings] LinkedIn callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect LinkedIn account");
-      }
-      
-      toast.success("LinkedIn Connected: Your LinkedIn account has been connected successfully.");
-      
-      await fetchConnectedIdentities();
-      
-    } catch (error: any) {
-      console.error("[SecuritySettings] Error connecting LinkedIn:", error);
-      toast.error("Failed to connect LinkedIn account: " + error.message);
-    } finally {
-      setIsConnecting(false);
-      
-      // Ensure popup is closed
-      if (linkedinWindowRef.current && !linkedinWindowRef.current.closed) {
-        linkedinWindowRef.current.close();
-        linkedinWindowRef.current = null;
-      }
-    }
-  };
-
   const disconnectAccount = async (provider: string) => {
     try {
       setIsDisconnecting(true);
@@ -387,7 +248,6 @@ const SecuritySettings = () => {
 
   const isGoogleConnected = connectedAccounts.includes('google');
   const isTwitterConnected = connectedAccounts.includes('twitter');
-  const isLinkedInConnected = connectedAccounts.includes('linkedin');
 
   return (
     <div className="space-y-8">
@@ -510,42 +370,6 @@ const SecuritySettings = () => {
                 <Button 
                   variant="outline" 
                   onClick={connectTwitter}
-                  disabled={isConnecting}
-                >
-                  {isConnecting ? "Connecting..." : "Connect"}
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="border rounded-md p-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Linkedin size={18} className="text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-medium">LinkedIn Account</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {isLinkedInConnected 
-                      ? "Your LinkedIn account is connected" 
-                      : "Connect your LinkedIn account for professional networking"}
-                  </p>
-                </div>
-              </div>
-              {isLinkedInConnected ? (
-                <Button 
-                  variant="outline" 
-                  className="text-destructive border-destructive hover:bg-destructive/10"
-                  onClick={() => disconnectAccount('linkedin')}
-                  disabled={isDisconnecting}
-                >
-                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={connectLinkedIn}
                   disabled={isConnecting}
                 >
                   {isConnecting ? "Connecting..." : "Connect"}
