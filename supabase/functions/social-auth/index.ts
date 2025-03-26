@@ -27,6 +27,11 @@ const FACEBOOK_CLIENT_ID = Deno.env.get("FACEBOOK_CLIENT_ID");
 const FACEBOOK_CLIENT_SECRET = Deno.env.get("FACEBOOK_CLIENT_SECRET");
 const FACEBOOK_REDIRECT_URI = "https://uzacai.com/facebook-callback.html";
 
+// Instagram OAuth credentials
+const INSTAGRAM_CLIENT_ID = Deno.env.get("INSTAGRAM_CLIENT_ID");
+const INSTAGRAM_CLIENT_SECRET = Deno.env.get("INSTAGRAM_CLIENT_SECRET");
+const INSTAGRAM_REDIRECT_URI = Deno.env.get("INSTAGRAM_REDIRECT_URI") || "https://uzacai.com/instagram-callback.html";
+
 // Generate a random string for OAuth state
 function generateState() {
   return Math.random().toString(36).substring(2, 15) + 
@@ -304,6 +309,105 @@ async function getFacebookUserProfile(accessToken: string) {
     return userData;
   } catch (error) {
     console.error('Error fetching Facebook user profile:', error);
+    throw error;
+  }
+}
+
+// Instagram OAuth URL generator
+function getInstagramAuthUrl() {
+  console.log("Instagram Client ID:", INSTAGRAM_CLIENT_ID ? "Exists" : "Missing");
+  console.log("Instagram Redirect URI:", INSTAGRAM_REDIRECT_URI ? "Exists" : "Missing");
+  
+  if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_REDIRECT_URI) {
+    throw new Error("Instagram OAuth credentials not configured");
+  }
+  
+  const state = generateState();
+  
+  // Store state in database temporarily to validate callback
+  const url = new URL('https://api.instagram.com/oauth/authorize');
+  url.searchParams.append('client_id', INSTAGRAM_CLIENT_ID);
+  url.searchParams.append('redirect_uri', INSTAGRAM_REDIRECT_URI);
+  url.searchParams.append('scope', 'user_profile,user_media');
+  url.searchParams.append('response_type', 'code');
+  url.searchParams.append('state', state);
+  
+  return { url: url.toString(), state };
+}
+
+// Instagram token exchange function
+async function exchangeInstagramCode(code: string) {
+  if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET || !INSTAGRAM_REDIRECT_URI) {
+    throw new Error("Instagram OAuth credentials not configured");
+  }
+  
+  try {
+    console.log("Exchanging Instagram code for token...");
+    
+    const tokenUrl = 'https://api.instagram.com/oauth/access_token';
+    
+    const formData = new FormData();
+    formData.append('client_id', INSTAGRAM_CLIENT_ID);
+    formData.append('client_secret', INSTAGRAM_CLIENT_SECRET);
+    formData.append('grant_type', 'authorization_code');
+    formData.append('redirect_uri', INSTAGRAM_REDIRECT_URI);
+    formData.append('code', code);
+    
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Instagram token exchange error:', errorText);
+      throw new Error(`Instagram API error: ${response.status} ${errorText}`);
+    }
+    
+    const tokens = await response.json();
+    return tokens;
+  } catch (error) {
+    console.error('Error exchanging Instagram code for tokens:', error);
+    throw error;
+  }
+}
+
+// Get Instagram user profile
+async function getInstagramUserProfile(accessToken: string, userId: string) {
+  try {
+    console.log("Fetching Instagram user profile...");
+    
+    // First, we need to get the long-lived token
+    const longLivedTokenUrl = `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${INSTAGRAM_CLIENT_SECRET}&access_token=${accessToken}`;
+    
+    const tokenResponse = await fetch(longLivedTokenUrl);
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error('Instagram long-lived token error:', errorText);
+      throw new Error(`Instagram API error: ${tokenResponse.status} ${errorText}`);
+    }
+    
+    const tokenData = await tokenResponse.json();
+    const longLivedToken = tokenData.access_token;
+    
+    // Now get the user profile
+    const profileUrl = `https://graph.instagram.com/${userId}?fields=id,username&access_token=${longLivedToken}`;
+    
+    const profileResponse = await fetch(profileUrl);
+    if (!profileResponse.ok) {
+      const errorText = await profileResponse.text();
+      console.error('Instagram profile error:', errorText);
+      throw new Error(`Instagram API error: ${profileResponse.status} ${errorText}`);
+    }
+    
+    const userData = await profileResponse.json();
+    return {
+      id: userData.id,
+      username: userData.username,
+      longLivedToken: longLivedToken
+    };
+  } catch (error) {
+    console.error('Error fetching Instagram user profile:', error);
     throw error;
   }
 }
@@ -709,70 +813,4 @@ serve(async (req) => {
           console.error("Error processing Facebook callback:", error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-      } 
-      else {
-        return new Response(
-          JSON.stringify({ error: "Invalid Facebook action" }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
-      }
-    }
-    else {
-      // For other platforms, continue with mock connections
-      const result = getMockPlatformResponse(platform);
-      
-      // Add a slight delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Store the connection in the database
-      const { data, error } = await supabase
-        .from('social_accounts')
-        .upsert({
-          user_id: userId,
-          platform: platform,
-          platform_account_id: result.platformId,
-          account_name: result.accountName,
-          account_type: result.accountType,
-          access_token: result.accessToken,
-          refresh_token: result.refreshToken,
-          token_expires_at: result.expiresAt,
-          last_used_at: new Date().toISOString(),
-          metadata: { connection_type: "oauth" }
-        }, {
-          onConflict: 'user_id, platform, platform_account_id',
-          ignoreDuplicates: false
-        });
-        
-      if (error) {
-        console.error("Error storing social connection:", error);
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
-      }
-      
-      // Log success for debugging
-      console.log(`Successfully connected ${platform} account: ${result.accountName}`);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          platform, 
-          accountName: result.accountName,
-          accountType: result.accountType
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-  } catch (error) {
-    console.error("Error processing request:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
-  }
-});
-
+            { headers: { ...corsHeaders, 'Content-Type': 'application/
