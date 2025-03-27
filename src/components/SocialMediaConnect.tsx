@@ -1,41 +1,16 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Twitter, Linkedin } from 'lucide-react';
-
-interface SocialPlatform {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  color: string;
-  connected: boolean;
-  accountName?: string;
-}
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Loader2, Twitter, Linkedin, Instagram, Facebook } from 'lucide-react';
+import { LoadingDots } from "@/components/ui/loading-dots";
 
 interface SocialMediaConnectProps {
+  trigger?: React.ReactNode;
+  userId?: string;
+  onConnect?: () => void;
   isDialog?: boolean;
   onClose?: () => void;
   onDone?: () => void;
@@ -43,715 +18,728 @@ interface SocialMediaConnectProps {
 }
 
 const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({ 
-  isDialog = false, 
+  trigger, 
+  userId,
+  onConnect,
+  isDialog,
   onClose,
   onDone,
   onAccountDisconnected
 }) => {
-  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [isConnecting, setIsConnecting] = useState<string | null>(null);
-  const [connectionSuccess, setConnectionSuccess] = useState<string | null>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
-  const [linkedinWindow, setLinkedinWindow] = useState<Window | null>(null);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
-  const [platforms, setPlatforms] = useState<SocialPlatform[]>([
-    {
-      id: 'twitter',
-      name: 'Twitter / X',
-      color: '#1DA1F2',
-      icon: (
-        <Twitter className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
-      id: 'linkedin',
-      name: 'LinkedIn',
-      color: '#0A66C2',
-      icon: (
-        <Linkedin className="w-5 h-5" />
-      ),
-      connected: false
-    }
-  ]);
-
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [connected, setConnected] = useState<{ [key: string]: boolean }>({
+    twitter: false,
+    linkedin: false,
+    facebook: false,
+    instagram: false
+  });
+  const { toast } = useToast();
+  
+  // Get user ID from session if not provided
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(userId);
+  
   useEffect(() => {
-    const fetchConnectedAccounts = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        const { data, error } = await supabase
-          .from('social_accounts')
-          .select('platform, account_name')
-          .eq('user_id', session.user.id);
-          
-        if (error) {
-          console.error("Error fetching social accounts:", error);
-          return;
+    if (!currentUserId) {
+      // Fetch user ID from session if not provided as prop
+      const getUserId = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setCurrentUserId(session.user.id);
         }
-        
-        if (data && data.length > 0) {
-          setPlatforms(prev => prev.map(platform => {
-            const connectedAccount = data.find(acc => acc.platform === platform.id);
-            if (connectedAccount) {
-              return {
-                ...platform, 
-                connected: true,
-                accountName: connectedAccount.account_name
-              };
-            }
-            return platform;
-          }));
-        }
-      }
-    };
-    
-    fetchConnectedAccounts();
-
-    const handleOAuthCallback = (event) => {
-      console.log("[SocialMediaConnect] Received message:", event.data);
-      
-      if (event.data && event.data.type === 'twitter-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('Received Twitter callback:', code, state);
-        
-        completeTwitterConnection(code, state);
-      }
-      else if (event.data && event.data.type === 'linkedin-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('[LinkedIn] Received auth code:', code);
-        
-        if (code) {
-          completeLinkedInConnection(code, state);
-        } else {
-          toast({
-            title: "LinkedIn Connection Failed",
-            description: "No LinkedIn code received.",
-            variant: "destructive"
-          });
-          setIsConnecting(null);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleOAuthCallback);
-    
-    return () => {
-      window.removeEventListener('message', handleOAuthCallback);
-      if (twitterWindow && !twitterWindow.closed) {
-        twitterWindow.close();
-      }
-      if (linkedinWindow && !linkedinWindow.closed) {
-        linkedinWindow.close();
-      }
-    };
-  }, []);
-
-  const completeTwitterConnection = async (code: string, state: string) => {
+      };
+      getUserId();
+    }
+  }, [currentUserId]);
+  
+  // Check connected accounts when dialog opens
+  useEffect(() => {
+    if ((isOpen || isDialog) && currentUserId) {
+      checkConnectedAccounts();
+    }
+  }, [isOpen, isDialog, currentUserId]);
+  
+  // Get current connected accounts
+  const checkConnectedAccounts = async () => {
     try {
-      setIsConnecting('twitter');
+      if (!currentUserId) return;
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError('twitter');
-        return;
-      }
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('platform')
+        .eq('user_id', currentUserId);
+        
+      if (error) throw error;
       
-      console.log("Completing Twitter connection with code:", code.substring(0, 5) + "...");
+      // Reset all connections to false
+      const newConnectionState = {
+        twitter: false,
+        linkedin: false,
+        facebook: false,
+        instagram: false
+      };
       
-      const response = await supabase.functions.invoke('social-auth', {
+      // Set true for connected platforms
+      data.forEach(account => {
+        if (account.platform in newConnectionState) {
+          newConnectionState[account.platform] = true;
+        }
+      });
+      
+      console.log("Connected accounts state:", newConnectionState);
+      setConnected(newConnectionState);
+    } catch (error: any) {
+      console.error("Error checking connected accounts:", error);
+    }
+  };
+  
+  // Twitter connection handler
+  const connectTwitter = async () => {
+    try {
+      setLoading('twitter');
+      setError(null);
+      
+      if (!currentUserId) return;
+      
+      // Call our edge function to get Twitter auth URL
+      const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'twitter',
-          action: 'callback',
-          code: code,
-          userId: session.user.id
+          action: 'auth-url',
+          userId: currentUserId
         }
       });
       
-      if (response.error) {
-        console.error("Twitter callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect Twitter account");
-      }
+      if (error) throw error;
       
-      setPlatforms(platforms.map(platform => {
-        if (platform.id === 'twitter') {
-          return { 
-            ...platform, 
-            connected: true,
-            accountName: response.data.accountName || 'Twitter Account'
-          };
+      const { url, state } = data;
+      
+      // Open Twitter auth in popup
+      const popup = window.open(url, 'twitterAuthPopup', 'width=800,height=600');
+      
+      // Poll for popup closure and handle callback
+      const pollInterval = setInterval(async () => {
+        try {
+          if (!popup || popup.closed) {
+            clearInterval(pollInterval);
+            
+            // Refresh connected accounts after popup closes
+            await checkConnectedAccounts();
+            setLoading(null);
+            
+            // If Twitter is now connected, show success toast
+            if (!connected.twitter && (await isTwitterConnected())) {
+              toast({
+                title: "Twitter Connected",
+                description: "Your Twitter account has been successfully connected."
+              });
+              if (onConnect) onConnect();
+              if (onDone) onDone();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking popup:", error);
         }
-        return platform;
-      }));
-      
-      setConnectionSuccess('twitter');
-      
-      toast({
-        title: "Twitter Connected",
-        description: `Your Twitter account has been connected successfully.`
-      });
+      }, 1000);
       
     } catch (error: any) {
-      console.error("Error connecting Twitter:", error);
-      setConnectionError('twitter');
-      toast({
-        title: "Twitter Connection Failed",
-        description: error.message || "Failed to connect Twitter account. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsConnecting(null);
+      console.error("Error connecting to Twitter:", error);
+      setError(`Failed to connect: ${error.message}`);
+      setLoading(null);
       
-      setTimeout(() => {
-        setConnectionSuccess(null);
-        setConnectionError(null);
-      }, 3000);
-    }
-  };
-
-  const completeLinkedInConnection = async (code: string, state: string) => {
-    try {
-      setIsConnecting('linkedin');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError('linkedin');
-        return;
-      }
-      
-      console.log("Completing LinkedIn connection with code:", code.substring(0, 5) + "...");
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'linkedin',
-          action: 'callback',
-          code: code,
-          userId: session.user.id
-        }
-      });
-      
-      if (response.error) {
-        console.error("LinkedIn callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect LinkedIn account");
-      }
-      
-      setPlatforms(platforms.map(platform => {
-        if (platform.id === 'linkedin') {
-          return { 
-            ...platform, 
-            connected: true,
-            accountName: response.data.accountName || 'LinkedIn Account'
-          };
-        }
-        return platform;
-      }));
-      
-      setConnectionSuccess('linkedin');
-      
-      toast({
-        title: "LinkedIn Connected",
-        description: `Your LinkedIn account has been connected successfully.`
-      });
-      
-    } catch (error: any) {
-      console.error("Error connecting LinkedIn:", error);
-      setConnectionError('linkedin');
-      toast({
-        title: "LinkedIn Connection Failed",
-        description: error.message || "Failed to connect LinkedIn account. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsConnecting(null);
-      
-      setTimeout(() => {
-        setConnectionSuccess(null);
-        setConnectionError(null);
-      }, 3000);
-      
-      if (linkedinWindow && !linkedinWindow.closed) {
-        linkedinWindow.close();
-        setLinkedinWindow(null);
-      }
-    }
-  };
-
-  const connectPlatform = async (id: string) => {
-    try {
-      setIsConnecting(id);
-      setConnectionSuccess(null);
-      setConnectionError(null);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError(id);
-        return;
-      }
-      
-      if (id === 'twitter') {
-        console.log("Starting Twitter OAuth flow...");
-        
-        const response = await supabase.functions.invoke('social-auth', {
-          body: {
-            platform: 'twitter',
-            action: 'auth-url',
-            userId: session.user.id
-          }
-        });
-        
-        console.log("Twitter auth response:", response);
-        
-        if (response.error) {
-          throw new Error(response.error.message || "Failed to start Twitter connection");
-        }
-        
-        if (!response.data.authUrl) {
-          throw new Error("No Twitter auth URL returned");
-        }
-        
-        const width = 600, height = 600;
-        const left = window.innerWidth / 2 - width / 2;
-        const top = window.innerHeight / 2 - height / 2;
-        
-        const twitterPopup = window.open(
-          response.data.authUrl,
-          'twitter-oauth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-        
-        if (!twitterPopup) {
-          throw new Error("Could not open Twitter auth popup. Please disable popup blocker.");
-        }
-        
-        setTwitterWindow(twitterPopup);
-        
-        return;
-      } 
-      else if (id === 'linkedin') {
-        console.log("Starting LinkedIn OAuth flow...");
-        
-        const response = await supabase.functions.invoke('social-auth', {
-          body: {
-            platform: 'linkedin',
-            action: 'auth-url',
-            userId: session.user.id
-          }
-        });
-        
-        console.log("LinkedIn auth response:", response);
-        
-        if (response.error) {
-          throw new Error(response.error.message || "Failed to start LinkedIn connection");
-        }
-        
-        if (!response.data.authUrl) {
-          throw new Error("No LinkedIn auth URL returned");
-        }
-        
-        const width = 600, height = 600;
-        const left = window.innerWidth / 2 - width / 2;
-        const top = window.innerHeight / 2 - height / 2;
-        
-        const linkedinPopup = window.open(
-          response.data.authUrl,
-          'linkedin-oauth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-        
-        if (!linkedinPopup) {
-          throw new Error("Could not open LinkedIn auth popup. Please disable popup blocker.");
-        }
-        
-        setLinkedinWindow(linkedinPopup);
-        
-        return;
-      }
-      else {
-        const response = await supabase.functions.invoke('social-auth', {
-          body: JSON.stringify({
-            platform: id,
-            userId: session.user.id
-          })
-        });
-        
-        if (response.error) {
-          throw new Error(response.error.message || "Failed to connect account");
-        }
-        
-        setPlatforms(platforms.map(platform => {
-          if (platform.id === id) {
-            return { 
-              ...platform, 
-              connected: true,
-              accountName: response.data.accountName || `${platform.name} Account`
-            };
-          }
-          return platform;
-        }));
-        
-        setConnectionSuccess(id);
-        
-        toast({
-          title: "Account Connected",
-          description: `Your ${platforms.find(p => p.id === id)?.name} account has been connected successfully.`
-        });
-      }
-      
-    } catch (error: any) {
-      console.error("Error connecting platform:", error);
-      setConnectionError(id);
       toast({
         title: "Connection Failed",
-        description: error.message || "Failed to connect account. Please try again.",
+        description: error.message || "Failed to connect to Twitter. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      if (id !== 'twitter' && id !== 'linkedin') {
-        setIsConnecting(null);
-        
-        setTimeout(() => {
-          setConnectionSuccess(null);
-          setConnectionError(null);
-        }, 3000);
-      }
     }
   };
-
-  const openDisconnectConfirmation = (id: string) => {
-    setPlatformToDisconnect(id);
-    setConfirmDialogOpen(true);
-  };
-
-  const handleCancelDisconnect = () => {
-    setConfirmDialogOpen(false);
-    setPlatformToDisconnect(null);
-  };
-
-  const disconnectPlatform = async (id: string) => {
+  
+  // LinkedIn connection handler
+  const connectLinkedIn = async () => {
     try {
-      setIsConnecting(id);
-      setConnectionSuccess(null);
-      setConnectionError(null);
-      setConfirmDialogOpen(false);
+      setLoading('linkedin');
+      setError(null);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to disconnect social accounts.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError(id);
-        return;
-      }
+      if (!currentUserId) return;
       
-      const { error } = await supabase
-        .from('social_accounts')
-        .delete()
-        .eq('user_id', session.user.id)
-        .eq('platform', id);
-        
-      if (error) {
-        throw new Error(error.message || "Failed to disconnect account");
-      }
-      
-      setPlatforms(platforms.map(platform => {
-        if (platform.id === id) {
-          return { ...platform, connected: false, accountName: undefined };
+      // Call our edge function to get LinkedIn auth URL
+      const { data, error } = await supabase.functions.invoke('social-auth', {
+        body: {
+          platform: 'linkedin',
+          action: 'auth-url',
+          userId: currentUserId
         }
-        return platform;
-      }));
-      
-      toast({
-        title: "Account Disconnected",
-        description: `Your ${platforms.find(p => p.id === id)?.name} account has been disconnected.`
       });
       
-      if (onAccountDisconnected) {
-        onAccountDisconnected(id);
-      }
+      if (error) throw error;
+      
+      const { url, state } = data;
+      
+      // Open LinkedIn auth in popup
+      const popup = window.open(url, 'linkedinAuthPopup', 'width=800,height=600');
+      
+      // Poll for popup closure and handle callback
+      const pollInterval = setInterval(async () => {
+        try {
+          if (!popup || popup.closed) {
+            clearInterval(pollInterval);
+            
+            // Refresh connected accounts after popup closes
+            await checkConnectedAccounts();
+            setLoading(null);
+            
+            // If LinkedIn is now connected, show success toast
+            if (!connected.linkedin && (await isLinkedInConnected())) {
+              toast({
+                title: "LinkedIn Connected",
+                description: "Your LinkedIn account has been successfully connected."
+              });
+              if (onConnect) onConnect();
+              if (onDone) onDone();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking popup:", error);
+        }
+      }, 1000);
       
     } catch (error: any) {
-      console.error("Error disconnecting platform:", error);
-      setConnectionError(id);
+      console.error("Error connecting to LinkedIn:", error);
+      setError(`Failed to connect: ${error.message}`);
+      setLoading(null);
+      
       toast({
-        title: "Disconnection Failed",
-        description: error.message || "Failed to disconnect account. Please try again.",
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to LinkedIn. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsConnecting(null);
-      setPlatformToDisconnect(null);
-      
-      setTimeout(() => {
-        setConnectionSuccess(null);
-        setConnectionError(null);
-      }, 3000);
     }
   };
 
-  const openDialog = () => setIsOpen(true);
-  const closeDialog = () => {
-    setIsOpen(false);
-    if (onClose) onClose();
-  };
-
-  const handleDone = () => {
-    closeDialog();
-    if (onDone) onDone();
-  };
-
-  const PlatformList = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {platforms.map((platform) => (
-        <div 
-          key={platform.id}
-          className={`p-4 rounded-lg border ${platform.connected ? `border-[${platform.color}]/30 bg-[${platform.color}]/5` : 'border-border bg-background/60'} transition-all duration-300 flex items-center justify-between`}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${platform.connected ? `bg-[${platform.color}]/10 text-[${platform.color}]` : 'bg-secondary text-foreground/70'}`} style={{ 
-              color: platform.connected ? platform.color : undefined,
-              backgroundColor: platform.connected ? `${platform.color}10` : undefined
-            }}>
-              {platform.icon}
-            </div>
-            <div>
-              <div className="font-medium">{platform.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {platform.connected 
-                  ? `Connected${platform.accountName ? ` as ${platform.accountName}` : ''}` 
-                  : 'Not connected'}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {connectionSuccess === platform.id && (
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-            )}
-            {connectionError === platform.id && (
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            )}
+  // Facebook connection handler
+  const connectFacebook = async () => {
+    try {
+      setLoading('facebook');
+      setError(null);
+      
+      if (!currentUserId) return;
+      
+      // Call our edge function to get Facebook auth URL
+      const { data, error } = await supabase.functions.invoke('social-auth', {
+        body: {
+          platform: 'facebook',
+          action: 'auth-url',
+          userId: currentUserId
+        }
+      });
+      
+      if (error) throw error;
+      
+      const { url, state } = data;
+      console.log("Got Facebook auth URL:", url);
+      
+      // Open Facebook auth in popup
+      const popup = window.open(url, 'facebookAuthPopup', 'width=800,height=600');
+      
+      // Poll for popup closure and handle callback
+      const pollInterval = setInterval(async () => {
+        try {
+          if (!popup || popup.closed) {
+            clearInterval(pollInterval);
+            console.log("Facebook popup closed, checking connection status");
             
-            <Button
-              variant={platform.connected ? "outline" : "default"}
-              size="sm"
-              onClick={() => platform.connected 
-                ? openDisconnectConfirmation(platform.id) 
-                : connectPlatform(platform.id)
-              }
-              disabled={isConnecting !== null}
-              className={platform.connected ? 'border-[#689675]/50 text-[#689675] hover:bg-[#689675]/5' : ''}
-              style={{
-                borderColor: platform.connected ? '#689675' : undefined,
-                color: platform.connected ? '#689675' : undefined,
-              }}
-            >
-              {isConnecting === platform.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : platform.connected ? 'Disconnect' : 'Connect'}
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
+            // Refresh connected accounts after popup closes
+            await checkConnectedAccounts();
+            setLoading(null);
+            
+            // If Facebook is now connected, show success toast
+            const isFBConnected = await isFacebookConnected();
+            console.log("Is Facebook connected:", isFBConnected);
+            
+            if (!connected.facebook && isFBConnected) {
+              toast({
+                title: "Facebook Connected",
+                description: "Your Facebook page has been successfully connected."
+              });
+              if (onConnect) onConnect();
+              if (onDone) onDone();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking popup:", error);
+        }
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error("Error connecting to Facebook:", error);
+      setError(`Failed to connect: ${error.message}`);
+      setLoading(null);
+      
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to Facebook. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Instagram connection handler
+  const connectInstagram = async () => {
+    try {
+      setLoading('instagram');
+      setError(null);
+      
+      if (!currentUserId) return;
+      
+      // Call our edge function to get Instagram auth URL
+      const { data, error } = await supabase.functions.invoke('social-auth', {
+        body: {
+          platform: 'instagram',
+          action: 'auth-url',
+          userId: currentUserId
+        }
+      });
+      
+      if (error) throw error;
+      
+      const { url, state } = data;
+      console.log("Got Instagram auth URL:", url);
+      
+      // Open Instagram auth in popup
+      const popup = window.open(url, 'instagramAuthPopup', 'width=800,height=600');
+      
+      // Poll for popup closure and handle callback
+      const pollInterval = setInterval(async () => {
+        try {
+          if (!popup || popup.closed) {
+            clearInterval(pollInterval);
+            console.log("Instagram popup closed, checking connection status");
+            
+            // Refresh connected accounts after popup closes
+            await checkConnectedAccounts();
+            setLoading(null);
+            
+            // If Instagram is now connected, show success toast
+            const isIGConnected = await isInstagramConnected();
+            console.log("Is Instagram connected:", isIGConnected);
+            
+            if (!connected.instagram && isIGConnected) {
+              toast({
+                title: "Instagram Connected",
+                description: "Your Instagram Business account has been successfully connected."
+              });
+              if (onConnect) onConnect();
+              if (onDone) onDone();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking popup:", error);
+        }
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error("Error connecting to Instagram:", error);
+      setError(`Failed to connect: ${error.message}`);
+      setLoading(null);
+      
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to Instagram. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Check if Twitter is connected
+  const isTwitterConnected = async () => {
+    try {
+      if (!currentUserId) return false;
+      
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('platform', 'twitter')
+        .limit(1);
+        
+      if (error) throw error;
+      
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error checking Twitter connection:", error);
+      return false;
+    }
+  };
+  
+  // Check if LinkedIn is connected
+  const isLinkedInConnected = async () => {
+    try {
+      if (!currentUserId) return false;
+      
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('platform', 'linkedin')
+        .limit(1);
+        
+      if (error) throw error;
+      
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error checking LinkedIn connection:", error);
+      return false;
+    }
+  };
+
+  // Check if Facebook is connected
+  const isFacebookConnected = async () => {
+    try {
+      if (!currentUserId) return false;
+      
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('platform', 'facebook')
+        .limit(1);
+        
+      if (error) throw error;
+      
+      console.log("Facebook connection check result:", data);
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error checking Facebook connection:", error);
+      return false;
+    }
+  };
+
+  // Check if Instagram is connected
+  const isInstagramConnected = async () => {
+    try {
+      if (!currentUserId) return false;
+      
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('platform', 'instagram')
+        .limit(1);
+        
+      if (error) throw error;
+      
+      console.log("Instagram connection check result:", data);
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error checking Instagram connection:", error);
+      return false;
+    }
+  };
+  
+  // Handle dialog open/close
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setError(null);
+      if (onClose) onClose();
+    }
+  };
+  
+  // Custom trigger or default button
+  const dialogTrigger = trigger || (
+    <Button variant="outline" className="gap-2">
+      Connect Accounts
+    </Button>
   );
 
-  if (isDialog) {
-    return (
-      <>
-        <Button onClick={openDialog} className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <line x1="10" y1="14" x2="21" y2="3"></line>
-          </svg>
-          Connect Account
-        </Button>
-        
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="sm:max-w-md lg:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Connect Your Social Media Accounts</DialogTitle>
-              <DialogDescription>
-                Link your accounts to publish content across multiple platforms at once.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="p-4">
-              <PlatformList />
-              
-              <div className="pt-6 border-t border-border mt-6">
-                <div className="text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    <span className="font-medium">Your account data is secure</span>
-                  </div>
-                  <p>We use official APIs and never store your passwords. Connect once and publish everywhere.</p>
-                </div>
-                
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Need help? </span>
-                    <Button variant="link" className="p-0 h-auto text-primary">View our guide</Button>
-                  </div>
-                  
-                  {platforms.some(p => p.connected) && (
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDone}
-                      className="ml-auto"
-                    >
-                      Done
-                    </Button>
-                  )}
-                </div>
-              </div>
+  // If isDialog is true, don't render the Dialog wrapper
+  return isDialog ? (
+    <div className="flex flex-col gap-4 mt-4">
+      {error && (
+        <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-700 rounded-md">
+          <AlertCircle className="h-4 w-4" />
+          <span>{error}</span>
+        </div>
+      )}
+      
+      {/* Twitter Connection Button */}
+      <Button
+        variant="outline"
+        className={`w-full justify-start gap-3 py-6 ${connected.twitter ? 'border-green-500 bg-green-50' : ''}`}
+        disabled={loading !== null}
+        onClick={connectTwitter}
+      >
+        {loading === 'twitter' ? (
+          <LoadingDots color="#10b981" />
+        ) : (
+          <>
+            <div className="bg-[#1DA1F2] rounded-full p-2 text-white">
+              <Twitter className="h-5 w-5" />
             </div>
-          </DialogContent>
-        </Dialog>
-        
-        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-[#689675]" />
-                Disconnect Account
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to disconnect your {platformToDisconnect ? platforms.find(p => p.id === platformToDisconnect)?.name : ''} account? 
-                This will remove the connection between your account and this platform.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleCancelDisconnect}>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => platformToDisconnect && disconnectPlatform(platformToDisconnect)}
-                className="bg-[#689675] hover:bg-[#85A88E]"
-              >
-                Disconnect
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </>
-    );
-  }
+            <div className="flex flex-col items-start">
+              <span className="font-semibold">{connected.twitter ? 'Connected to Twitter' : 'Connect Twitter'}</span>
+              <span className="text-xs text-muted-foreground">
+                {connected.twitter ? 'Your Twitter account is connected' : 'Connect your Twitter account to post content'}
+              </span>
+            </div>
+            {connected.twitter && (
+              <div className="ml-auto bg-green-100 rounded-full p-1">
+                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                </svg>
+              </div>
+            )}
+          </>
+        )}
+      </Button>
+      
+      {/* LinkedIn Connection Button */}
+      <Button
+        variant="outline"
+        className={`w-full justify-start gap-3 py-6 ${connected.linkedin ? 'border-green-500 bg-green-50' : ''}`}
+        disabled={loading !== null}
+        onClick={connectLinkedIn}
+      >
+        {loading === 'linkedin' ? (
+          <LoadingDots color="#10b981" />
+        ) : (
+          <>
+            <div className="bg-[#0A66C2] rounded-full p-2 text-white">
+              <Linkedin className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="font-semibold">{connected.linkedin ? 'Connected to LinkedIn' : 'Connect LinkedIn'}</span>
+              <span className="text-xs text-muted-foreground">
+                {connected.linkedin ? 'Your LinkedIn account is connected' : 'Connect your LinkedIn account to post content'}
+              </span>
+            </div>
+            {connected.linkedin && (
+              <div className="ml-auto bg-green-100 rounded-full p-1">
+                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                </svg>
+              </div>
+            )}
+          </>
+        )}
+      </Button>
 
-  return (
-    <section id="social-connect" className="py-16 md:py-24 bg-secondary/30">
-      <div className="container max-w-7xl mx-auto px-6 md:px-10">
-        <div className="flex flex-col md:flex-row gap-12 md:gap-16 items-center">
-          <div className="w-full md:w-1/2 order-2 md:order-1">
-            <div className="glass-card rounded-xl shadow-md overflow-hidden animate-scale">
-              <div className="p-6 md:p-8 space-y-6">
-                <h3 className="text-xl font-semibold mb-4">Connect Your Accounts</h3>
-                
-                <PlatformList />
-                
-                <div className="pt-4 border-t border-border">
-                  <div className="text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                      <span>Your account data is secure</span>
-                    </div>
-                    <p>We use official APIs and never store your passwords.</p>
-                  </div>
-                </div>
-              </div>
+      {/* Facebook Connection Button */}
+      <Button
+        variant="outline"
+        className={`w-full justify-start gap-3 py-6 ${connected.facebook ? 'border-green-500 bg-green-50' : ''}`}
+        disabled={loading !== null}
+        onClick={connectFacebook}
+      >
+        {loading === 'facebook' ? (
+          <LoadingDots color="#10b981" />
+        ) : (
+          <>
+            <div className="bg-[#4267B2] rounded-full p-2 text-white">
+              <Facebook className="h-5 w-5" />
             </div>
-          </div>
+            <div className="flex flex-col items-start">
+              <span className="font-semibold">{connected.facebook ? 'Connected to Facebook' : 'Connect Facebook'}</span>
+              <span className="text-xs text-muted-foreground">
+                {connected.facebook ? 'Your Facebook page is connected' : 'Connect your Facebook page to post content'}
+              </span>
+            </div>
+            {connected.facebook && (
+              <div className="ml-auto bg-green-100 rounded-full p-1">
+                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                </svg>
+              </div>
+            )}
+          </>
+        )}
+      </Button>
+
+      {/* Instagram Connection Button */}
+      <Button
+        variant="outline"
+        className={`w-full justify-start gap-3 py-6 ${connected.instagram ? 'border-green-500 bg-green-50' : ''}`}
+        disabled={loading !== null}
+        onClick={connectInstagram}
+      >
+        {loading === 'instagram' ? (
+          <LoadingDots color="#10b981" />
+        ) : (
+          <>
+            <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-2 text-white">
+              <Instagram className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="font-semibold">{connected.instagram ? 'Connected to Instagram' : 'Connect Instagram'}</span>
+              <span className="text-xs text-muted-foreground">
+                {connected.instagram ? 'Your Instagram Business account is connected' : 'Connect your Instagram Business account to post content'}
+              </span>
+            </div>
+            {connected.instagram && (
+              <div className="ml-auto bg-green-100 rounded-full p-1">
+                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                </svg>
+              </div>
+            )}
+          </>
+        )}
+      </Button>
+      
+      <div className="text-xs text-muted-foreground mt-2">
+        <p>Connect your social media accounts to post and schedule content directly from the platform.</p>
+      </div>
+    </div>
+  ) : (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        {dialogTrigger}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-center">Connect Your Social Accounts</DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex flex-col gap-4 mt-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-700 rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error}</span>
+            </div>
+          )}
           
-          <div className="w-full md:w-1/2 order-1 md:order-2">
-            <div className="mb-6 animate-slide-up">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-                <span>Simple Integration</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Connect Once, Post Everywhere
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Seamlessly connect all your social media accounts and manage them from a single dashboard. No more switching between apps.
-              </p>
-            </div>
-            
-            <div className="space-y-4 animate-slide-up">
-              {[
-                {
-                  title: "Secure Authentication",
-                  description: "Connect securely using official APIs with full data protection."
-                },
-                {
-                  title: "Cross-Platform Posting",
-                  description: "Create once and publish to multiple platforms simultaneously."
-                },
-                {
-                  title: "Platform-Specific Formatting",
-                  description: "Content automatically optimized for each social network's requirements."
-                }
-              ].map((feature, i) => (
-                <div key={i} className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1">{feature.title}</h3>
-                    <p className="text-muted-foreground text-sm">{feature.description}</p>
-                  </div>
+          {/* Twitter Connection Button */}
+          <Button
+            variant="outline"
+            className={`w-full justify-start gap-3 py-6 ${connected.twitter ? 'border-green-500 bg-green-50' : ''}`}
+            disabled={loading !== null}
+            onClick={connectTwitter}
+          >
+            {loading === 'twitter' ? (
+              <LoadingDots color="#10b981" />
+            ) : (
+              <>
+                <div className="bg-[#1DA1F2] rounded-full p-2 text-white">
+                  <Twitter className="h-5 w-5" />
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">{connected.twitter ? 'Connected to Twitter' : 'Connect Twitter'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {connected.twitter ? 'Your Twitter account is connected' : 'Connect your Twitter account to post content'}
+                  </span>
+                </div>
+                {connected.twitter && (
+                  <div className="ml-auto bg-green-100 rounded-full p-1">
+                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </div>
+                )}
+              </>
+            )}
+          </Button>
+          
+          {/* LinkedIn Connection Button */}
+          <Button
+            variant="outline"
+            className={`w-full justify-start gap-3 py-6 ${connected.linkedin ? 'border-green-500 bg-green-50' : ''}`}
+            disabled={loading !== null}
+            onClick={connectLinkedIn}
+          >
+            {loading === 'linkedin' ? (
+              <LoadingDots color="#10b981" />
+            ) : (
+              <>
+                <div className="bg-[#0A66C2] rounded-full p-2 text-white">
+                  <Linkedin className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">{connected.linkedin ? 'Connected to LinkedIn' : 'Connect LinkedIn'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {connected.linkedin ? 'Your LinkedIn account is connected' : 'Connect your LinkedIn account to post content'}
+                  </span>
+                </div>
+                {connected.linkedin && (
+                  <div className="ml-auto bg-green-100 rounded-full p-1">
+                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </div>
+                )}
+              </>
+            )}
+          </Button>
+
+          {/* Facebook Connection Button */}
+          <Button
+            variant="outline"
+            className={`w-full justify-start gap-3 py-6 ${connected.facebook ? 'border-green-500 bg-green-50' : ''}`}
+            disabled={loading !== null}
+            onClick={connectFacebook}
+          >
+            {loading === 'facebook' ? (
+              <LoadingDots color="#10b981" />
+            ) : (
+              <>
+                <div className="bg-[#4267B2] rounded-full p-2 text-white">
+                  <Facebook className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">{connected.facebook ? 'Connected to Facebook' : 'Connect Facebook'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {connected.facebook ? 'Your Facebook page is connected' : 'Connect your Facebook page to post content'}
+                  </span>
+                </div>
+                {connected.facebook && (
+                  <div className="ml-auto bg-green-100 rounded-full p-1">
+                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </div>
+                )}
+              </>
+            )}
+          </Button>
+
+          {/* Instagram Connection Button */}
+          <Button
+            variant="outline"
+            className={`w-full justify-start gap-3 py-6 ${connected.instagram ? 'border-green-500 bg-green-50' : ''}`}
+            disabled={loading !== null}
+            onClick={connectInstagram}
+          >
+            {loading === 'instagram' ? (
+              <LoadingDots color="#10b981" />
+            ) : (
+              <>
+                <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-2 text-white">
+                  <Instagram className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">{connected.instagram ? 'Connected to Instagram' : 'Connect Instagram'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {connected.instagram ? 'Your Instagram Business account is connected' : 'Connect your Instagram Business account to post content'}
+                  </span>
+                </div>
+                {connected.instagram && (
+                  <div className="ml-auto bg-green-100 rounded-full p-1">
+                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </div>
+                )}
+              </>
+            )}
+          </Button>
+          
+          <div className="text-xs text-muted-foreground mt-2">
+            <p>Connect your social media accounts to post and schedule content directly from the platform.</p>
           </div>
         </div>
-      </div>
-      
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-[#689675]" />
-              Disconnect Account
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to disconnect your {platformToDisconnect ? `${platforms.find(p => p.id === platformToDisconnect)?.name}` : ''} account? 
-              This will remove the connection between your account and this platform.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDisconnect}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => platformToDisconnect && disconnectPlatform(platformToDisconnect)}
-              className="bg-[#689675] hover:bg-[#85A88E]"
-            >
-              Disconnect
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </section>
+      </DialogContent>
+    </Dialog>
   );
 };
 
