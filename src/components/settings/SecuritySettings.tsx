@@ -12,8 +12,6 @@ const SecuritySettings = () => {
 
   useEffect(() => {
     fetchUserAndConnectedAccounts();
-
-    // We've removed the OAuth callback handling for Facebook and Instagram
   }, []);
 
   const fetchUserAndConnectedAccounts = async () => {
@@ -32,8 +30,6 @@ const SecuritySettings = () => {
       }
     }
   };
-
-  // Removed Facebook and Instagram connection methods
 
   const handleDisconnectTwitter = async () => {
     // Show loading state
