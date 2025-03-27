@@ -463,7 +463,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     </Button>
   );
 
-  // Render the connection button with optional disconnect button
+  // Render the connection buttons without the disconnect buttons in the same line
   const renderConnectionButton = (
     platform: 'twitter' | 'linkedin' | 'facebook' | 'instagram',
     connect: () => void,
@@ -478,7 +478,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
                          `${platformName} account`;
 
     return (
-      <div className="flex items-center w-full">
+      <div className="flex flex-col w-full">
         <Button
           variant="outline"
           className={`w-full justify-start gap-3 py-6 ${isConnected ? 'border-green-500 bg-green-50' : ''}`}
@@ -511,10 +511,16 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           )}
         </Button>
         {isConnected && (
-          <AccountDisconnectButton 
-            platform={platform} 
-            onDisconnect={handleAccountDisconnected} 
-          />
+          <div className="mt-1 text-right">
+            <Button
+              variant="link"
+              size="sm" 
+              className="text-red-500 hover:text-red-600 p-0"
+              onClick={() => handleAccountDisconnected(platform)}
+            >
+              Disconnect
+            </Button>
+          </div>
         )}
       </div>
     );
