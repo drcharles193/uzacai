@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
@@ -8,56 +9,11 @@ const SecuritySettings = () => {
   const [connectedAccounts, setConnectedAccounts] = useState([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [facebookWindow, setFacebookWindow] = useState(null);
-  const [instagramWindow, setInstagramWindow] = useState(null);
 
   useEffect(() => {
     fetchUserAndConnectedAccounts();
 
-    const handleOAuthCallback = (event) => {
-      console.log("[SecuritySettings] Received message:", event.data);
-      
-      if (event.data && event.data.type === 'facebook-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('[SecuritySettings] Received Facebook code:', code);
-        completeFacebookConnection(code);
-      }
-      else if (event.data && event.data.type === 'facebook-oauth-callback-error') {
-        const { error, errorDescription } = event.data;
-        console.error('[SecuritySettings] Facebook auth error:', error, errorDescription);
-        
-        toast.error('Facebook Connection Failed', {
-          description: errorDescription || "Failed to connect Facebook account"
-        });
-        setIsConnecting(false);
-      }
-      else if (event.data && event.data.type === 'instagram-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('[SecuritySettings] Received Instagram code:', code);
-        completeInstagramConnection(code);
-      }
-      else if (event.data && event.data.type === 'instagram-oauth-callback-error') {
-        const { error, errorDescription } = event.data;
-        console.error('[SecuritySettings] Instagram auth error:', error, errorDescription);
-        
-        toast.error('Instagram Connection Failed', {
-          description: errorDescription || "Failed to connect Instagram account"
-        });
-        setIsConnecting(false);
-      }
-    };
-
-    window.addEventListener('message', handleOAuthCallback);
-    
-    return () => {
-      window.removeEventListener('message', handleOAuthCallback);
-      if (facebookWindow && !facebookWindow.closed) {
-        facebookWindow.close();
-      }
-      if (instagramWindow && !instagramWindow.closed) {
-        instagramWindow.close();
-      }
-    };
+    // We've removed the OAuth callback handling for Facebook and Instagram
   }, []);
 
   const fetchUserAndConnectedAccounts = async () => {
@@ -77,236 +33,9 @@ const SecuritySettings = () => {
     }
   };
 
-  const handleFacebookConnect = async () => {
-    setIsConnecting(true);
-    
-    try {
-      // Get auth URL from our edge function
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'facebook',
-          action: 'auth-url',
-          userId: user.id
-        }
-      });
-      
-      console.log("Facebook auth response:", response);
-      
-      if (response.error) {
-        throw new Error(response.error.message || "Failed to start Facebook connection");
-      }
-      
-      if (!response.data?.authUrl) {
-        throw new Error("No Facebook auth URL returned");
-      }
-      
-      const width = 600, height = 600;
-      const left = window.innerWidth / 2 - width / 2;
-      const top = window.innerHeight / 2 - height / 2;
-      
-      const fbWindow = window.open(
-        response.data.authUrl,
-        'facebook-oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-      
-      if (!fbWindow) {
-        throw new Error("Could not open Facebook auth popup. Please disable popup blocker.");
-      }
-      
-      setFacebookWindow(fbWindow);
-      
-      // Monitor popup for close
-      const checkClosed = setInterval(() => {
-        if (fbWindow.closed) {
-          clearInterval(checkClosed);
-          console.log("[SecuritySettings] Facebook popup was closed");
-          // Only reset isConnecting if we haven't received a successful callback
-          if (isConnecting) {
-            setIsConnecting(false);
-          }
-        }
-      }, 500);
-    } catch (error) {
-      console.error("Error starting Facebook connection:", error);
-      toast.error('Facebook Connection Failed', {
-        description: error.message || "Failed to connect Facebook account"
-      });
-      setIsConnecting(false);
-    }
-  };
+  // Removed Facebook and Instagram connection methods
 
-  const completeFacebookConnection = async (code) => {
-    try {
-      console.log("[SecuritySettings] Completing Facebook connection with code:", code.substring(0, 5) + "...");
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'facebook',
-          action: 'callback',
-          code: code,
-          userId: user.id
-        }
-      });
-      
-      console.log("[SecuritySettings] Facebook callback response:", response);
-      
-      if (response.error) {
-        console.error("Facebook callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect Facebook account");
-      }
-      
-      toast.success('Facebook Account Connected', {
-        description: 'Your Facebook account has been connected successfully.'
-      });
-      
-      // Refresh connected accounts
-      fetchUserAndConnectedAccounts();
-    } catch (error) {
-      console.error("Error connecting Facebook:", error);
-      toast.error('Facebook Connection Failed', {
-        description: error.message || "Failed to connect Facebook account"
-      });
-    } finally {
-      setIsConnecting(false);
-      
-      if (facebookWindow && !facebookWindow.closed) {
-        facebookWindow.close();
-        setFacebookWindow(null);
-      }
-    }
-  };
-
-  const handleInstagramConnect = async () => {
-    setIsConnecting(true);
-    
-    try {
-      // Get auth URL from our edge function
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'instagram',
-          action: 'auth-url',
-          userId: user.id
-        }
-      });
-      
-      console.log("Instagram auth response:", response);
-      
-      if (response.error) {
-        throw new Error(response.error.message || "Failed to start Instagram connection");
-      }
-      
-      if (!response.data?.authUrl) {
-        throw new Error("No Instagram auth URL returned");
-      }
-      
-      const width = 600, height = 600;
-      const left = window.innerWidth / 2 - width / 2;
-      const top = window.innerHeight / 2 - height / 2;
-      
-      const igWindow = window.open(
-        response.data.authUrl,
-        'instagram-oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-      
-      if (!igWindow) {
-        throw new Error("Could not open Instagram auth popup. Please disable popup blocker.");
-      }
-      
-      setInstagramWindow(igWindow);
-      
-      // Monitor popup for close
-      const checkClosed = setInterval(() => {
-        if (igWindow.closed) {
-          clearInterval(checkClosed);
-          console.log("[SecuritySettings] Instagram popup was closed");
-          // Only reset isConnecting if we haven't received a successful callback
-          if (isConnecting) {
-            setIsConnecting(false);
-          }
-        }
-      }, 500);
-    } catch (error) {
-      console.error("Error starting Instagram connection:", error);
-      toast.error('Instagram Connection Failed', {
-        description: error.message || "Failed to connect Instagram account"
-      });
-      setIsConnecting(false);
-    }
-  };
-
-  const completeInstagramConnection = async (code) => {
-    try {
-      console.log("[SecuritySettings] Completing Instagram connection with code:", code.substring(0, 5) + "...");
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'instagram',
-          action: 'callback',
-          code: code,
-          userId: user.id
-        }
-      });
-      
-      console.log("[SecuritySettings] Instagram callback response:", response);
-      
-      if (response.error) {
-        console.error("Instagram callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect Instagram account");
-      }
-      
-      toast.success('Instagram Account Connected', {
-        description: 'Your Instagram account has been connected successfully.'
-      });
-      
-      // Refresh connected accounts
-      fetchUserAndConnectedAccounts();
-    } catch (error) {
-      console.error("Error connecting Instagram:", error);
-      toast.error('Instagram Connection Failed', {
-        description: error.message || "Failed to connect Instagram account"
-      });
-    } finally {
-      setIsConnecting(false);
-      
-      if (instagramWindow && !instagramWindow.closed) {
-        instagramWindow.close();
-        setInstagramWindow(null);
-      }
-    }
-  };
-
-  const handleDisconnectFacebook = async () => {
-    // Show loading state
-    setIsDisconnecting(true);
-    
-    try {
-      // Call the disconnect-social edge function instead of using unlinkProvider
-      const { data, error } = await supabase.functions.invoke('disconnect-social', {
-        body: {
-          userId: user.id,
-          provider: 'facebook'
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('Facebook account disconnected');
-      // Refresh user data to update the UI
-      fetchUserAndConnectedAccounts();
-    } catch (error) {
-      toast.error('Failed to disconnect Facebook', {
-        description: error.message
-      });
-    } finally {
-      setIsDisconnecting(false);
-    }
-  };
-
-  const handleDisconnectInstagram = async () => {
+  const handleDisconnectTwitter = async () => {
     // Show loading state
     setIsDisconnecting(true);
     
@@ -315,7 +44,7 @@ const SecuritySettings = () => {
       const { data, error } = await supabase.functions.invoke('disconnect-social', {
         body: {
           userId: user.id,
-          provider: 'instagram'
+          provider: 'twitter'
         }
       });
       
@@ -323,11 +52,11 @@ const SecuritySettings = () => {
         throw error;
       }
       
-      toast.success('Instagram account disconnected');
+      toast.success('Twitter account disconnected');
       // Refresh user data to update the UI
       fetchUserAndConnectedAccounts();
     } catch (error) {
-      toast.error('Failed to disconnect Instagram', {
+      toast.error('Failed to disconnect Twitter', {
         description: error.message
       });
     } finally {
@@ -335,8 +64,37 @@ const SecuritySettings = () => {
     }
   };
 
-  const isFacebookConnected = connectedAccounts.some(acc => acc.platform === 'facebook');
-  const isInstagramConnected = connectedAccounts.some(acc => acc.platform === 'instagram');
+  const handleDisconnectLinkedin = async () => {
+    // Show loading state
+    setIsDisconnecting(true);
+    
+    try {
+      // Call the disconnect-social edge function
+      const { data, error } = await supabase.functions.invoke('disconnect-social', {
+        body: {
+          userId: user.id,
+          provider: 'linkedin'
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('LinkedIn account disconnected');
+      // Refresh user data to update the UI
+      fetchUserAndConnectedAccounts();
+    } catch (error) {
+      toast.error('Failed to disconnect LinkedIn', {
+        description: error.message
+      });
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
+  const isTwitterConnected = connectedAccounts.some(acc => acc.platform === 'twitter');
+  const isLinkedinConnected = connectedAccounts.some(acc => acc.platform === 'linkedin');
 
   return (
     <div className="space-y-6">
@@ -345,16 +103,16 @@ const SecuritySettings = () => {
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium">Facebook</h4>
+              <h4 className="text-sm font-medium">Twitter</h4>
               <p className="text-xs text-muted-foreground">
-                {isFacebookConnected ? 'Connected' : 'Not Connected'}
+                {isTwitterConnected ? 'Connected' : 'Not Connected'}
               </p>
             </div>
-            {isFacebookConnected ? (
+            {isTwitterConnected ? (
               <Button 
                 variant="destructive" 
                 size="sm" 
-                onClick={handleDisconnectFacebook}
+                onClick={handleDisconnectTwitter}
                 disabled={isDisconnecting}
               >
                 {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
@@ -363,7 +121,7 @@ const SecuritySettings = () => {
               <Button 
                 variant="secondary" 
                 size="sm" 
-                onClick={handleFacebookConnect}
+                onClick={() => {}} // Kept placeholder for Twitter connection
                 disabled={isConnecting}
               >
                 {isConnecting ? (
@@ -381,16 +139,16 @@ const SecuritySettings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium">Instagram</h4>
+              <h4 className="text-sm font-medium">LinkedIn</h4>
               <p className="text-xs text-muted-foreground">
-                {isInstagramConnected ? 'Connected' : 'Not Connected'}
+                {isLinkedinConnected ? 'Connected' : 'Not Connected'}
               </p>
             </div>
-            {isInstagramConnected ? (
+            {isLinkedinConnected ? (
               <Button 
                 variant="destructive" 
                 size="sm" 
-                onClick={handleDisconnectInstagram}
+                onClick={handleDisconnectLinkedin}
                 disabled={isDisconnecting}
               >
                 {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
@@ -399,7 +157,7 @@ const SecuritySettings = () => {
               <Button 
                 variant="secondary" 
                 size="sm" 
-                onClick={handleInstagramConnect}
+                onClick={() => {}} // Kept placeholder for LinkedIn connection
                 disabled={isConnecting}
               >
                 {isConnecting ? (
