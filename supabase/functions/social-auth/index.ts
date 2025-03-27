@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -813,4 +814,133 @@ serve(async (req) => {
           console.error("Error processing Facebook callback:", error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Facebook action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+    // Handle Instagram OAuth flow
+    else if (platform === 'instagram') {
+      if (action === 'auth-url') {
+        // Step 1: Generate Instagram auth URL
+        try {
+          const { url, state } = getInstagramAuthUrl();
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'instagram',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating Instagram auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          // Exchange code for tokens
+          const tokens = await exchangeInstagramCode(code);
+          
+          // The response from Instagram includes the user_id and access_token
+          const userId = tokens.user_id;
+          const accessToken = tokens.access_token;
+          
+          // Get additional user profile information
+          const userProfile = await getInstagramUserProfile(accessToken, userId);
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'instagram',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.username || 'Instagram User',
+              account_type: "profile",
+              access_token: userProfile.longLivedToken || accessToken,
+              refresh_token: null, // Instagram Basic Display API doesn't use refresh tokens
+              token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days for long-lived token
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                username: userProfile.username,
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing Instagram connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'instagram', 
+              accountName: userProfile.username || 'Instagram User',
+              accountType: "profile",
+              username: userProfile.username
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing Instagram callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Instagram action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+    // Mock implementation for other platforms
+    else {
+      console.log(`Using mock implementation for platform: ${platform}`);
+      // For now, just return mock responses for other platforms
+      const mockResponse = getMockPlatformResponse(platform);
+      
+      return new Response(
+        JSON.stringify(mockResponse),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  } catch (error) {
+    console.error("Error handling request:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "An unexpected error occurred" }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});
