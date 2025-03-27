@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,12 +36,11 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   });
   const { toast } = useToast();
   
-  // Get user ID from session if not provided
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(userId);
+  const [connectedAccountNames, setConnectedAccountNames] = useState<{ [key: string]: string }>({});
   
   useEffect(() => {
     if (!currentUserId) {
-      // Fetch user ID from session if not provided as prop
       const getUserId = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -53,26 +51,23 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   }, [currentUserId]);
   
-  // Check connected accounts when dialog opens
   useEffect(() => {
     if ((isOpen || isDialog) && currentUserId) {
       checkConnectedAccounts();
     }
   }, [isOpen, isDialog, currentUserId]);
   
-  // Get current connected accounts
   const checkConnectedAccounts = async () => {
     try {
       if (!currentUserId) return;
       
       const { data, error } = await supabase
         .from('social_accounts')
-        .select('platform')
+        .select('platform, account_name')
         .eq('user_id', currentUserId);
         
       if (error) throw error;
       
-      // Reset all connections to false
       const newConnectionState = {
         twitter: false,
         linkedin: false,
@@ -80,21 +75,23 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         instagram: false
       };
       
-      // Set true for connected platforms
+      const newAccountNames = {};
+      
       data.forEach(account => {
         if (account.platform in newConnectionState) {
           newConnectionState[account.platform] = true;
+          newAccountNames[account.platform] = account.account_name;
         }
       });
       
       console.log("Connected accounts state:", newConnectionState);
       setConnected(newConnectionState);
+      setConnectedAccountNames(newAccountNames);
     } catch (error: any) {
       console.error("Error checking connected accounts:", error);
     }
   };
   
-  // Twitter connection handler
   const connectTwitter = async () => {
     try {
       setLoading('twitter');
@@ -102,7 +99,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       if (!currentUserId) return;
       
-      // Call our edge function to get Twitter auth URL
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'twitter',
@@ -115,20 +111,16 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       const { url, state } = data;
       
-      // Open Twitter auth in popup
       const popup = window.open(url, 'twitterAuthPopup', 'width=800,height=600');
       
-      // Poll for popup closure and handle callback
       const pollInterval = setInterval(async () => {
         try {
           if (!popup || popup.closed) {
             clearInterval(pollInterval);
             
-            // Refresh connected accounts after popup closes
             await checkConnectedAccounts();
             setLoading(null);
             
-            // If Twitter is now connected, show success toast
             if (!connected.twitter && (await isTwitterConnected())) {
               toast({
                 title: "Twitter Connected",
@@ -156,7 +148,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
   
-  // LinkedIn connection handler
   const connectLinkedIn = async () => {
     try {
       setLoading('linkedin');
@@ -164,7 +155,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       if (!currentUserId) return;
       
-      // Call our edge function to get LinkedIn auth URL
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'linkedin',
@@ -177,20 +167,16 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       const { url, state } = data;
       
-      // Open LinkedIn auth in popup
       const popup = window.open(url, 'linkedinAuthPopup', 'width=800,height=600');
       
-      // Poll for popup closure and handle callback
       const pollInterval = setInterval(async () => {
         try {
           if (!popup || popup.closed) {
             clearInterval(pollInterval);
             
-            // Refresh connected accounts after popup closes
             await checkConnectedAccounts();
             setLoading(null);
             
-            // If LinkedIn is now connected, show success toast
             if (!connected.linkedin && (await isLinkedInConnected())) {
               toast({
                 title: "LinkedIn Connected",
@@ -218,7 +204,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  // Facebook connection handler
   const connectFacebook = async () => {
     try {
       setLoading('facebook');
@@ -226,7 +211,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       if (!currentUserId) return;
       
-      // Call our edge function to get Facebook auth URL
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'facebook',
@@ -240,21 +224,17 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       const { url, state } = data;
       console.log("Got Facebook auth URL:", url);
       
-      // Open Facebook auth in popup
       const popup = window.open(url, 'facebookAuthPopup', 'width=800,height=600');
       
-      // Poll for popup closure and handle callback
       const pollInterval = setInterval(async () => {
         try {
           if (!popup || popup.closed) {
             clearInterval(pollInterval);
             console.log("Facebook popup closed, checking connection status");
             
-            // Refresh connected accounts after popup closes
             await checkConnectedAccounts();
             setLoading(null);
             
-            // If Facebook is now connected, show success toast
             const isFBConnected = await isFacebookConnected();
             console.log("Is Facebook connected:", isFBConnected);
             
@@ -285,7 +265,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  // Instagram connection handler
   const connectInstagram = async () => {
     try {
       setLoading('instagram');
@@ -293,7 +272,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       
       if (!currentUserId) return;
       
-      // Call our edge function to get Instagram auth URL
       const { data, error } = await supabase.functions.invoke('social-auth', {
         body: {
           platform: 'instagram',
@@ -307,21 +285,17 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       const { url, state } = data;
       console.log("Got Instagram auth URL:", url);
       
-      // Open Instagram auth in popup
       const popup = window.open(url, 'instagramAuthPopup', 'width=800,height=600');
       
-      // Poll for popup closure and handle callback
       const pollInterval = setInterval(async () => {
         try {
           if (!popup || popup.closed) {
             clearInterval(pollInterval);
             console.log("Instagram popup closed, checking connection status");
             
-            // Refresh connected accounts after popup closes
             await checkConnectedAccounts();
             setLoading(null);
             
-            // If Instagram is now connected, show success toast
             const isIGConnected = await isInstagramConnected();
             console.log("Is Instagram connected:", isIGConnected);
             
@@ -352,7 +326,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
   
-  // Check if Twitter is connected
   const isTwitterConnected = async () => {
     try {
       if (!currentUserId) return false;
@@ -373,7 +346,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
   
-  // Check if LinkedIn is connected
   const isLinkedInConnected = async () => {
     try {
       if (!currentUserId) return false;
@@ -394,7 +366,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  // Check if Facebook is connected
   const isFacebookConnected = async () => {
     try {
       if (!currentUserId) return false;
@@ -416,7 +387,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  // Check if Instagram is connected
   const isInstagramConnected = async () => {
     try {
       if (!currentUserId) return false;
@@ -438,7 +408,42 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
   
-  // Handle dialog open/close
+  const handleDisconnect = async (platform: string) => {
+    try {
+      setLoading(platform);
+      
+      const { data, error } = await supabase.functions.invoke('disconnect-social', {
+        body: {
+          userId: currentUserId,
+          provider: platform
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Disconnected`,
+        description: `Your ${platform} account has been successfully disconnected.`
+      });
+      
+      await checkConnectedAccounts();
+      
+      if (onAccountDisconnected) {
+        onAccountDisconnected(platform);
+      }
+      
+    } catch (error: any) {
+      console.error(`Error disconnecting ${platform}:`, error);
+      toast({
+        title: "Disconnection Failed",
+        description: error.message || `Failed to disconnect ${platform}. Please try again.`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+  
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
@@ -447,16 +452,61 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
   
-  // Custom trigger or default button
   const dialogTrigger = trigger || (
     <Button variant="outline" className="gap-2">
       Connect Accounts
     </Button>
   );
 
-  // If isDialog is true, don't render the Dialog wrapper
+  const renderSocialAccount = (platform: string, name: string, icon: React.ReactNode) => {
+    const isConnected = connected[platform];
+    const accountName = connectedAccountNames[platform];
+    
+    return (
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          {icon}
+          <div>
+            <h3 className="font-medium">{name}</h3>
+            <p className="text-sm text-muted-foreground">
+              {isConnected 
+                ? `Connected as ${accountName}` 
+                : 'Not connected'}
+            </p>
+          </div>
+        </div>
+        
+        {loading === platform ? (
+          <div className="w-24 flex justify-center">
+            <LoadingDots color="#10b981" />
+          </div>
+        ) : isConnected ? (
+          <Button 
+            variant="outline" 
+            className="text-gray-600 border-gray-300 hover:bg-gray-100 hover:text-gray-800"
+            onClick={() => handleDisconnect(platform)}
+          >
+            Disconnect
+          </Button>
+        ) : (
+          <Button 
+            className="bg-[#689675] hover:bg-[#85A88EA8]"
+            onClick={() => {
+              if (platform === 'twitter') connectTwitter();
+              if (platform === 'linkedin') connectLinkedIn();
+              if (platform === 'facebook') connectFacebook();
+              if (platform === 'instagram') connectInstagram();
+            }}
+          >
+            Connect
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   return isDialog ? (
-    <div className="flex flex-col gap-4 mt-4">
+    <div className="space-y-6">
       {error && (
         <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-700 rounded-md">
           <AlertCircle className="h-4 w-4" />
@@ -464,132 +514,76 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         </div>
       )}
       
-      {/* Twitter Connection Button */}
-      <Button
-        variant="outline"
-        className={`w-full justify-start gap-3 py-6 ${connected.twitter ? 'border-green-500 bg-green-50' : ''}`}
-        disabled={loading !== null}
-        onClick={connectTwitter}
-      >
-        {loading === 'twitter' ? (
-          <LoadingDots color="#10b981" />
-        ) : (
-          <>
-            <div className="bg-[#1DA1F2] rounded-full p-2 text-white">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Connect Your Social Media Accounts</h2>
+        <p className="text-muted-foreground mb-6">
+          Link your accounts to publish content across multiple platforms at once.
+        </p>
+        
+        <div className="space-y-6">
+          {renderSocialAccount(
+            'twitter', 
+            'Twitter / X', 
+            <div className="text-[#1DA1F2]">
               <Twitter className="h-5 w-5" />
             </div>
-            <div className="flex flex-col items-start">
-              <span className="font-semibold">{connected.twitter ? 'Connected to Twitter' : 'Connect Twitter'}</span>
-              <span className="text-xs text-muted-foreground">
-                {connected.twitter ? 'Your Twitter account is connected' : 'Connect your Twitter account to post content'}
-              </span>
-            </div>
-            {connected.twitter && (
-              <div className="ml-auto bg-green-100 rounded-full p-1">
-                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                </svg>
-              </div>
-            )}
-          </>
-        )}
-      </Button>
-      
-      {/* LinkedIn Connection Button */}
-      <Button
-        variant="outline"
-        className={`w-full justify-start gap-3 py-6 ${connected.linkedin ? 'border-green-500 bg-green-50' : ''}`}
-        disabled={loading !== null}
-        onClick={connectLinkedIn}
-      >
-        {loading === 'linkedin' ? (
-          <LoadingDots color="#10b981" />
-        ) : (
-          <>
-            <div className="bg-[#0A66C2] rounded-full p-2 text-white">
+          )}
+          
+          {renderSocialAccount(
+            'linkedin', 
+            'LinkedIn', 
+            <div className="text-[#0A66C2]">
               <Linkedin className="h-5 w-5" />
             </div>
-            <div className="flex flex-col items-start">
-              <span className="font-semibold">{connected.linkedin ? 'Connected to LinkedIn' : 'Connect LinkedIn'}</span>
-              <span className="text-xs text-muted-foreground">
-                {connected.linkedin ? 'Your LinkedIn account is connected' : 'Connect your LinkedIn account to post content'}
-              </span>
-            </div>
-            {connected.linkedin && (
-              <div className="ml-auto bg-green-100 rounded-full p-1">
-                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                </svg>
-              </div>
-            )}
-          </>
-        )}
-      </Button>
-
-      {/* Facebook Connection Button */}
-      <Button
-        variant="outline"
-        className={`w-full justify-start gap-3 py-6 ${connected.facebook ? 'border-green-500 bg-green-50' : ''}`}
-        disabled={loading !== null}
-        onClick={connectFacebook}
-      >
-        {loading === 'facebook' ? (
-          <LoadingDots color="#10b981" />
-        ) : (
-          <>
-            <div className="bg-[#4267B2] rounded-full p-2 text-white">
+          )}
+          
+          {renderSocialAccount(
+            'facebook', 
+            'Facebook', 
+            <div className="text-[#4267B2]">
               <Facebook className="h-5 w-5" />
             </div>
-            <div className="flex flex-col items-start">
-              <span className="font-semibold">{connected.facebook ? 'Connected to Facebook' : 'Connect Facebook'}</span>
-              <span className="text-xs text-muted-foreground">
-                {connected.facebook ? 'Your Facebook page is connected' : 'Connect your Facebook page to post content'}
-              </span>
+          )}
+          
+          {renderSocialAccount(
+            'instagram', 
+            'Instagram', 
+            <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white p-1 rounded-full">
+              <Instagram className="h-3 w-3" />
             </div>
-            {connected.facebook && (
-              <div className="ml-auto bg-green-100 rounded-full p-1">
-                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                </svg>
+          )}
+          
+          <div className="pt-4 border-t mt-4">
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="mt-0.5"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              <div>
+                <p>Your account data is secure</p>
+                <p className="mt-1">We use official APIs and never store your passwords. Connect once and publish everywhere.</p>
               </div>
-            )}
-          </>
-        )}
-      </Button>
-
-      {/* Instagram Connection Button */}
-      <Button
-        variant="outline"
-        className={`w-full justify-start gap-3 py-6 ${connected.instagram ? 'border-green-500 bg-green-50' : ''}`}
-        disabled={loading !== null}
-        onClick={connectInstagram}
-      >
-        {loading === 'instagram' ? (
-          <LoadingDots color="#10b981" />
-        ) : (
-          <>
-            <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-2 text-white">
-              <Instagram className="h-5 w-5" />
             </div>
-            <div className="flex flex-col items-start">
-              <span className="font-semibold">{connected.instagram ? 'Connected to Instagram' : 'Connect Instagram'}</span>
-              <span className="text-xs text-muted-foreground">
-                {connected.instagram ? 'Your Instagram Business account is connected' : 'Connect your Instagram Business account to post content'}
-              </span>
+            
+            <div className="mt-4 text-sm">
+              Need help? <a href="#" className="text-[#689675] hover:underline">View our guide</a>
             </div>
-            {connected.instagram && (
-              <div className="ml-auto bg-green-100 rounded-full p-1">
-                <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                </svg>
-              </div>
-            )}
-          </>
-        )}
-      </Button>
+          </div>
+        </div>
+      </div>
       
-      <div className="text-xs text-muted-foreground mt-2">
-        <p>Connect your social media accounts to post and schedule content directly from the platform.</p>
+      <div className="flex justify-end mt-6">
+        <Button onClick={onClose} variant="outline" className="mr-2">Done</Button>
       </div>
     </div>
   ) : (
@@ -597,145 +591,83 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       <DialogTrigger asChild>
         {dialogTrigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="text-center">Connect Your Social Accounts</DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex flex-col gap-4 mt-4">
+      <DialogContent className="sm:max-w-md md:max-w-lg">
+        <div className="p-4">
+          <h2 className="text-2xl font-bold mb-2">Connect Your Social Media Accounts</h2>
+          <p className="text-muted-foreground mb-6">
+            Link your accounts to publish content across multiple platforms at once.
+          </p>
+          
           {error && (
-            <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-700 rounded-md">
+            <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-700 rounded-md mb-4">
               <AlertCircle className="h-4 w-4" />
               <span>{error}</span>
             </div>
           )}
           
-          {/* Twitter Connection Button */}
-          <Button
-            variant="outline"
-            className={`w-full justify-start gap-3 py-6 ${connected.twitter ? 'border-green-500 bg-green-50' : ''}`}
-            disabled={loading !== null}
-            onClick={connectTwitter}
-          >
-            {loading === 'twitter' ? (
-              <LoadingDots color="#10b981" />
-            ) : (
-              <>
-                <div className="bg-[#1DA1F2] rounded-full p-2 text-white">
-                  <Twitter className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="font-semibold">{connected.twitter ? 'Connected to Twitter' : 'Connect Twitter'}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {connected.twitter ? 'Your Twitter account is connected' : 'Connect your Twitter account to post content'}
-                  </span>
-                </div>
-                {connected.twitter && (
-                  <div className="ml-auto bg-green-100 rounded-full p-1">
-                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                    </svg>
-                  </div>
-                )}
-              </>
+          <div className="space-y-6">
+            {renderSocialAccount(
+              'twitter', 
+              'Twitter / X', 
+              <div className="text-[#1DA1F2]">
+                <Twitter className="h-5 w-5" />
+              </div>
             )}
-          </Button>
+            
+            {renderSocialAccount(
+              'linkedin', 
+              'LinkedIn', 
+              <div className="text-[#0A66C2]">
+                <Linkedin className="h-5 w-5" />
+              </div>
+            )}
+            
+            {renderSocialAccount(
+              'facebook', 
+              'Facebook', 
+              <div className="text-[#4267B2]">
+                <Facebook className="h-5 w-5" />
+              </div>
+            )}
+            
+            {renderSocialAccount(
+              'instagram', 
+              'Instagram', 
+              <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white p-1 rounded-full">
+                <Instagram className="h-3 w-3" />
+              </div>
+            )}
+            
+            <div className="pt-4 border-t mt-4">
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="20" 
+                  height="20" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="mt-0.5"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <div>
+                  <p>Your account data is secure</p>
+                  <p className="mt-1">We use official APIs and never store your passwords. Connect once and publish everywhere.</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 text-sm">
+                Need help? <a href="#" className="text-[#689675] hover:underline">View our guide</a>
+              </div>
+            </div>
+          </div>
           
-          {/* LinkedIn Connection Button */}
-          <Button
-            variant="outline"
-            className={`w-full justify-start gap-3 py-6 ${connected.linkedin ? 'border-green-500 bg-green-50' : ''}`}
-            disabled={loading !== null}
-            onClick={connectLinkedIn}
-          >
-            {loading === 'linkedin' ? (
-              <LoadingDots color="#10b981" />
-            ) : (
-              <>
-                <div className="bg-[#0A66C2] rounded-full p-2 text-white">
-                  <Linkedin className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="font-semibold">{connected.linkedin ? 'Connected to LinkedIn' : 'Connect LinkedIn'}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {connected.linkedin ? 'Your LinkedIn account is connected' : 'Connect your LinkedIn account to post content'}
-                  </span>
-                </div>
-                {connected.linkedin && (
-                  <div className="ml-auto bg-green-100 rounded-full p-1">
-                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                    </svg>
-                  </div>
-                )}
-              </>
-            )}
-          </Button>
-
-          {/* Facebook Connection Button */}
-          <Button
-            variant="outline"
-            className={`w-full justify-start gap-3 py-6 ${connected.facebook ? 'border-green-500 bg-green-50' : ''}`}
-            disabled={loading !== null}
-            onClick={connectFacebook}
-          >
-            {loading === 'facebook' ? (
-              <LoadingDots color="#10b981" />
-            ) : (
-              <>
-                <div className="bg-[#4267B2] rounded-full p-2 text-white">
-                  <Facebook className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="font-semibold">{connected.facebook ? 'Connected to Facebook' : 'Connect Facebook'}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {connected.facebook ? 'Your Facebook page is connected' : 'Connect your Facebook page to post content'}
-                  </span>
-                </div>
-                {connected.facebook && (
-                  <div className="ml-auto bg-green-100 rounded-full p-1">
-                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                    </svg>
-                  </div>
-                )}
-              </>
-            )}
-          </Button>
-
-          {/* Instagram Connection Button */}
-          <Button
-            variant="outline"
-            className={`w-full justify-start gap-3 py-6 ${connected.instagram ? 'border-green-500 bg-green-50' : ''}`}
-            disabled={loading !== null}
-            onClick={connectInstagram}
-          >
-            {loading === 'instagram' ? (
-              <LoadingDots color="#10b981" />
-            ) : (
-              <>
-                <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-2 text-white">
-                  <Instagram className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="font-semibold">{connected.instagram ? 'Connected to Instagram' : 'Connect Instagram'}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {connected.instagram ? 'Your Instagram Business account is connected' : 'Connect your Instagram Business account to post content'}
-                  </span>
-                </div>
-                {connected.instagram && (
-                  <div className="ml-auto bg-green-100 rounded-full p-1">
-                    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                    </svg>
-                  </div>
-                )}
-              </>
-            )}
-          </Button>
-          
-          <div className="text-xs text-muted-foreground mt-2">
-            <p>Connect your social media accounts to post and schedule content directly from the platform.</p>
+          <div className="flex justify-end mt-6">
+            <Button onClick={handleOpenChange.bind(null, false)} variant="outline">Done</Button>
           </div>
         </div>
       </DialogContent>
