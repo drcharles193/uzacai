@@ -87,6 +87,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         }
       });
       
+      console.log("Connected accounts state:", newConnectionState);
       setConnected(newConnectionState);
     } catch (error: any) {
       console.error("Error checking connected accounts:", error);
@@ -237,6 +238,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       if (error) throw error;
       
       const { url, state } = data;
+      console.log("Got Facebook auth URL:", url);
       
       // Open Facebook auth in popup
       const popup = window.open(url, 'facebookAuthPopup', 'width=800,height=600');
@@ -246,13 +248,17 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         try {
           if (!popup || popup.closed) {
             clearInterval(pollInterval);
+            console.log("Facebook popup closed, checking connection status");
             
             // Refresh connected accounts after popup closes
             await checkConnectedAccounts();
             setLoading(null);
             
             // If Facebook is now connected, show success toast
-            if (!connected.facebook && (await isFacebookConnected())) {
+            const isFBConnected = await isFacebookConnected();
+            console.log("Is Facebook connected:", isFBConnected);
+            
+            if (!connected.facebook && isFBConnected) {
               toast({
                 title: "Facebook Connected",
                 description: "Your Facebook page has been successfully connected."
@@ -299,6 +305,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       if (error) throw error;
       
       const { url, state } = data;
+      console.log("Got Instagram auth URL:", url);
       
       // Open Instagram auth in popup
       const popup = window.open(url, 'instagramAuthPopup', 'width=800,height=600');
@@ -308,13 +315,17 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         try {
           if (!popup || popup.closed) {
             clearInterval(pollInterval);
+            console.log("Instagram popup closed, checking connection status");
             
             // Refresh connected accounts after popup closes
             await checkConnectedAccounts();
             setLoading(null);
             
             // If Instagram is now connected, show success toast
-            if (!connected.instagram && (await isInstagramConnected())) {
+            const isIGConnected = await isInstagramConnected();
+            console.log("Is Instagram connected:", isIGConnected);
+            
+            if (!connected.instagram && isIGConnected) {
               toast({
                 title: "Instagram Connected",
                 description: "Your Instagram Business account has been successfully connected."
@@ -397,6 +408,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
       if (error) throw error;
       
+      console.log("Facebook connection check result:", data);
       return data && data.length > 0;
     } catch (error) {
       console.error("Error checking Facebook connection:", error);
@@ -418,6 +430,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
       if (error) throw error;
       
+      console.log("Instagram connection check result:", data);
       return data && data.length > 0;
     } catch (error) {
       console.error("Error checking Instagram connection:", error);

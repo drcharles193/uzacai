@@ -42,8 +42,8 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
 
   // Function to get platform-specific styles and status
   const getPlatformInfo = (platform: string) => {
-    // Default to implemented for Twitter and LinkedIn
-    let isImplemented = platform === 'twitter' || platform === 'linkedin';
+    // All platforms are now implemented
+    let isImplemented = true; 
     let bgColor = '';
     let icon = null;
     
@@ -65,7 +65,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
         );
         break;
       case 'facebook':
-        isImplemented = true; // Facebook is now implemented
         bgColor = 'bg-[#4267B2]';
         icon = (
           <svg fill="white" viewBox="0 0 24 24" width="14" height="14">
@@ -74,7 +73,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
         );
         break;
       case 'instagram':
-        isImplemented = true; // Instagram is now implemented
         bgColor = 'bg-[#E1306C]';
         icon = (
           <svg fill="white" viewBox="0 0 24 24" width="14" height="14">

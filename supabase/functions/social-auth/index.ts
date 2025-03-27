@@ -311,6 +311,8 @@ async function exchangeFacebookCode(code: string) {
     params.append('redirect_uri', FACEBOOK_REDIRECT_URI);
     params.append('code', code);
     
+    console.log("Facebook exchange params:", params.toString());
+    
     const response = await fetch(`${tokenUrl}?${params.toString()}`, {
       method: 'GET',
       headers: {
@@ -318,13 +320,15 @@ async function exchangeFacebookCode(code: string) {
       }
     });
     
+    const responseText = await response.text();
+    console.log(`Facebook token exchange response status: ${response.status}`);
+    console.log(`Facebook token exchange response: ${responseText}`);
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Facebook token exchange error:', errorText);
-      throw new Error(`Facebook API error: ${response.status} ${errorText}`);
+      throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
     }
     
-    const tokens = await response.json();
+    const tokens = JSON.parse(responseText);
     return tokens;
   } catch (error) {
     console.error('Error exchanging Facebook code for tokens:', error);
@@ -344,13 +348,15 @@ async function getFacebookPages(accessToken: string) {
       }
     });
     
+    const responseText = await response.text();
+    console.log(`Facebook pages response status: ${response.status}`);
+    console.log(`Facebook pages response: ${responseText}`);
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Facebook pages error:', errorText);
-      throw new Error(`Facebook API error: ${response.status} ${errorText}`);
+      throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
     }
     
-    const pagesData = await response.json();
+    const pagesData = JSON.parse(responseText);
     return pagesData.data || [];
   } catch (error) {
     console.error('Error fetching Facebook pages:', error);
@@ -370,13 +376,15 @@ async function getInstagramBusinessAccount(pageId: string, pageAccessToken: stri
       }
     });
     
+    const responseText = await response.text();
+    console.log(`Instagram business account response status: ${response.status}`);
+    console.log(`Instagram business account response: ${responseText}`);
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Instagram business account error:', errorText);
-      throw new Error(`Instagram API error: ${response.status} ${errorText}`);
+      throw new Error(`Instagram API error: ${response.status} - ${responseText}`);
     }
     
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     return data.instagram_business_account;
   } catch (error) {
     console.error('Error fetching Instagram business account:', error);
@@ -401,6 +409,8 @@ async function exchangeInstagramCode(code: string) {
     params.append('redirect_uri', INSTAGRAM_REDIRECT_URI);
     params.append('code', code);
     
+    console.log("Instagram exchange params:", params.toString());
+    
     const response = await fetch(`${tokenUrl}?${params.toString()}`, {
       method: 'GET',
       headers: {
@@ -408,13 +418,15 @@ async function exchangeInstagramCode(code: string) {
       }
     });
     
+    const responseText = await response.text();
+    console.log(`Instagram token exchange response status: ${response.status}`);
+    console.log(`Instagram token exchange response: ${responseText}`);
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Instagram token exchange error:', errorText);
-      throw new Error(`Instagram API error: ${response.status} ${errorText}`);
+      throw new Error(`Instagram API error: ${response.status} - ${responseText}`);
     }
     
-    const tokens = await response.json();
+    const tokens = JSON.parse(responseText);
     return tokens;
   } catch (error) {
     console.error('Error exchanging Instagram code for tokens:', error);
@@ -434,6 +446,7 @@ serve(async (req) => {
     const { platform, action, code, userId } = await req.json();
     
     console.log(`Received request for ${platform}, action: ${action}`);
+    console.log(`User ID: ${userId || 'not provided'}`);
     
     if (!platform) {
       throw new Error("Platform is required");
@@ -478,6 +491,9 @@ serve(async (req) => {
       if (!userId) {
         throw new Error("User ID is required for callback");
       }
+      
+      console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
+      console.log(`Authorization code: ${code.substring(0, 10)}...`);
       
       let result;
       let accountName: string;
@@ -565,7 +581,7 @@ serve(async (req) => {
             page_id: selectedPage.id,
             page_name: selectedPage.name,
             page_category: selectedPage.category,
-            available_pages: pages.map(p => ({ id: p.id, name: p.name }))
+            available_pages: pages.map((p: any) => ({ id: p.id, name: p.name }))
           };
           
           result = { accountName, page: selectedPage, allPages: pages };
@@ -621,7 +637,7 @@ serve(async (req) => {
             page_id: selectedPage.id,
             page_name: selectedPage.name,
             instagram_account_id: instagramAccount.id,
-            available_pages: pages.map(p => ({ id: p.id, name: p.name }))
+            available_pages: pages.map((p: any) => ({ id: p.id, name: p.name }))
           };
           
           result = { accountName, instagram: instagramAccount, page: selectedPage };
@@ -644,8 +660,12 @@ serve(async (req) => {
         throw new Error(`Database error: ${queryError.message}`);
       }
       
+      console.log(`Found ${existingAccounts?.length || 0} existing accounts for platform ${platform}`);
+      
       // Upsert - either update existing or insert new
       if (existingAccounts && existingAccounts.length > 0) {
+        console.log(`Updating existing ${platform} account for user ${userId}`);
+        
         const { error: updateError } = await supabase
           .from('social_accounts')
           .update({
@@ -662,6 +682,8 @@ serve(async (req) => {
           throw new Error(`Database update error: ${updateError.message}`);
         }
       } else {
+        console.log(`Creating new ${platform} account for user ${userId}`);
+        
         const accountType = platform === 'facebook' 
           ? 'page'
           : platform === 'instagram' 
@@ -688,6 +710,8 @@ serve(async (req) => {
           throw new Error(`Database insert error: ${insertError.message}`);
         }
       }
+      
+      console.log(`Successfully processed ${platform} account for user ${userId}`);
       
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
