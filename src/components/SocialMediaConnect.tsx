@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -23,7 +24,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Facebook, Instagram, Youtube, Twitter, Linkedin } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, X as XIcon, Twitter, Linkedin } from 'lucide-react';
 
 interface SocialPlatform {
   id: string;
@@ -54,8 +55,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [twitterWindow, setTwitterWindow] = useState<Window | null>(null);
   const [linkedinWindow, setLinkedinWindow] = useState<Window | null>(null);
-  const [facebookWindow, setFacebookWindow] = useState<Window | null>(null);
-  const [instagramWindow, setInstagramWindow] = useState<Window | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
@@ -74,93 +73,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       color: '#0A66C2',
       icon: (
         <Linkedin className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
-      id: 'facebook',
-      name: 'Facebook',
-      color: '#4267B2',
-      icon: (
-        <Facebook className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
-      id: 'instagram',
-      name: 'Instagram',
-      color: '#E1306C',
-      icon: (
-        <Instagram className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
-      id: 'youtube',
-      name: 'YouTube',
-      color: '#FF0000',
-      icon: (
-        <Youtube className="w-5 h-5" />
-      ),
-      connected: false
-    },
-    {
-      id: 'pinterest',
-      name: 'Pinterest',
-      color: '#E60023',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-        </svg>
-      ),
-      connected: false
-    },
-    {
-      id: 'tiktok',
-      name: 'TikTok',
-      color: '#000000',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M9 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>
-          <path d="M15 8a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
-          <path d="M15 8v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-4a4 4 0 0 1 4-4h8"></path>
-        </svg>
-      ),
-      connected: false
-    },
-    {
-      id: 'threads',
-      name: 'Threads',
-      color: '#000000',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M6 12a6 6 0 0 0 12 0v-4a6 6 0 0 0-12 0v4z"></path>
-          <path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6"></path>
-          <path d="M12 22v-6"></path>
-        </svg>
-      ),
-      connected: false
-    },
-    {
-      id: 'google',
-      name: 'Google',
-      color: '#4285F4',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-          <path d="m2 12 10-7v14l-10-7" />
-          <path d="M12 5v14" />
-          <path d="M22 12H12" />
-        </svg>
-      ),
-      connected: false
-    },
-    {
-      id: 'facebook_page',
-      name: 'Facebook Page',
-      color: '#36465D',
-      icon: (
-        <Facebook className="w-5 h-5" />
       ),
       connected: false
     }
@@ -223,60 +135,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           setIsConnecting(null);
         }
       }
-      else if (event.data && event.data.type === 'facebook-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('[SocialMediaConnect] Received Facebook auth code:', code);
-        
-        if (code) {
-          completeFacebookConnection(code, state);
-        } else {
-          toast({
-            title: "Facebook Connection Failed",
-            description: "No Facebook code received.",
-            variant: "destructive"
-          });
-          setIsConnecting(null);
-        }
-      }
-      else if (event.data && event.data.type === 'facebook-oauth-callback-error') {
-        const { error, errorDescription } = event.data;
-        console.error('[Facebook] Auth error:', error, errorDescription);
-        
-        toast({
-          title: "Facebook Connection Failed",
-          description: errorDescription || "Failed to connect Facebook account.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError('facebook');
-      }
-      else if (event.data && event.data.type === 'instagram-oauth-callback') {
-        const { code, state } = event.data;
-        console.log('[SocialMediaConnect] Received Instagram auth code:', code);
-        
-        if (code) {
-          completeInstagramConnection(code, state);
-        } else {
-          toast({
-            title: "Instagram Connection Failed",
-            description: "No Instagram code received.",
-            variant: "destructive"
-          });
-          setIsConnecting(null);
-        }
-      }
-      else if (event.data && event.data.type === 'instagram-oauth-callback-error') {
-        const { error, errorDescription } = event.data;
-        console.error('[Instagram] Auth error:', error, errorDescription);
-        
-        toast({
-          title: "Instagram Connection Failed",
-          description: errorDescription || "Failed to connect Instagram account.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError('instagram');
-      }
     };
 
     window.addEventListener('message', handleOAuthCallback);
@@ -288,12 +146,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       }
       if (linkedinWindow && !linkedinWindow.closed) {
         linkedinWindow.close();
-      }
-      if (facebookWindow && !facebookWindow.closed) {
-        facebookWindow.close();
-      }
-      if (instagramWindow && !instagramWindow.closed) {
-        instagramWindow.close();
       }
     };
   }, []);
@@ -439,156 +291,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
     }
   };
 
-  const completeFacebookConnection = async (code: string, state: string) => {
-    try {
-      setIsConnecting('facebook');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError('facebook');
-        return;
-      }
-      
-      console.log("[SocialMediaConnect] Completing Facebook connection with code:", code.substring(0, 5) + "...");
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'facebook',
-          action: 'callback',
-          code: code,
-          userId: session.user.id
-        }
-      });
-      
-      console.log("[SocialMediaConnect] Facebook callback response:", response);
-      
-      if (response.error) {
-        console.error("Facebook callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect Facebook account");
-      }
-      
-      setPlatforms(platforms.map(platform => {
-        if (platform.id === 'facebook') {
-          return { 
-            ...platform, 
-            connected: true,
-            accountName: response.data.accountName || 'Facebook Account'
-          };
-        }
-        return platform;
-      }));
-      
-      setConnectionSuccess('facebook');
-      
-      toast({
-        title: "Facebook Connected",
-        description: `Your Facebook account has been connected successfully.`
-      });
-      
-    } catch (error) {
-      console.error("Error connecting Facebook:", error);
-      setConnectionError('facebook');
-      toast({
-        title: "Facebook Connection Failed",
-        description: error.message || "Failed to connect Facebook account. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsConnecting(null);
-      
-      setTimeout(() => {
-        setConnectionSuccess(null);
-        setConnectionError(null);
-      }, 3000);
-      
-      if (facebookWindow && !facebookWindow.closed) {
-        facebookWindow.close();
-        setFacebookWindow(null);
-      }
-    }
-  };
-
-  const completeInstagramConnection = async (code: string, state: string) => {
-    try {
-      setIsConnecting('instagram');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to connect social accounts.",
-          variant: "destructive"
-        });
-        setIsConnecting(null);
-        setConnectionError('instagram');
-        return;
-      }
-      
-      console.log("[SocialMediaConnect] Completing Instagram connection with code:", code.substring(0, 5) + "...");
-      
-      const response = await supabase.functions.invoke('social-auth', {
-        body: {
-          platform: 'instagram',
-          action: 'callback',
-          code: code,
-          userId: session.user.id
-        }
-      });
-      
-      console.log("[SocialMediaConnect] Instagram callback response:", response);
-      
-      if (response.error) {
-        console.error("Instagram callback error:", response.error);
-        throw new Error(response.error.message || "Failed to connect Instagram account");
-      }
-      
-      setPlatforms(platforms.map(platform => {
-        if (platform.id === 'instagram') {
-          return { 
-            ...platform, 
-            connected: true,
-            accountName: response.data.accountName || 'Instagram Account'
-          };
-        }
-        return platform;
-      }));
-      
-      setConnectionSuccess('instagram');
-      
-      toast({
-        title: "Instagram Connected",
-        description: `Your Instagram account has been connected successfully.`
-      });
-      
-    } catch (error) {
-      console.error("Error connecting Instagram:", error);
-      setConnectionError('instagram');
-      toast({
-        title: "Instagram Connection Failed",
-        description: error.message || "Failed to connect Instagram account. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsConnecting(null);
-      
-      setTimeout(() => {
-        setConnectionSuccess(null);
-        setConnectionError(null);
-      }, 3000);
-      
-      if (instagramWindow && !instagramWindow.closed) {
-        instagramWindow.close();
-        setInstagramWindow(null);
-      }
-    }
-  };
-
   const connectPlatform = async (id: string) => {
     try {
       setIsConnecting(id);
@@ -685,104 +387,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         
         return;
       }
-      else if (id === 'facebook') {
-        console.log("Starting Facebook OAuth flow...");
-        
-        const response = await supabase.functions.invoke('social-auth', {
-          body: {
-            platform: 'facebook',
-            action: 'auth-url',
-            userId: session.user.id
-          }
-        });
-        
-        console.log("Facebook auth response:", response);
-        
-        if (response.error) {
-          throw new Error(response.error.message || "Failed to start Facebook connection");
-        }
-        
-        if (!response.data?.authUrl) {
-          throw new Error("No Facebook auth URL returned");
-        }
-        
-        const width = 600, height = 600;
-        const left = window.innerWidth / 2 - width / 2;
-        const top = window.innerHeight / 2 - height / 2;
-        
-        const facebookPopup = window.open(
-          response.data.authUrl,
-          'facebook-oauth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-        
-        if (!facebookPopup) {
-          throw new Error("Could not open Facebook auth popup. Please disable popup blocker.");
-        }
-        
-        setFacebookWindow(facebookPopup);
-        
-        const checkClosed = setInterval(() => {
-          if (facebookPopup.closed) {
-            clearInterval(checkClosed);
-            console.log("[SocialMediaConnect] Facebook popup was closed");
-            if (isConnecting === 'facebook') {
-              setIsConnecting(null);
-            }
-          }
-        }, 500);
-        
-        return;
-      }
-      else if (id === 'instagram') {
-        console.log("Starting Instagram OAuth flow...");
-        
-        const response = await supabase.functions.invoke('social-auth', {
-          body: {
-            platform: 'instagram',
-            action: 'auth-url',
-            userId: session.user.id
-          }
-        });
-        
-        console.log("Instagram auth response:", response);
-        
-        if (response.error) {
-          throw new Error(response.error.message || "Failed to start Instagram connection");
-        }
-        
-        if (!response.data?.authUrl) {
-          throw new Error("No Instagram auth URL returned");
-        }
-        
-        const width = 600, height = 600;
-        const left = window.innerWidth / 2 - width / 2;
-        const top = window.innerHeight / 2 - height / 2;
-        
-        const instagramPopup = window.open(
-          response.data.authUrl,
-          'instagram-oauth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-        
-        if (!instagramPopup) {
-          throw new Error("Could not open Instagram auth popup. Please disable popup blocker.");
-        }
-        
-        setInstagramWindow(instagramPopup);
-        
-        const checkClosed = setInterval(() => {
-          if (instagramPopup.closed) {
-            clearInterval(checkClosed);
-            console.log("[SocialMediaConnect] Instagram popup was closed");
-            if (isConnecting === 'instagram') {
-              setIsConnecting(null);
-            }
-          }
-        }, 500);
-        
-        return;
-      }
       else {
         const response = await supabase.functions.invoke('social-auth', {
           body: JSON.stringify({
@@ -812,7 +416,6 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
           title: "Account Connected",
           description: `Your ${platforms.find(p => p.id === id)?.name} account has been connected successfully.`
         });
-        
       }
       
     } catch (error: any) {
@@ -824,7 +427,7 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         variant: "destructive"
       });
     } finally {
-      if (id !== 'twitter' && id !== 'linkedin' && id !== 'facebook' && id !== 'instagram') {
+      if (id !== 'twitter' && id !== 'linkedin') {
         setIsConnecting(null);
         
         setTimeout(() => {
