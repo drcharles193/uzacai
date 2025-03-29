@@ -72,30 +72,6 @@ export type Database = {
         }
         Relationships: []
       }
-      secrets: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          updated_at: string | null
-          value: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-          updated_at?: string | null
-          value: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          updated_at?: string | null
-          value?: string
-        }
-        Relationships: []
-      }
       social_accounts: {
         Row: {
           access_token: string | null

@@ -1,11 +1,11 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Image, Link, Upload, Video, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import AIPostGenerator from '../AIPostGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { FileImage, FileVideo } from 'lucide-react';
 
 interface PostContentEditorProps {
   postContent: string;
@@ -27,24 +27,15 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
   selectedAccounts
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [mediaUrl, setMediaUrl] = useState('');
 
   const handleContentGenerated = (content: string) => {
     setPostContent(content);
   };
 
-  const handlePhotoUpload = () => {
+  const handleDeviceUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    }
-  };
-  
-  const handleVideoUpload = () => {
-    if (videoInputRef.current) {
-      videoInputRef.current.click();
     }
   };
 
@@ -56,98 +47,27 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
 
     const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
     setMediaPreviewUrls(prev => [...prev, ...newPreviewUrls]);
-    
     toast({
       title: "Media Added",
       description: `Added ${newFiles.length} media files to your post`
     });
   };
 
-  const handleAddMediaUrl = () => {
-    if (!mediaUrl.trim()) {
-      toast({
-        title: "Empty URL",
-        description: "Please enter a valid URL",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Add the URL to preview urls
-    setMediaPreviewUrls(prev => [...prev, mediaUrl]);
-    
+  const handleExternalUpload = (source: string) => {
     toast({
-      title: "Media URL Added",
-      description: "External media URL has been added to your post"
+      title: "External Upload",
+      description: `Connect to ${source} to select media (coming soon)`
     });
-    
-    // Reset the URL input
-    setMediaUrl('');
-    setShowUrlInput(false);
   };
 
   const removeMedia = (index: number) => {
-    // Revoke object URL if it's a blob URL to prevent memory leaks
-    if (mediaPreviewUrls[index].startsWith('blob:')) {
-      URL.revokeObjectURL(mediaPreviewUrls[index]);
-    }
-    
+    URL.revokeObjectURL(mediaPreviewUrls[index]);
     setMediaFiles(prev => prev.filter((_, i) => i !== index));
     setMediaPreviewUrls(prev => prev.filter((_, i) => i !== index));
-    
     toast({
       title: "Media Removed",
-      description: "Media has been removed from your post"
+      description: "Media file removed from your post"
     });
-  };
-
-  const isVideoFile = (file: File | null): boolean => {
-    if (!file) return false;
-    return file.type.startsWith('video/');
-  };
-
-  const isVideoUrl = (url: string): boolean => {
-    // Check if it's a direct video URL by extension
-    const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
-    if (videoExtensions.test(url)) return true;
-    
-    // For blob URLs, check the associated file type
-    const fileIndex = mediaPreviewUrls.indexOf(url);
-    if (fileIndex !== -1 && mediaFiles[fileIndex]) {
-      return isVideoFile(mediaFiles[fileIndex]);
-    }
-    
-    return false;
-  };
-
-  const renderMediaPreview = (url: string, index: number) => {
-    // Check if the URL is for a video
-    const isVideo = isVideoUrl(url);
-    
-    return (
-      <div key={index} className="relative group">
-        {isVideo ? (
-          <video 
-            src={url} 
-            className="w-full h-24 object-cover rounded-md border border-gray-200"
-            controls
-            preload="metadata"
-          />
-        ) : (
-          <img 
-            src={url} 
-            alt={`Media preview ${index + 1}`} 
-            className="w-full h-24 object-cover rounded-md border border-gray-200" 
-          />
-        )}
-        <button 
-          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" 
-          onClick={() => removeMedia(index)}
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-    );
   };
 
   return (
@@ -164,7 +84,21 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
       
       {mediaPreviewUrls.length > 0 && (
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {mediaPreviewUrls.map((url, index) => renderMediaPreview(url, index))}
+          {mediaPreviewUrls.map((url, index) => (
+            <div key={index} className="relative group">
+              <img 
+                src={url} 
+                alt={`Media preview ${index + 1}`} 
+                className="w-full h-24 object-cover rounded-md border border-gray-200" 
+              />
+              <button 
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" 
+                onClick={() => removeMedia(index)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
       
@@ -172,33 +106,10 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
         type="file" 
         ref={fileInputRef} 
         onChange={handleFileChange} 
-        accept="image/*" 
+        accept="image/*,video/*" 
         multiple 
         className="hidden" 
       />
-      
-      <input 
-        type="file" 
-        ref={videoInputRef} 
-        onChange={handleFileChange} 
-        accept="video/*" 
-        multiple 
-        className="hidden" 
-      />
-      
-      {showUrlInput && (
-        <div className="mt-4 flex gap-2">
-          <Input
-            type="url"
-            placeholder="Enter media URL"
-            value={mediaUrl}
-            onChange={(e) => setMediaUrl(e.target.value)}
-            className="flex-1"
-          />
-          <Button size="sm" onClick={handleAddMediaUrl}>Add</Button>
-          <Button size="sm" variant="outline" onClick={() => setShowUrlInput(false)}>Cancel</Button>
-        </div>
-      )}
       
       <div className="flex justify-end mt-2 gap-2">
         <DropdownMenu>
@@ -216,17 +127,21 @@ const PostContentEditor: React.FC<PostContentEditorProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white border border-[#689675]/20">
-            <DropdownMenuItem onClick={handlePhotoUpload} className="hover:bg-[#689675]/10">
-              <Image className="h-4 w-4 mr-2" />
-              <span>Photo</span>
+            <DropdownMenuItem onClick={handleDeviceUpload} className="hover:bg-[#689675]/10">
+              <FileImage className="h-4 w-4 mr-2" />
+              <span>My Device</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleVideoUpload} className="hover:bg-[#689675]/10">
-              <Video className="h-4 w-4 mr-2" />
-              <span>Video</span>
+            <DropdownMenuItem onClick={() => handleExternalUpload('Dropbox')} className="hover:bg-[#689675]/10">
+              <FileVideo className="h-4 w-4 mr-2" />
+              <span>Dropbox</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowUrlInput(true)} className="hover:bg-[#689675]/10">
-              <Link className="h-4 w-4 mr-2" />
-              <span>URL</span>
+            <DropdownMenuItem onClick={() => handleExternalUpload('Google Drive')} className="hover:bg-[#689675]/10">
+              <FileImage className="h-4 w-4 mr-2" />
+              <span>Google Drive</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExternalUpload('Box')} className="hover:bg-[#689675]/10">
+              <FileVideo className="h-4 w-4 mr-2" />
+              <span>Box</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

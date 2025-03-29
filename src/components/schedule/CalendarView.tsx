@@ -22,27 +22,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ date, setDate, scheduledPos
     });
   };
 
-  // Render the day cell with an indicator if there are posts
-  const renderDay = (day: Date) => {
-    const hasPostsForDay = hasPosts(day);
-    
-    if (hasPostsForDay) {
-      return (
-        <div className="relative w-full h-full flex items-center justify-center">
-          {day.getDate()}
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></div>
-        </div>
-      );
-    }
-    
-    // Always return a React Element, not just a number
-    return (
-      <div className="flex items-center justify-center">
-        {day.getDate()}
-      </div>
-    );
-  };
-
   return (
     <div className="animate-scale">
       <Card className="glass-card shadow-md border-border/50 overflow-hidden">
@@ -62,9 +41,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ date, setDate, scheduledPos
                 color: 'hsl(var(--primary))',
                 borderRadius: '0.25rem'
               }
-            }}
-            components={{
-              Day: ({ date }) => renderDay(date)
             }}
           />
         </CardContent>

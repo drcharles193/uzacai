@@ -233,19 +233,16 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
         return;
       }
       
-      console.log("Completing Twitter connection with code:", code.substring(0, 5) + "...");
-      
       const response = await supabase.functions.invoke('social-auth', {
-        body: {
+        body: JSON.stringify({
           platform: 'twitter',
           action: 'callback',
           code: code,
           userId: session.user.id
-        }
+        })
       });
       
       if (response.error) {
-        console.error("Twitter callback error:", response.error);
         throw new Error(response.error.message || "Failed to connect Twitter account");
       }
       
@@ -304,17 +301,13 @@ const SocialMediaConnect: React.FC<SocialMediaConnectProps> = ({
       }
       
       if (id === 'twitter') {
-        console.log("Starting Twitter OAuth flow...");
-        
         const response = await supabase.functions.invoke('social-auth', {
-          body: {
+          body: JSON.stringify({
             platform: 'twitter',
             action: 'auth-url',
             userId: session.user.id
-          }
+          })
         });
-        
-        console.log("Twitter auth response:", response);
         
         if (response.error) {
           throw new Error(response.error.message || "Failed to start Twitter connection");

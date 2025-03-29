@@ -46,12 +46,6 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    .debug {
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: #9ca3af;
-      display: none;
-    }
   </style>
 </head>
 <body>
@@ -59,7 +53,6 @@
     <div class="spinner"></div>
     <h1>Connecting your Twitter account</h1>
     <p>Please wait while we complete the connection process...</p>
-    <div class="debug" id="debug"></div>
   </div>
 
   <script>
@@ -67,46 +60,20 @@
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
-      const error = urlParams.get('error');
-      const errorDescription = urlParams.get('error_description');
-      
-      const debugEl = document.getElementById('debug');
-      
-      if (error || errorDescription) {
-        debugEl.style.display = 'block';
-        debugEl.textContent = `Error: ${error || ''} ${errorDescription || ''}`;
-        
-        document.body.innerHTML = `
-          <div class="card">
-            <h1>Authentication Error</h1>
-            <p>${errorDescription || 'An error occurred during authentication. Please try again.'}</p>
-            <p><button onclick="window.close()">Close Window</button></p>
-          </div>
-        `;
-        return;
-      }
       
       if (code && state) {
-        // Log for debugging
-        debugEl.style.display = 'block';
-        debugEl.textContent = `Code: ${code.substring(0, 5)}... State: ${state.substring(0, 5)}...`;
-        
         // Send message to parent window with the code and state
         if (window.opener) {
-          try {
-            window.opener.postMessage({
-              type: 'twitter-oauth-callback',
-              code: code,
-              state: state
-            }, '*');
-            
-            // Close this window after a short delay
-            setTimeout(function() {
-              window.close();
-            }, 2000);
-          } catch (err) {
-            debugEl.textContent += ` Error sending message: ${err.message}`;
-          }
+          window.opener.postMessage({
+            type: 'twitter-oauth-callback',
+            code: code,
+            state: state
+          }, '*');
+          
+          // Close this window after a short delay
+          setTimeout(function() {
+            window.close();
+          }, 2000);
         } else {
           document.body.innerHTML = `
             <div class="card">

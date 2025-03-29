@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Key, Shield, Mail, Twitter } from 'lucide-react';
+import { Key, Shield, Mail } from 'lucide-react';
 import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,59 +30,19 @@ const SecuritySettings = () => {
   const connectGoogle = async () => {
     try {
       setIsConnecting(true);
-      
-      // Get the current URL to use in the redirect
-      const origin = window.location.origin;
-      const redirectTo = `${origin}/settings?tab=security`;
-      
-      console.log("Starting Google OAuth flow with redirect to:", redirectTo);
-      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectTo,
-          scopes: 'email profile',
+          redirectTo: window.location.origin + '/settings?tab=security',
+          skipBrowserRedirect: false,
         }
       });
       
       if (error) throw error;
-      
-      // User will be redirected to Google for authentication
-      // No need to set isConnecting to false as the page will reload after redirect
       
     } catch (error: any) {
       console.error("Error connecting Google account:", error);
       toast.error("Failed to connect Google account: " + error.message);
-      setIsConnecting(false);
-    }
-  };
-
-  const connectTwitter = async () => {
-    try {
-      setIsConnecting(true);
-      
-      // Get the current URL to use in the redirect
-      const origin = window.location.origin;
-      const redirectTo = `${origin}/settings?tab=security`;
-      
-      console.log("Starting Twitter OAuth flow with redirect to:", redirectTo);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'twitter',
-        options: {
-          redirectTo: redirectTo,
-          scopes: 'tweet.read users.read offline.access'
-        }
-      });
-      
-      if (error) throw error;
-      
-      // User will be redirected to Twitter for authentication
-      // No need to set isConnecting to false as the page will reload after redirect
-      
-    } catch (error: any) {
-      console.error("Error connecting Twitter account:", error);
-      toast.error("Failed to connect Twitter account: " + error.message);
       setIsConnecting(false);
     }
   };
@@ -95,8 +56,6 @@ const SecuritySettings = () => {
       if (!user) {
         throw new Error("No user found. Please sign in again.");
       }
-      
-      console.log(`Attempting to disconnect ${provider} account for user ${user.id}`);
       
       // Call the edge function to disconnect the account
       const { data, error } = await supabase.functions.invoke('disconnect-social', {
@@ -126,7 +85,6 @@ const SecuritySettings = () => {
   };
 
   const isGoogleConnected = connectedAccounts.includes('google');
-  const isTwitterConnected = connectedAccounts.includes('twitter');
 
   return (
     <div className="space-y-8">
@@ -213,42 +171,6 @@ const SecuritySettings = () => {
                 <Button 
                   variant="outline" 
                   onClick={connectGoogle}
-                  disabled={isConnecting}
-                >
-                  {isConnecting ? "Connecting..." : "Connect"}
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="border rounded-md p-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Twitter size={18} className="text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Twitter / X Account</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {isTwitterConnected 
-                      ? "Your Twitter/X account is connected" 
-                      : "Connect your Twitter/X account for easier sign-in"}
-                  </p>
-                </div>
-              </div>
-              {isTwitterConnected ? (
-                <Button 
-                  variant="outline" 
-                  className="text-destructive border-destructive hover:bg-destructive/10"
-                  onClick={() => disconnectAccount('twitter')}
-                  disabled={isDisconnecting}
-                >
-                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={connectTwitter}
                   disabled={isConnecting}
                 >
                   {isConnecting ? "Connecting..." : "Connect"}
