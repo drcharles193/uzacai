@@ -47,3 +47,13 @@ export interface FacebookUserData {
     }
   }
 }
+
+// New Facebook permission types
+export interface FacebookPermission {
+  permission: string;
+  status: string;
+}
+
+export interface FacebookPermissionsResponse {
+  data: FacebookPermission[];
+}

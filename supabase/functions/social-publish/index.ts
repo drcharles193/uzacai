@@ -39,7 +39,7 @@ serve(async (req) => {
     }
     
     // Validate Twitter credentials are available
-    if (!validateTwitterCredentials()) {
+    if (platforms.includes('twitter') && !validateTwitterCredentials()) {
       return new Response(
         JSON.stringify({ error: "Twitter API credentials are not configured correctly" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

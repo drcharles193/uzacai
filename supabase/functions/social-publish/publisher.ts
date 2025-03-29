@@ -195,6 +195,7 @@ export async function publishToFacebook(
     // Prepare request body
     const formData = new FormData();
     formData.append('message', content);
+    formData.append('access_token', access_token);
     
     // Handle media
     // For Facebook, it's better to use URLs directly rather than uploading base64
@@ -209,7 +210,7 @@ export async function publishToFacebook(
     console.log(`Posting to Facebook ${isPage ? 'page' : 'profile'} with ID: ${targetId}`);
     
     // Make API request
-    const response = await fetch(`${apiUrl}?access_token=${encodeURIComponent(access_token)}`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       body: formData
     });
