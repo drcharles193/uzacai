@@ -1,175 +1,265 @@
-
 import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
+import { Key, Shield, Mail, Twitter } from 'lucide-react';
+import DeleteAccountSection from './DeleteAccountSection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const SecuritySettings = () => {
-  const [user, setUser] = useState(null);
-  const [connectedAccounts, setConnectedAccounts] = useState([]);
+  const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
-    fetchUserAndConnectedAccounts();
+    fetchConnectedIdentities();
   }, []);
 
-  const fetchUserAndConnectedAccounts = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    
-    if (user) {
-      // Fetch connected accounts from social_accounts table
-      const { data, error } = await supabase
-        .from('social_accounts')
-        .select('platform, account_name')
-        .eq('user_id', user.id);
-        
-      if (!error && data) {
-        setConnectedAccounts(data);
+  const fetchConnectedIdentities = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.identities) {
+        const providers = user.identities.map(identity => identity.provider);
+        setConnectedAccounts(providers);
       }
+    } catch (error) {
+      console.error("Error fetching connected identities:", error);
     }
   };
 
-  const handleDisconnectTwitter = async () => {
-    // Show loading state
-    setIsDisconnecting(true);
-    
+  const connectGoogle = async () => {
     try {
-      // Call the disconnect-social edge function
-      const { data, error } = await supabase.functions.invoke('disconnect-social', {
-        body: {
-          userId: user.id,
-          provider: 'twitter'
+      setIsConnecting(true);
+      
+      // Get the current URL to use in the redirect
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/settings?tab=security`;
+      
+      console.log("Starting Google OAuth flow with redirect to:", redirectTo);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectTo,
+          scopes: 'email profile',
         }
       });
       
-      if (error) {
-        throw error;
+      if (error) throw error;
+      
+      // User will be redirected to Google for authentication
+      // No need to set isConnecting to false as the page will reload after redirect
+      
+    } catch (error: any) {
+      console.error("Error connecting Google account:", error);
+      toast.error("Failed to connect Google account: " + error.message);
+      setIsConnecting(false);
+    }
+  };
+
+  const connectTwitter = async () => {
+    try {
+      setIsConnecting(true);
+      
+      // Get the current URL to use in the redirect
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/settings?tab=security`;
+      
+      console.log("Starting Twitter OAuth flow with redirect to:", redirectTo);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'twitter',
+        options: {
+          redirectTo: redirectTo,
+          scopes: 'tweet.read users.read offline.access'
+        }
+      });
+      
+      if (error) throw error;
+      
+      // User will be redirected to Twitter for authentication
+      // No need to set isConnecting to false as the page will reload after redirect
+      
+    } catch (error: any) {
+      console.error("Error connecting Twitter account:", error);
+      toast.error("Failed to connect Twitter account: " + error.message);
+      setIsConnecting(false);
+    }
+  };
+
+  const disconnectAccount = async (provider: string) => {
+    try {
+      setIsDisconnecting(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("No user found. Please sign in again.");
       }
       
-      toast.success('Twitter account disconnected');
-      // Refresh user data to update the UI
-      fetchUserAndConnectedAccounts();
-    } catch (error) {
-      toast.error('Failed to disconnect Twitter', {
-        description: error.message
+      console.log(`Attempting to disconnect ${provider} account for user ${user.id}`);
+      
+      // Call the edge function to disconnect the account
+      const { data, error } = await supabase.functions.invoke('disconnect-social', {
+        body: {
+          userId: user.id,
+          provider: provider
+        }
       });
+      
+      if (error) throw error;
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      toast.success(data.message || `${provider.charAt(0).toUpperCase() + provider.slice(1)} account disconnected successfully`);
+      
+      // Refresh the connected accounts list
+      await fetchConnectedIdentities();
+      
+    } catch (error: any) {
+      console.error(`Error disconnecting ${provider} account:`, error);
+      toast.error(`Failed to disconnect ${provider} account: ${error.message}`);
     } finally {
       setIsDisconnecting(false);
     }
   };
 
-  const handleDisconnectLinkedin = async () => {
-    // Show loading state
-    setIsDisconnecting(true);
-    
-    try {
-      // Call the disconnect-social edge function
-      const { data, error } = await supabase.functions.invoke('disconnect-social', {
-        body: {
-          userId: user.id,
-          provider: 'linkedin'
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('LinkedIn account disconnected');
-      // Refresh user data to update the UI
-      fetchUserAndConnectedAccounts();
-    } catch (error) {
-      toast.error('Failed to disconnect LinkedIn', {
-        description: error.message
-      });
-    } finally {
-      setIsDisconnecting(false);
-    }
-  };
-
-  const isTwitterConnected = connectedAccounts.some(acc => acc.platform === 'twitter');
-  const isLinkedinConnected = connectedAccounts.some(acc => acc.platform === 'linkedin');
+  const isGoogleConnected = connectedAccounts.includes('google');
+  const isTwitterConnected = connectedAccounts.includes('twitter');
 
   return (
-    <div className="space-y-6">
-      <div className="border-b pb-4">
-        <h3 className="text-lg font-medium">Connected Accounts</h3>
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-medium">Twitter</h4>
-              <p className="text-xs text-muted-foreground">
-                {isTwitterConnected ? 'Connected' : 'Not Connected'}
-              </p>
+    <div className="space-y-8">
+      <section>
+        <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
+          Password & Authentication
+        </h3>
+        
+        <div className="grid grid-cols-1 gap-6">
+          <div className="border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Key size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Change Password</h4>
+                  <p className="text-sm text-muted-foreground">Update your password to keep your account secure</p>
+                </div>
+              </div>
+              <Button variant="outline">Change Password</Button>
             </div>
-            {isTwitterConnected ? (
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                onClick={handleDisconnectTwitter}
-                disabled={isDisconnecting}
-              >
-                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-              </Button>
-            ) : (
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => {}} // Kept placeholder for Twitter connection
-                disabled={isConnecting}
-              >
-                {isConnecting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Connecting...
-                  </>
-                ) : 'Connect'}
-              </Button>
-            )}
           </div>
           
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-medium">LinkedIn</h4>
-              <p className="text-xs text-muted-foreground">
-                {isLinkedinConnected ? 'Connected' : 'Not Connected'}
-              </p>
+          <div className="border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Shield size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Two-Factor Authentication</h4>
+                  <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
+                </div>
+              </div>
+              <Button variant="outline">Enable 2FA</Button>
             </div>
-            {isLinkedinConnected ? (
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                onClick={handleDisconnectLinkedin}
-                disabled={isDisconnecting}
-              >
-                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-              </Button>
-            ) : (
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => {}} // Kept placeholder for LinkedIn connection
-                disabled={isConnecting}
-              >
-                {isConnecting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Connecting...
-                  </>
-                ) : 'Connect'}
-              </Button>
-            )}
           </div>
         </div>
-      </div>
+      </section>
+      
+      <section>
+        <h3 className="text-lg font-medium mb-4 pb-1 border-b border-primary w-fit">
+          Connected Accounts
+        </h3>
+        
+        <div className="grid grid-cols-1 gap-6">
+          <div className="border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    width="18" 
+                    height="18" 
+                    className="text-primary"
+                  >
+                    <path 
+                      fill="currentColor" 
+                      d="M12 11h8.533c.044.385.067.773.067 1.167 0 2.272-.586 4.33-1.59 5.973-1.04 1.703-2.585 3.025-4.659 3.386A9.98 9.98 0 0 1 12 22 9.958 9.958 0 0 1 7.649 21.526c-2.074-.361-3.62-1.683-4.66-3.386-1.003-1.643-1.589-3.7-1.589-5.973C1.4 6.175 6.13 1.4 12 1.4c2.539 0 4.844.852 6.66 2.263a9.949 9.949 0 0 1 3.14 4.679h-5.517A5.381 5.381 0 0 0 12 6.6a5.388 5.388 0 0 0-5.384 5.384A5.388 5.388 0 0 0 12 17.368a5.375 5.375 0 0 0 4.391-2.241 5.379 5.379 0 0 0 .926-3.043H12V11Z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-medium">Google Account</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {isGoogleConnected 
+                      ? "Your Google account is connected" 
+                      : "Connect your Google account for easier sign-in"}
+                  </p>
+                </div>
+              </div>
+              {isGoogleConnected ? (
+                <Button 
+                  variant="outline" 
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                  onClick={() => disconnectAccount('google')}
+                  disabled={isDisconnecting}
+                >
+                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={connectGoogle}
+                  disabled={isConnecting}
+                >
+                  {isConnecting ? "Connecting..." : "Connect"}
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Twitter size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Twitter / X Account</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {isTwitterConnected 
+                      ? "Your Twitter/X account is connected" 
+                      : "Connect your Twitter/X account for easier sign-in"}
+                  </p>
+                </div>
+              </div>
+              {isTwitterConnected ? (
+                <Button 
+                  variant="outline" 
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                  onClick={() => disconnectAccount('twitter')}
+                  disabled={isDisconnecting}
+                >
+                  {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={connectTwitter}
+                  disabled={isConnecting}
+                >
+                  {isConnecting ? "Connecting..." : "Connect"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <DeleteAccountSection />
     </div>
   );
 };

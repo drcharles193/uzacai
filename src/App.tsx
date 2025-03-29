@@ -38,9 +38,6 @@ const App = () => (
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/schedule" element={<ScheduleCalendar />} />
-          {/* Callback URLs for OAuth */}
-          <Route path="/linkedin-callback" element={<div>LinkedIn Auth Redirect</div>} />
-          <Route path="/facebook-callback" element={<div>Facebook Auth Redirect</div>} />
           {/* Coming Soon pages */}
           <Route path="/users" element={<ComingSoon />} />
           <Route path="/analytics" element={<ComingSoon />} />

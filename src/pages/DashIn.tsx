@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { UserRound, LogOut, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -243,12 +242,7 @@ const DashIn = () => {
             <DialogTitle>Connect Your Social Accounts</DialogTitle>
           </DialogHeader>
           <div className="p-4">
-            <SocialMediaConnect 
-              isDialog={true} 
-              onClose={() => setShowConnectDialog(false)} 
-              onDone={handleSocialConnectDone} 
-              onAccountDisconnected={handleAccountDisconnected} 
-            />
+            <SocialMediaConnect isDialog={true} onClose={() => setShowConnectDialog(false)} onDone={handleSocialConnectDone} onAccountDisconnected={handleAccountDisconnected} />
           </div>
         </DialogContent>
       </Dialog>
