@@ -18,7 +18,17 @@ const TWITTER_CLIENT_ID = Deno.env.get("TWITTER_CLIENT_ID");
 const TWITTER_CLIENT_SECRET = Deno.env.get("TWITTER_CLIENT_SECRET");
 const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 
-// Generate a random string for Twitter OAuth state
+// Facebook OAuth credentials
+const FACEBOOK_CLIENT_ID = Deno.env.get("FACEBOOK_CLIENT_ID");
+const FACEBOOK_CLIENT_SECRET = Deno.env.get("FACEBOOK_CLIENT_SECRET");
+const FACEBOOK_REDIRECT_URI = Deno.env.get("FACEBOOK_REDIRECT_URI");
+
+// Instagram OAuth credentials
+const INSTAGRAM_CLIENT_ID = Deno.env.get("INSTAGRAM_CLIENT_ID");
+const INSTAGRAM_CLIENT_SECRET = Deno.env.get("INSTAGRAM_CLIENT_SECRET");
+const INSTAGRAM_REDIRECT_URI = Deno.env.get("INSTAGRAM_REDIRECT_URI");
+
+// Generate a random string for OAuth state
 function generateState() {
   return Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
@@ -46,6 +56,47 @@ function getTwitterAuthUrl() {
   url.searchParams.append('state', state);
   url.searchParams.append('code_challenge', 'challenge'); // In a real implementation, use PKCE
   url.searchParams.append('code_challenge_method', 'plain');
+  
+  return { url: url.toString(), state };
+}
+
+// Facebook OAuth URL generator
+function getFacebookAuthUrl() {
+  console.log("Facebook Client ID:", FACEBOOK_CLIENT_ID ? "Exists" : "Missing");
+  console.log("Facebook Redirect URI:", FACEBOOK_REDIRECT_URI ? "Exists" : "Missing");
+  
+  if (!FACEBOOK_CLIENT_ID || !FACEBOOK_REDIRECT_URI) {
+    throw new Error("Facebook OAuth credentials not configured");
+  }
+  
+  const state = generateState();
+  
+  const url = new URL('https://www.facebook.com/v18.0/dialog/oauth');
+  url.searchParams.append('client_id', FACEBOOK_CLIENT_ID);
+  url.searchParams.append('redirect_uri', FACEBOOK_REDIRECT_URI);
+  url.searchParams.append('state', state);
+  url.searchParams.append('scope', 'pages_show_list,pages_read_engagement,pages_manage_posts');
+  
+  return { url: url.toString(), state };
+}
+
+// Instagram OAuth URL generator
+function getInstagramAuthUrl() {
+  console.log("Instagram Client ID:", INSTAGRAM_CLIENT_ID ? "Exists" : "Missing");
+  console.log("Instagram Redirect URI:", INSTAGRAM_REDIRECT_URI ? "Exists" : "Missing");
+  
+  if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_REDIRECT_URI) {
+    throw new Error("Instagram OAuth credentials not configured");
+  }
+  
+  const state = generateState();
+  
+  const url = new URL('https://api.instagram.com/oauth/authorize');
+  url.searchParams.append('client_id', INSTAGRAM_CLIENT_ID);
+  url.searchParams.append('redirect_uri', INSTAGRAM_REDIRECT_URI);
+  url.searchParams.append('response_type', 'code');
+  url.searchParams.append('state', state);
+  url.searchParams.append('scope', 'user_profile,user_media');
   
   return { url: url.toString(), state };
 }
@@ -89,6 +140,73 @@ async function exchangeTwitterCode(code: string) {
   }
 }
 
+// Facebook token exchange function
+async function exchangeFacebookCode(code: string) {
+  if (!FACEBOOK_CLIENT_ID || !FACEBOOK_CLIENT_SECRET || !FACEBOOK_REDIRECT_URI) {
+    throw new Error("Facebook OAuth credentials not configured");
+  }
+  
+  try {
+    // Exchange the code for a token
+    const tokenUrl = 'https://graph.facebook.com/v18.0/oauth/access_token';
+    const url = new URL(tokenUrl);
+    url.searchParams.append('client_id', FACEBOOK_CLIENT_ID);
+    url.searchParams.append('client_secret', FACEBOOK_CLIENT_SECRET);
+    url.searchParams.append('redirect_uri', FACEBOOK_REDIRECT_URI);
+    url.searchParams.append('code', code);
+    
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Facebook token exchange error:', errorText);
+      throw new Error(`Facebook API error: ${response.status} ${errorText}`);
+    }
+    
+    const tokenData = await response.json();
+    return tokenData;
+  } catch (error) {
+    console.error('Error exchanging Facebook code for token:', error);
+    throw error;
+  }
+}
+
+// Instagram token exchange function
+async function exchangeInstagramCode(code: string) {
+  if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET || !INSTAGRAM_REDIRECT_URI) {
+    throw new Error("Instagram OAuth credentials not configured");
+  }
+  
+  try {
+    // Exchange the code for a token
+    const tokenUrl = 'https://api.instagram.com/oauth/access_token';
+    
+    const formData = new FormData();
+    formData.append('client_id', INSTAGRAM_CLIENT_ID);
+    formData.append('client_secret', INSTAGRAM_CLIENT_SECRET);
+    formData.append('grant_type', 'authorization_code');
+    formData.append('redirect_uri', INSTAGRAM_REDIRECT_URI);
+    formData.append('code', code);
+    
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Instagram token exchange error:', errorText);
+      throw new Error(`Instagram API error: ${response.status} ${errorText}`);
+    }
+    
+    const tokenData = await response.json();
+    return tokenData;
+  } catch (error) {
+    console.error('Error exchanging Instagram code for token:', error);
+    throw error;
+  }
+}
+
 // Get Twitter user profile
 async function getTwitterUserProfile(accessToken: string) {
   try {
@@ -112,40 +230,90 @@ async function getTwitterUserProfile(accessToken: string) {
   }
 }
 
+// Get Facebook user profile
+async function getFacebookUserProfile(accessToken: string) {
+  try {
+    // Get user profile
+    const profileResponse = await fetch(`https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${accessToken}`);
+    
+    if (!profileResponse.ok) {
+      const errorText = await profileResponse.text();
+      console.error('Facebook profile error:', errorText);
+      throw new Error(`Facebook API error: ${profileResponse.status} ${errorText}`);
+    }
+    
+    const profileData = await profileResponse.json();
+    
+    // Get pages (if we have pages_show_list permission)
+    const pagesResponse = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`);
+    
+    if (!pagesResponse.ok) {
+      console.error('Facebook pages error - user might not have pages or permission');
+      // Not throwing here as this is optional
+      return {
+        id: profileData.id,
+        name: profileData.name,
+        email: profileData.email,
+        picture: profileData.picture?.data?.url,
+        accountType: 'personal'
+      };
+    }
+    
+    const pagesData = await pagesResponse.json();
+    
+    // If user has pages, use the first one
+    if (pagesData.data && pagesData.data.length > 0) {
+      const page = pagesData.data[0];
+      return {
+        id: page.id,
+        name: page.name,
+        accessToken: page.access_token, // Page-specific token
+        accountType: 'page'
+      };
+    }
+    
+    return {
+      id: profileData.id,
+      name: profileData.name,
+      email: profileData.email,
+      picture: profileData.picture?.data?.url,
+      accountType: 'personal'
+    };
+  } catch (error) {
+    console.error('Error fetching Facebook user profile:', error);
+    throw error;
+  }
+}
+
+// Get Instagram user profile
+async function getInstagramUserProfile(accessToken: string, userId: string) {
+  try {
+    // Get user profile
+    const profileResponse = await fetch(`https://graph.instagram.com/v18.0/${userId}?fields=id,username&access_token=${accessToken}`);
+    
+    if (!profileResponse.ok) {
+      const errorText = await profileResponse.text();
+      console.error('Instagram profile error:', errorText);
+      throw new Error(`Instagram API error: ${profileResponse.status} ${errorText}`);
+    }
+    
+    const profileData = await profileResponse.json();
+    
+    return {
+      id: profileData.id,
+      username: profileData.username,
+      accountType: 'business'
+    };
+  } catch (error) {
+    console.error('Error fetching Instagram user profile:', error);
+    throw error;
+  }
+}
+
 // Handle mock connections for other platforms
 function getMockPlatformResponse(platform: string) {
   // Simulate different platform responses
   switch(platform) {
-    case 'facebook':
-      return {
-        success: true,
-        platformId: `fb-${Math.floor(Math.random() * 1000000)}`,
-        accountName: "Facebook Page",
-        accountType: "page",
-        accessToken: "mock-fb-access-token",
-        refreshToken: "mock-fb-refresh-token",
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60).toISOString() // 60 days
-      };
-    case 'instagram':
-      return {
-        success: true,
-        platformId: `ig-${Math.floor(Math.random() * 1000000)}`,
-        accountName: "Instagram Business",
-        accountType: "business",
-        accessToken: "mock-ig-access-token",
-        refreshToken: "mock-ig-refresh-token",
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60).toISOString() // 60 days
-      };
-    case 'twitter':
-      return {
-        success: true,
-        platformId: `tw-${Math.floor(Math.random() * 1000000)}`,
-        accountName: "Twitter Profile",
-        accountType: "profile",
-        accessToken: "mock-tw-access-token",
-        refreshToken: "mock-tw-refresh-token",
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 7).toISOString() // 7 days
-      };
     case 'linkedin':
       return {
         success: true,
@@ -196,14 +364,14 @@ function getMockPlatformResponse(platform: string) {
         refreshToken: "mock-th-refresh-token",
         expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 90).toISOString() // 90 days
       };
-    case 'bluesky':
+    case 'google':
       return {
         success: true,
-        platformId: `bs-${Math.floor(Math.random() * 1000000)}`,
-        accountName: "Bluesky Account",
+        platformId: `g-${Math.floor(Math.random() * 1000000)}`,
+        accountName: "Google Account",
         accountType: "personal",
-        accessToken: "mock-bs-access-token",
-        refreshToken: null, // Bluesky uses a different auth mechanism
+        accessToken: "mock-g-access-token",
+        refreshToken: null,
         expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 365).toISOString() // Long-lived token
       };
     case 'tumblr':
@@ -236,13 +404,8 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action } = await req.json();
+    const { platform, code, userId, action, state } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
-    console.log("Environment variables check:", {
-      twitterClientId: TWITTER_CLIENT_ID ? "Exists" : "Missing",
-      twitterClientSecret: TWITTER_CLIENT_SECRET ? "Exists" : "Missing",
-      twitterCallbackUrl: TWITTER_CALLBACK_URL ? "Exists" : "Missing"
-    });
     
     // Handle Twitter OAuth flow
     if (platform === 'twitter') {
@@ -339,6 +502,201 @@ serve(async (req) => {
       else {
         return new Response(
           JSON.stringify({ error: "Invalid Twitter action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+    // Handle Facebook OAuth flow
+    else if (platform === 'facebook') {
+      if (action === 'auth-url') {
+        // Step 1: Generate Facebook auth URL
+        try {
+          const { url, state } = getFacebookAuthUrl();
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'facebook',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating Facebook auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      }
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          // Exchange code for tokens
+          const tokenData = await exchangeFacebookCode(code);
+          
+          // Get user profile information
+          const userProfile = await getFacebookUserProfile(tokenData.access_token);
+          
+          // Determine expiration time (default to 3 months if not provided)
+          const expiresIn = tokenData.expires_in || 7776000; // 90 days in seconds
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'facebook',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.name,
+              account_type: userProfile.accountType || 'personal',
+              access_token: userProfile.accessToken || tokenData.access_token,
+              refresh_token: null, // Facebook doesn't provide refresh tokens in basic flow
+              token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                email: userProfile.email,
+                picture: userProfile.picture,
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing Facebook connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'facebook', 
+              accountName: userProfile.name,
+              accountType: userProfile.accountType || 'personal'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing Facebook callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      }
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Facebook action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+    // Handle Instagram OAuth flow
+    else if (platform === 'instagram') {
+      if (action === 'auth-url') {
+        // Step 1: Generate Instagram auth URL
+        try {
+          const { url, state } = getInstagramAuthUrl();
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'instagram',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating Instagram auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      }
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          // Exchange code for tokens
+          const tokenData = await exchangeInstagramCode(code);
+          
+          // The response contains a user_id and access_token
+          // Get user profile information
+          const userProfile = await getInstagramUserProfile(tokenData.access_token, tokenData.user_id);
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'instagram',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.username,
+              account_type: userProfile.accountType || 'business',
+              access_token: tokenData.access_token,
+              refresh_token: null, // Instagram doesn't provide refresh tokens in basic flow
+              token_expires_at: null, // Basic tokens don't expire
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                username: userProfile.username,
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing Instagram connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'instagram', 
+              accountName: userProfile.username,
+              accountType: userProfile.accountType || 'business'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing Instagram callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      }
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Instagram action" }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }

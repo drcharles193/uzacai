@@ -29,3 +29,21 @@ export interface ProcessedMedia {
   base64: string[];
   contentTypes: string[];
 }
+
+// Facebook specific types
+export interface FacebookPageData {
+  id: string;
+  name: string;
+  access_token: string;
+}
+
+export interface FacebookUserData {
+  id: string;
+  name: string;
+  email?: string;
+  picture?: {
+    data: {
+      url: string;
+    }
+  }
+}
