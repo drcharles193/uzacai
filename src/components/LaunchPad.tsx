@@ -1,13 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { X } from 'lucide-react';
-import { Button } from './ui/button';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { SocialAccount } from './launchpad/types';
-import { useToast } from "@/components/ui/use-toast";
 
 // Import refactored components
+import LaunchpadDialogHeader from './launchpad/LaunchpadDialogHeader';
 import LaunchpadHeader from './launchpad/LaunchpadHeader';
 import CreatePostPanel from './launchpad/CreatePostPanel';
 import DraftsPanel from './launchpad/DraftsPanel';
@@ -17,6 +15,7 @@ import LaunchpadFooter from './launchpad/LaunchpadFooter';
 // Import custom hooks
 import { useDrafts } from './launchpad/hooks/useDrafts';
 import { useScheduling } from './launchpad/hooks/useScheduling';
+import { usePublishing } from './launchpad/hooks/usePublishing';
 
 interface LaunchPadProps {
   isOpen: boolean;
@@ -32,23 +31,6 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  // Custom hooks
-  const { drafts, isLoading: isDraftsLoading, saveDraft, deleteDraft } = useDrafts(currentUser, selectedTab);
-  const {
-    isSchedulePopoverOpen,
-    setIsSchedulePopoverOpen,
-    scheduleDate,
-    setScheduleDate,
-    scheduleTime,
-    setScheduleTime,
-    schedulePost,
-    isLoading: isSchedulingLoading
-  } = useScheduling(currentUser);
-
-  // Determine if any operation is currently loading
-  const isLoading = isDraftsLoading || isSchedulingLoading;
 
   // Get the current user on mount
   useEffect(() => {
@@ -62,6 +44,23 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
     getUserId();
   }, []);
 
+  // Custom hooks
+  const { drafts, isLoading: isDraftsLoading, saveDraft, deleteDraft } = useDrafts(currentUser, selectedTab);
+  const {
+    isSchedulePopoverOpen,
+    setIsSchedulePopoverOpen,
+    scheduleDate,
+    setScheduleDate,
+    scheduleTime,
+    setScheduleTime,
+    schedulePost,
+    isLoading: isSchedulingLoading
+  } = useScheduling(currentUser);
+  const { isPublishing, publishNow } = usePublishing(currentUser);
+
+  // Determine if any operation is currently loading
+  const isLoading = isDraftsLoading || isSchedulingLoading || isPublishing;
+
   // Handle saving a draft
   const handleSaveAsDraft = () => {
     saveDraft(postContent, mediaPreviewUrls, selectedAccounts);
@@ -73,22 +72,29 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   };
 
   // Handle publishing a post now
-  const handlePublishNow = () => {
-    if (!postContent.trim() || selectedAccounts.length === 0) {
-      toast({
-        title: "Incomplete post",
-        description: "Please add content and select at least one account to post to.",
-        variant: "destructive"
-      });
-      return;
+  const handlePublishNow = async () => {
+    console.log("Attempting to publish now...");
+    const success = await publishNow(
+      postContent, 
+      mediaPreviewUrls, 
+      mediaFiles,
+      selectedAccounts, 
+      connectedAccounts
+    );
+    
+    if (success) {
+      console.log("Publish successful, resetting form");
+      // Reset the form
+      setPostContent('');
+      setMediaFiles([]);
+      setMediaPreviewUrls([]);
+      setSelectedAccounts([]);
+      
+      // Close the dialog
+      onClose();
+    } else {
+      console.log("Publish failed, keeping form open");
     }
-
-    // Here we could implement actual publishing logic
-    // For now, just show a success toast
-    toast({
-      title: "Post Published",
-      description: "Your post has been published successfully!"
-    });
   };
 
   // Handle loading a draft
@@ -107,16 +113,8 @@ const LaunchPad: React.FC<LaunchPadProps> = ({ isOpen, onClose, connectedAccount
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[1000px] p-0 gap-0 overflow-hidden max-h-[90vh]">
-        <DialogTitle className="sr-only">Create Post</DialogTitle>
         <div className="flex flex-col h-full">
-          <div className="flex justify-between items-center border-b py-2 px-4">
-            <div>
-              <h2 className="text-lg font-semibold">Create Post</h2>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <LaunchpadDialogHeader onClose={onClose} />
           
           <LaunchpadHeader selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
           

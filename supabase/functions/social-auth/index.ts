@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
@@ -12,9 +13,9 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Twitter API credentials
-const TWITTER_API_KEY = Deno.env.get("TWITTER_API_KEY");
-const TWITTER_API_SECRET = Deno.env.get("TWITTER_API_SECRET");
+// Twitter OAuth credentials
+const TWITTER_CLIENT_ID = Deno.env.get("TWITTER_CLIENT_ID");
+const TWITTER_CLIENT_SECRET = Deno.env.get("TWITTER_CLIENT_SECRET");
 const TWITTER_CALLBACK_URL = Deno.env.get("TWITTER_CALLBACK_URL");
 
 // Generate a random string for Twitter OAuth state
@@ -25,8 +26,11 @@ function generateState() {
 
 // Twitter OAuth URL generator
 function getTwitterAuthUrl() {
-  if (!TWITTER_API_KEY || !TWITTER_CALLBACK_URL) {
-    throw new Error("Twitter API credentials not configured");
+  console.log("Twitter Client ID:", TWITTER_CLIENT_ID ? "Exists" : "Missing");
+  console.log("Twitter Callback URL:", TWITTER_CALLBACK_URL ? "Exists" : "Missing");
+  
+  if (!TWITTER_CLIENT_ID || !TWITTER_CALLBACK_URL) {
+    throw new Error("Twitter OAuth credentials not configured");
   }
   
   const state = generateState();
@@ -36,7 +40,7 @@ function getTwitterAuthUrl() {
   
   const url = new URL('https://twitter.com/i/oauth2/authorize');
   url.searchParams.append('response_type', 'code');
-  url.searchParams.append('client_id', TWITTER_API_KEY);
+  url.searchParams.append('client_id', TWITTER_CLIENT_ID);
   url.searchParams.append('redirect_uri', TWITTER_CALLBACK_URL);
   url.searchParams.append('scope', 'tweet.read users.read offline.access');
   url.searchParams.append('state', state);
@@ -48,12 +52,12 @@ function getTwitterAuthUrl() {
 
 // Twitter token exchange function
 async function exchangeTwitterCode(code: string) {
-  if (!TWITTER_API_KEY || !TWITTER_API_SECRET || !TWITTER_CALLBACK_URL) {
-    throw new Error("Twitter API credentials not configured");
+  if (!TWITTER_CLIENT_ID || !TWITTER_CLIENT_SECRET || !TWITTER_CALLBACK_URL) {
+    throw new Error("Twitter OAuth credentials not configured");
   }
   
   const tokenUrl = 'https://api.twitter.com/2/oauth2/token';
-  const basicAuth = btoa(`${TWITTER_API_KEY}:${TWITTER_API_SECRET}`);
+  const basicAuth = btoa(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`);
   
   const params = new URLSearchParams();
   params.append('code', code);
@@ -234,6 +238,11 @@ serve(async (req) => {
   try {
     const { platform, code, userId, action } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
+    console.log("Environment variables check:", {
+      twitterClientId: TWITTER_CLIENT_ID ? "Exists" : "Missing",
+      twitterClientSecret: TWITTER_CLIENT_SECRET ? "Exists" : "Missing",
+      twitterCallbackUrl: TWITTER_CALLBACK_URL ? "Exists" : "Missing"
+    });
     
     // Handle Twitter OAuth flow
     if (platform === 'twitter') {
