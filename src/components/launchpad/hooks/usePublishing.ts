@@ -109,7 +109,23 @@ export const usePublishing = (currentUserId: string | null) => {
 
       if (error) {
         console.error("Error invoking function:", error);
-        throw new Error(`Failed to publish: ${error.message}`);
+        
+        // Check if the error contains Facebook permission issue
+        const errorMessage = error.message || "Failed to publish";
+        if (errorMessage.includes("Facebook") && errorMessage.includes("permission")) {
+          toast({
+            title: "Facebook Permissions Required",
+            description: "Please disconnect and reconnect your Facebook account with posting permissions.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Publishing Failed",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        }
+        return false;
       }
 
       console.log("Publish response:", data);
@@ -118,15 +134,39 @@ export const usePublishing = (currentUserId: string | null) => {
         // We have some errors
         if (data.success) {
           // But some posts were successful
+          const platformsWithErrors = data.errors.map((e: any) => e.platform);
+          const errorMessages = data.errors.map((e: any) => {
+            // Extract clear messages for common Facebook permission errors
+            if (e.platform === 'facebook' && e.error && e.error.includes('permission')) {
+              return 'Facebook requires additional permissions. Please reconnect your account.';
+            }
+            return e.error || `Unknown error with ${e.platform}`;
+          });
+          
           toast({
             title: "Partially Published",
-            description: `Some posts were published but there were errors with: ${data.errors.map((e: any) => e.platform).join(', ')}`,
+            description: `Some posts were published but there were errors with: ${platformsWithErrors.join(', ')}. ${errorMessages[0]}`,
             variant: "default"
           });
+          return true; // Return true since some posts were successful
         } else {
           // All posts failed
-          const errorMessage = data.errors[0].error || 'Missing API credentials';
-          throw new Error(`Failed to publish: ${errorMessage}`);
+          const errorMessage = data.errors[0].error || 'Unknown error';
+          // Check if it's a Facebook permission issue
+          if (data.errors[0].platform === 'facebook' && errorMessage.includes('permission')) {
+            toast({
+              title: "Facebook Permissions Required",
+              description: "Please disconnect and reconnect your Facebook account with posting permissions.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Publishing Failed",
+              description: errorMessage,
+              variant: "destructive"
+            });
+          }
+          return false;
         }
       } else {
         // All posts were successful
@@ -134,9 +174,8 @@ export const usePublishing = (currentUserId: string | null) => {
           title: "Post Published",
           description: "Your post has been published successfully!"
         });
+        return true;
       }
-
-      return true; // Return true to indicate successful publish
     } catch (error: any) {
       console.error("Error publishing post:", error);
       toast({

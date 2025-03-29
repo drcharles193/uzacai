@@ -65,6 +65,10 @@ serve(async (req) => {
     
     console.log(`Returning response with ${results.length} successes and ${errors.length} errors`);
     
+    // If we have a mix of successes and failures, or all failures but with different errors,
+    // return a 207 Multi-Status response
+    const responseStatus = hasSuccesses ? (hasErrors ? 207 : 200) : 500;
+    
     return new Response(
       JSON.stringify({ 
         success: hasSuccesses,
@@ -73,7 +77,7 @@ serve(async (req) => {
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: hasSuccesses || !hasErrors ? 200 : 500
+        status: responseStatus
       }
     );
   } catch (error: any) {

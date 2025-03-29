@@ -158,7 +158,7 @@ export async function publishToFacebook(
     // Get Facebook credentials
     const { data: accountData, error: accountError } = await supabase
       .from('social_accounts')
-      .select('platform_account_id, access_token, account_type')
+      .select('platform_account_id, access_token, account_type, metadata')
       .eq('user_id', userId)
       .eq('platform', 'facebook')
       .single();
@@ -172,7 +172,32 @@ export async function publishToFacebook(
       throw new Error("Facebook credentials not found. Please connect your Facebook account.");
     }
     
-    const { platform_account_id, access_token, account_type } = accountData;
+    const { platform_account_id, access_token, account_type, metadata } = accountData;
+    
+    // Check if the right permissions are granted
+    const permissionsUrl = `https://graph.facebook.com/v18.0/me/permissions?access_token=${encodeURIComponent(access_token)}`;
+    const permissionsResponse = await fetch(permissionsUrl);
+    
+    if (!permissionsResponse.ok) {
+      const errorText = await permissionsResponse.text();
+      console.error(`Failed to check Facebook permissions: ${permissionsResponse.status} - ${errorText}`);
+    } else {
+      const permissionsData = await permissionsResponse.json();
+      console.log("Facebook permissions:", JSON.stringify(permissionsData));
+      
+      // Check if the user has publish_actions or publish_to_groups permission
+      const hasPublishPermission = permissionsData.data?.some(
+        (p: { permission: string; status: string }) => 
+          (p.permission === 'publish_actions' || 
+           p.permission === 'publish_to_groups' ||
+           p.permission === 'pages_manage_posts') && 
+          p.status === 'granted'
+      );
+      
+      if (!hasPublishPermission) {
+        throw new Error("Facebook posting requires additional permissions. Please reconnect your Facebook account.");
+      }
+    }
     
     // Determine if we're posting to a page or a user profile
     const isPage = account_type === 'page';
@@ -188,7 +213,7 @@ export async function publishToFacebook(
       // For a page post
       apiUrl = `https://graph.facebook.com/${apiVersion}/${targetId}/feed`;
     } else {
-      // For a user post (note: this requires additional permissions and may not work with Graph API v18.0)
+      // For a user post
       apiUrl = `https://graph.facebook.com/${apiVersion}/me/feed`;
     }
     
@@ -220,7 +245,14 @@ export async function publishToFacebook(
     console.log(`Facebook API response body: ${responseText}`);
     
     if (!response.ok) {
-      throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
+      let errorMessage = `Facebook API error: ${response.status} - ${responseText}`;
+      
+      // Check if it's a permission issue
+      if (responseText.includes("publish_") || responseText.includes("permission")) {
+        errorMessage = "Facebook posting requires additional permissions. Please disconnect and reconnect your Facebook account with the proper permissions.";
+      }
+      
+      throw new Error(errorMessage);
     }
     
     // Parse response data
