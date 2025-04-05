@@ -49,14 +49,25 @@ async function getTwitterCredentials(userId: string) {
   if (accountError) {
     console.error("Error fetching user account:", accountError);
   }
+
+  console.log("Twitter account data:", account);
   
   // Use user tokens if available, otherwise fall back to environment variables
-  return {
+  const credentials = {
     apiKey: Deno.env.get("TWITTER_API_KEY") || "",
     apiSecret: Deno.env.get("TWITTER_API_SECRET") || "",
     accessToken: account?.access_token || Deno.env.get("TWITTER_ACCESS_TOKEN") || "",
     accessTokenSecret: account?.access_token_secret || Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET") || ""
   };
+
+  console.log("Using Twitter credentials:", {
+    apiKey: credentials.apiKey ? "Present" : "Missing",
+    apiSecret: credentials.apiSecret ? "Present" : "Missing",
+    accessToken: credentials.accessToken ? "Present" : "Missing",
+    accessTokenSecret: credentials.accessTokenSecret ? "Present" : "Missing"
+  });
+
+  return credentials;
 }
 
 /**
@@ -84,6 +95,8 @@ function generateOAuthSignature(
   // Generate HMAC-SHA1 signature
   const hmac = createHmac("sha1", signingKey);
   const signature = hmac.update(signatureBaseString).digest("base64");
+  
+  console.log("Generated signature:", signature);
   
   return signature;
 }
@@ -127,6 +140,8 @@ function createTwitterAuthHeader(
   const authHeader = 'OAuth ' + Object.entries(oauthParams)
     .map(([key, value]) => `${encodeURIComponent(key)}="${encodeURIComponent(value)}"`)
     .join(', ');
+  
+  console.log("Generated OAuth header:", authHeader.substring(0, 50) + "...");
   
   return authHeader;
 }
@@ -206,13 +221,15 @@ async function uploadMediaToTwitter(mediaUrl: string, credentials: any): Promise
       body: formData
     });
     
+    const responseText = await response.text();
+    console.log(`Twitter media upload response: ${response.status} - ${responseText.substring(0, 200)}`);
+    
     if (!response.ok) {
-      const responseText = await response.text();
       console.error(`Twitter media upload error: ${response.status} - ${responseText}`);
       return null;
     }
     
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     console.log("Media upload successful, media_id:", data.media_id_string);
     
     return data.media_id_string;
@@ -336,6 +353,94 @@ async function publishToTwitter(userId: string, content: string, mediaUrls: stri
 }
 
 /**
+ * Publish content to Facebook
+ */
+async function publishToFacebook(userId: string, content: string, mediaUrls: string[] = []): Promise<any> {
+  try {
+    console.log(`Publishing to Facebook for user ${userId} with ${mediaUrls.length} media items`);
+    
+    // Get user-specific Facebook access token
+    const { data: account, error: accountError } = await supabase
+      .from('social_accounts')
+      .select('access_token, platform_user_id')
+      .eq('user_id', userId)
+      .eq('platform', 'facebook')
+      .maybeSingle();
+    
+    if (accountError || !account) {
+      throw new Error(`Failed to get Facebook access token: ${accountError?.message || "No account found"}`);
+    }
+    
+    const accessToken = account.access_token;
+    const platformUserId = account.platform_user_id;
+    
+    if (!accessToken) {
+      throw new Error("Facebook access token is missing");
+    }
+    
+    console.log(`Facebook user ID: ${platformUserId}, token available: ${!!accessToken}`);
+    
+    // Initialize request body as FormData
+    const formData = new FormData();
+    formData.append("message", content);
+    
+    // Check for media attachments
+    if (mediaUrls && mediaUrls.length > 0) {
+      console.log(`Adding ${mediaUrls.length} media URLs to Facebook post`);
+      
+      // Add all media URLs as attachments
+      for (let i = 0; i < mediaUrls.length; i++) {
+        const mediaUrl = mediaUrls[i];
+        if (!mediaUrl.startsWith('blob:')) {
+          formData.append(`url`, mediaUrl);
+        }
+      }
+    }
+    
+    // API endpoint for posting to a user's feed
+    const url = `https://graph.facebook.com/v18.0/me/feed`;
+    
+    // Make the API request
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: formData
+    });
+    
+    const responseText = await response.text();
+    console.log(`Facebook API response status: ${response.status}`);
+    console.log(`Facebook API response body: ${responseText}`);
+    
+    if (!response.ok) {
+      const errorData = JSON.parse(responseText);
+      
+      // Check for permission errors
+      if (errorData.error && 
+          (errorData.error.code === 200 || 
+           errorData.error.code === 190 || 
+           errorData.error.message.includes('permission'))) {
+        throw new Error(`Facebook permission error: ${errorData.error.message}. Please reconnect your Facebook account with the necessary permissions.`);
+      }
+      
+      throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
+    }
+    
+    // Parse response data
+    const responseData = JSON.parse(responseText);
+    
+    // Update last_used_at timestamp
+    await updateLastUsedTimestamp(userId, 'facebook');
+    
+    return responseData;
+  } catch (error: any) {
+    console.error('Error publishing to Facebook:', error);
+    throw error;
+  }
+}
+
+/**
  * Mock function for other platforms that aren't fully implemented yet
  */
 function mockPublishToOtherPlatform(platform: string, content: string): any {
@@ -363,6 +468,8 @@ async function publishToPlatform(
     
     if (platform === 'twitter') {
       result = await publishToTwitter(userId, content, mediaUrls);
+    } else if (platform === 'facebook') {
+      result = await publishToFacebook(userId, content, mediaUrls);
     } else {
       result = mockPublishToOtherPlatform(platform, content);
     }
@@ -438,14 +545,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-    
-    // Validate Twitter credentials are available
-    if (!validateTwitterCredentials()) {
-      return new Response(
-        JSON.stringify({ error: "Twitter API credentials are not configured correctly" }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     

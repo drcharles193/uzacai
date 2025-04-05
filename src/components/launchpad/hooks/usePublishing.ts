@@ -114,10 +114,35 @@ export const usePublishing = (currentUserId: string | null) => {
             description: `Some posts were published but there were errors with: ${data.errors.map((e: any) => e.platform).join(', ')}`,
             variant: "default"
           });
+          
+          // Check for permission errors specifically for Facebook
+          const fbPermissionError = data.errors.find((e: any) => 
+            e.platform === 'facebook' && e.error && e.error.includes('permission')
+          );
+          
+          if (fbPermissionError) {
+            toast({
+              title: "Facebook Permission Error",
+              description: "Your Facebook connection needs additional permissions. Please reconnect your Facebook account.",
+              variant: "destructive"
+            });
+          }
         } else {
           // All posts failed
           const errorMessage = data.errors[0].error || 'Missing API credentials';
-          throw new Error(`Failed to publish: ${errorMessage}`);
+          
+          // Check if this is a Twitter auth error
+          if (data.errors.find((e: any) => e.platform === 'twitter' && e.error.includes('API'))) {
+            throw new Error(`Failed to publish to Twitter: Please check your Twitter API credentials.`);
+          } 
+          // Check for Facebook permission errors
+          else if (data.errors.find((e: any) => 
+            e.platform === 'facebook' && e.error && e.error.includes('permission')
+          )) {
+            throw new Error(`Facebook permission error: Please reconnect your Facebook account with the necessary permissions.`);
+          } else {
+            throw new Error(`Failed to publish: ${errorMessage}`);
+          }
         }
       } else {
         // All posts were successful
