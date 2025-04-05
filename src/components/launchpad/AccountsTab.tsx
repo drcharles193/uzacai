@@ -70,9 +70,9 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
         {connectedAccounts.length > 0 ? (
           connectedAccounts.map(account => {
             const isSelected = selectedAccounts.includes(account.account_name);
-            // All platforms are now implemented
-            const isImplemented = ['twitter', 'facebook', 'instagram'].includes(account.platform);
-            const otherPlatformClass = !isImplemented ? 'opacity-70' : '';
+            // Check if the platform is fully implemented
+            const isTwitter = account.platform === 'twitter';
+            const otherPlatformClass = !isTwitter ? 'opacity-70' : '';
             
             return (
               <div 
@@ -84,12 +84,12 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
                   checked={isSelected}
                   onCheckedChange={() => handleAccountToggle(account.account_name)}
                   className="h-4 w-4 mr-3"
-                  disabled={!isImplemented}
+                  disabled={!isTwitter}
                 />
                 <label 
                   htmlFor={account.account_name} 
-                  className={`flex items-center gap-2 cursor-pointer w-full ${!isImplemented ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  onClick={() => isImplemented && handleAccountToggle(account.account_name)}
+                  className={`flex items-center gap-2 cursor-pointer w-full ${!isTwitter ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  onClick={() => isTwitter && handleAccountToggle(account.account_name)}
                 >
                   {account.platform === 'instagram' && (
                     <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 flex items-center justify-center text-white text-xs">
@@ -121,7 +121,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
                   )}
                   <div className="flex flex-col">
                     <span>{account.account_name}</span>
-                    {!isImplemented && (
+                    {!isTwitter && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <AlertCircle size={12} />
                         Coming soon
@@ -129,7 +129,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
                     )}
                   </div>
                   
-                  {isImplemented && (
+                  {isTwitter && (
                     <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
                       Active
                     </Badge>
