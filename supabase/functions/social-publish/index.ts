@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
@@ -380,7 +381,7 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     console.log(`Facebook user ID: ${platformUserId}, token available: ${!!accessToken}`);
     console.log(`Access token length: ${accessToken.length}, first 10 chars: ${accessToken.substring(0, 10)}...`);
     
-    // Create form data for the POST request
+    // Build the URL parameters manually for better compatibility
     const params = new URLSearchParams();
     params.append("message", content);
     params.append("access_token", accessToken);
@@ -405,13 +406,13 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     console.log("Facebook API request URL:", url);
     console.log("Facebook API request body:", Object.fromEntries(params.entries()));
     
-    // Make the API request
+    // Make the API request with URLSearchParams as string body
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: params
+      body: params.toString() // Convert to string explicitly
     });
     
     const responseText = await response.text();
