@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -114,28 +115,15 @@ export const usePublishing = (currentUserId: string | null) => {
             variant: "default"
           });
           
-          // Check for permission errors specifically for Facebook
-          const fbPermissionError = data.errors.find((e: any) => 
-            e.platform === 'facebook' && e.error && e.error.includes('permission')
+          // Check for permission errors specifically for platforms
+          const permissionError = data.errors.find((e: any) => 
+            e.error && e.error.includes('permission')
           );
           
-          if (fbPermissionError) {
+          if (permissionError) {
             toast({
-              title: "Facebook Permission Error",
-              description: "Your Facebook connection needs additional permissions. Please reconnect your Facebook account.",
-              variant: "destructive"
-            });
-          }
-          
-          // Check for LinkedIn permission errors
-          const linkedinPermissionError = data.errors.find((e: any) => 
-            e.platform === 'linkedin' && e.error && e.error.includes('permission')
-          );
-          
-          if (linkedinPermissionError) {
-            toast({
-              title: "LinkedIn Permission Error",
-              description: "Your LinkedIn connection needs additional permissions. Please reconnect your LinkedIn account.",
+              title: `${permissionError.platform.charAt(0).toUpperCase() + permissionError.platform.slice(1)} Permission Error`,
+              description: `Your ${permissionError.platform} connection needs additional permissions. Please reconnect your account.`,
               variant: "destructive"
             });
           }
@@ -143,21 +131,13 @@ export const usePublishing = (currentUserId: string | null) => {
           // All posts failed
           const errorMessage = data.errors[0].error || 'Missing API credentials';
           
-          // Check if this is a Twitter auth error
-          if (data.errors.find((e: any) => e.platform === 'twitter' && e.error.includes('API'))) {
-            throw new Error(`Failed to publish to Twitter: Please check your Twitter API credentials.`);
+          // Check if this is an auth error
+          if (data.errors.find((e: any) => e.error && e.error.includes('API'))) {
+            throw new Error(`Failed to publish: Please check your API credentials.`);
           } 
-          // Check for Facebook permission errors
-          else if (data.errors.find((e: any) => 
-            e.platform === 'facebook' && e.error && e.error.includes('permission')
-          )) {
-            throw new Error(`Facebook permission error: Please reconnect your Facebook account with the necessary permissions.`);
-          }
-          // Check for LinkedIn permission errors
-          else if (data.errors.find((e: any) => 
-            e.platform === 'linkedin' && e.error && e.error.includes('permission')
-          )) {
-            throw new Error(`LinkedIn permission error: Please reconnect your LinkedIn account with the necessary permissions.`);
+          // Check for permission errors
+          else if (data.errors.find((e: any) => e.error && e.error.includes('permission'))) {
+            throw new Error(`Permission error: Please reconnect your account with the necessary permissions.`);
           } else {
             throw new Error(`Failed to publish: ${errorMessage}`);
           }

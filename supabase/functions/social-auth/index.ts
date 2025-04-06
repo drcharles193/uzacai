@@ -1,13 +1,28 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
 
-// Import LinkedIn helpers
+// Import OAuth helpers
 import { 
   getLinkedInAuthUrl, 
   exchangeLinkedInCode, 
   getLinkedInUserProfile 
 } from "./linkedin.ts";
+
+import {
+  getFacebookAuthUrl,
+  exchangeFacebookCode,
+  getFacebookUserProfile,
+  getFacebookLongLivedToken
+} from "./facebook.ts";
+
+import {
+  getInstagramAuthUrl,
+  exchangeInstagramCode,
+  getInstagramUserProfile,
+  getInstagramLongLivedToken
+} from "./instagram.ts";
 
 // Twitter OAuth credentials
 const TWITTER_CLIENT_ID = Deno.env.get("TWITTER_CLIENT_ID");
@@ -340,6 +355,8 @@ serve(async (req) => {
         try {
           const { url, state } = getLinkedInAuthUrl();
           
+          console.log("Generated LinkedIn auth URL:", url);
+          
           // Store the state temporarily
           await supabase
             .from('oauth_states')
@@ -375,20 +392,6 @@ serve(async (req) => {
           if (!state) {
             throw new Error("State parameter missing from LinkedIn callback");
           }
-          
-          // Optionally, verify the state in the database
-          // const { data: stateData } = await supabase
-          //   .from('oauth_states')
-          //   .select('state')
-          //   .eq('user_id', userId)
-          //   .eq('platform', 'linkedin')
-          //   .order('created_at', { ascending: false })
-          //   .limit(1)
-          //   .single();
-          
-          // if (!stateData || stateData.state !== state) {
-          //   throw new Error("Invalid state parameter");
-          // }
           
           // Exchange code for tokens
           const tokens = await exchangeLinkedInCode(code);
@@ -455,6 +458,222 @@ serve(async (req) => {
       else {
         return new Response(
           JSON.stringify({ error: "Invalid LinkedIn action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+    // Handle Facebook OAuth flow
+    else if (platform === 'facebook') {
+      if (action === 'auth-url') {
+        // Step 1: Generate Facebook auth URL
+        try {
+          const { url, state } = getFacebookAuthUrl();
+          
+          console.log("Generated Facebook auth URL:", url);
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'facebook',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating Facebook auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          console.log("Processing Facebook callback with code:", code?.substring(0, 10) + "...");
+          
+          // Exchange code for tokens
+          const tokens = await exchangeFacebookCode(code);
+          console.log("Got Facebook tokens:", tokens.access_token ? "Access token received" : "No access token");
+          
+          // Get long-lived token
+          const longLivedToken = await getFacebookLongLivedToken(tokens.access_token);
+          console.log("Got Facebook long-lived token, expires in:", longLivedToken.expires_in || "unknown");
+          
+          // Get user profile information
+          const userProfile = await getFacebookUserProfile(longLivedToken.access_token);
+          console.log("Got Facebook user profile:", userProfile.name);
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'facebook',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.name || "Facebook User",
+              account_type: userProfile.pages && userProfile.pages.length > 0 ? "page" : "profile",
+              access_token: longLivedToken.access_token,
+              refresh_token: null,
+              token_expires_at: longLivedToken.expires_in ? new Date(Date.now() + longLivedToken.expires_in * 1000).toISOString() : null,
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                name: userProfile.name,
+                email: userProfile.email,
+                profile_image_url: userProfile.profileImageUrl,
+                pages: userProfile.pages || [],
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing Facebook connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'facebook', 
+              accountName: userProfile.name || "Facebook User",
+              accountType: userProfile.pages && userProfile.pages.length > 0 ? "page" : "profile",
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing Facebook callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Facebook action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+    // Handle Instagram OAuth flow
+    else if (platform === 'instagram') {
+      if (action === 'auth-url') {
+        // Step 1: Generate Instagram auth URL
+        try {
+          const { url, state } = getInstagramAuthUrl();
+          
+          console.log("Generated Instagram auth URL:", url);
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'instagram',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating Instagram auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          console.log("Processing Instagram callback with code:", code?.substring(0, 10) + "...");
+          
+          // Exchange code for tokens
+          const tokens = await exchangeInstagramCode(code);
+          console.log("Got Instagram tokens:", tokens.access_token ? "Access token received" : "No access token");
+          
+          // Get long-lived token
+          const longLivedToken = await getInstagramLongLivedToken(tokens.access_token);
+          console.log("Got Instagram long-lived token, expires in:", longLivedToken.expires_in || "unknown");
+          
+          // Get user profile information
+          const userProfile = await getInstagramUserProfile(longLivedToken.access_token, tokens.user_id);
+          console.log("Got Instagram user profile:", userProfile.name);
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'instagram',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.name || "Instagram User",
+              account_type: userProfile.accountType || "personal",
+              access_token: longLivedToken.access_token,
+              refresh_token: null,
+              token_expires_at: longLivedToken.expires_in ? new Date(Date.now() + longLivedToken.expires_in * 1000).toISOString() : null,
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                username: userProfile.username,
+                account_type: userProfile.accountType,
+                media_count: userProfile.mediaCount,
+                profile_image_url: userProfile.profileImageUrl,
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing Instagram connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'instagram', 
+              accountName: userProfile.name || "Instagram User",
+              accountType: userProfile.accountType || "personal",
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing Instagram callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid Instagram action" }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }

@@ -71,9 +71,8 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
           connectedAccounts.map(account => {
             const isSelected = selectedAccounts.includes(account.account_name);
             // Check if the platform is fully implemented
-            const isTwitter = account.platform === 'twitter';
-            const isLinkedIn = account.platform === 'linkedin';
-            const otherPlatformClass = !isTwitter && !isLinkedIn ? 'opacity-70' : '';
+            const isImplemented = ['twitter', 'linkedin', 'facebook', 'instagram'].includes(account.platform);
+            const otherPlatformClass = !isImplemented ? 'opacity-70' : '';
             
             return (
               <div 
@@ -85,12 +84,12 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
                   checked={isSelected}
                   onCheckedChange={() => handleAccountToggle(account.account_name)}
                   className="h-4 w-4 mr-3"
-                  disabled={!isTwitter && !isLinkedIn}
+                  disabled={!isImplemented}
                 />
                 <label 
                   htmlFor={account.account_name} 
-                  className={`flex items-center gap-2 cursor-pointer w-full ${!isTwitter && !isLinkedIn ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  onClick={() => (isTwitter || isLinkedIn) && handleAccountToggle(account.account_name)}
+                  className={`flex items-center gap-2 w-full ${!isImplemented ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  onClick={() => isImplemented && handleAccountToggle(account.account_name)}
                 >
                   {account.platform === 'instagram' && (
                     <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 flex items-center justify-center text-white text-xs">
@@ -120,9 +119,16 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
                       </svg>
                     </div>
                   )}
+                  {!['instagram', 'facebook', 'twitter', 'linkedin'].includes(account.platform) && (
+                    <div className="w-6 h-6 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">
+                      <svg fill="white" viewBox="0 0 24 24" width="14" height="14">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path>
+                      </svg>
+                    </div>
+                  )}
                   <div className="flex flex-col">
                     <span>{account.account_name}</span>
-                    {!isTwitter && !isLinkedIn && (
+                    {!isImplemented && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <AlertCircle size={12} />
                         Coming soon
@@ -130,7 +136,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({
                     )}
                   </div>
                   
-                  {(isTwitter || isLinkedIn) && (
+                  {isImplemented && (
                     <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
                       Active
                     </Badge>

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinkedIn Authentication</title>
+  <title>Facebook Authentication</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -28,7 +28,7 @@
       font-size: 2rem;
       font-weight: bold;
       margin-bottom: 1rem;
-      color: #0077b5;
+      color: #4267B2;
     }
     .message {
       margin-bottom: 1.5rem;
@@ -38,7 +38,7 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      border-left-color: #0077b5;
+      border-left-color: #4267B2;
       animation: spin 1s linear infinite;
       margin: 0 auto;
     }
@@ -54,7 +54,7 @@
 </head>
 <body>
   <div class="container">
-    <div class="logo">LinkedIn</div>
+    <div class="logo">Facebook</div>
     <div class="message">Completing authentication...</div>
     <div class="spinner"></div>
   </div>
@@ -65,20 +65,12 @@
     const code = urlParams.get('code');
     const state = urlParams.get('state');
     const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
-    
-    // Debug information
-    console.log("LinkedIn callback received:", {
-      code: code ? code.substring(0, 10) + "..." : "none",
-      state: state || "none",
-      error: error || "none",
-      errorDescription: errorDescription || "none"
-    });
+    const errorDescription = urlParams.get('error_description') || urlParams.get('error_reason');
     
     if (error) {
       // Handle authentication error
       window.opener.postMessage({
-        type: 'linkedin-oauth-callback',
+        type: 'facebook-oauth-callback',
         error: error,
         errorDescription: errorDescription
       }, '*');
@@ -94,7 +86,7 @@
     } else if (code && state) {
       // Send code and state to parent window
       window.opener.postMessage({
-        type: 'linkedin-oauth-callback',
+        type: 'facebook-oauth-callback',
         code: code,
         state: state
       }, '*');
