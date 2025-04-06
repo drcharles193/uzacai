@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
@@ -380,19 +379,21 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     
     console.log(`Facebook user ID: ${platformUserId}, token available: ${!!accessToken}`);
     
-    // Initialize request body as FormData
-    const formData = new FormData();
+    // Create form data for the POST request
+    const formData = new URLSearchParams();
     formData.append("message", content);
+    formData.append("access_token", accessToken);
     
     // Check for media attachments
     if (mediaUrls && mediaUrls.length > 0) {
       console.log(`Adding ${mediaUrls.length} media URLs to Facebook post`);
       
-      // Add all media URLs as attachments
-      for (let i = 0; i < mediaUrls.length; i++) {
-        const mediaUrl = mediaUrls[i];
-        if (!mediaUrl.startsWith('blob:')) {
-          formData.append(`url`, mediaUrl);
+      // Facebook requires different endpoints for photos vs regular posts
+      if (mediaUrls.some(url => !url.startsWith('blob:'))) {
+        // For simplicity, we'll just attach the first valid URL as a link
+        const validUrl = mediaUrls.find(url => !url.startsWith('blob:'));
+        if (validUrl) {
+          formData.append("link", validUrl);
         }
       }
     }
@@ -400,11 +401,14 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     // API endpoint for posting to a user's feed
     const url = `https://graph.facebook.com/v18.0/me/feed`;
     
+    console.log("Facebook API request URL:", url);
+    console.log("Facebook API request body:", Array.from(formData.entries()));
+    
     // Make the API request
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${accessToken}`
+        "Content-Type": "application/x-www-form-urlencoded"
       },
       body: formData
     });
@@ -414,21 +418,36 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     console.log(`Facebook API response body: ${responseText}`);
     
     if (!response.ok) {
-      const errorData = JSON.parse(responseText);
-      
-      // Check for permission errors
-      if (errorData.error && 
-          (errorData.error.code === 200 || 
-           errorData.error.code === 190 || 
-           errorData.error.message.includes('permission'))) {
-        throw new Error(`Facebook permission error: ${errorData.error.message}. Please reconnect your Facebook account with the necessary permissions.`);
+      try {
+        const errorData = JSON.parse(responseText);
+        
+        // Check for permission errors
+        if (errorData.error && 
+            (errorData.error.code === 200 || 
+             errorData.error.code === 190 || 
+             errorData.error.message.includes('permission'))) {
+          throw new Error(`Facebook permission error: ${errorData.error.message}. Please reconnect your Facebook account with the necessary permissions.`);
+        }
+        
+        throw new Error(`Facebook API error: ${response.status} - ${JSON.stringify(errorData.error)}`);
+      } catch (parseError) {
+        throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
       }
-      
-      throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
     }
     
     // Parse response data
-    const responseData = JSON.parse(responseText);
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (error) {
+      throw new Error(`Failed to parse Facebook API response: ${responseText}`);
+    }
+    
+    if (!responseData.id) {
+      throw new Error(`Facebook post creation failed: Missing post ID in response`);
+    }
+    
+    console.log(`Successfully posted to Facebook, post ID: ${responseData.id}`);
     
     // Update last_used_at timestamp
     await updateLastUsedTimestamp(userId, 'facebook');
