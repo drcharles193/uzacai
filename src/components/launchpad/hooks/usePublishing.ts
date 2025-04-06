@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -127,6 +126,19 @@ export const usePublishing = (currentUserId: string | null) => {
               variant: "destructive"
             });
           }
+          
+          // Check for LinkedIn permission errors
+          const linkedinPermissionError = data.errors.find((e: any) => 
+            e.platform === 'linkedin' && e.error && e.error.includes('permission')
+          );
+          
+          if (linkedinPermissionError) {
+            toast({
+              title: "LinkedIn Permission Error",
+              description: "Your LinkedIn connection needs additional permissions. Please reconnect your LinkedIn account.",
+              variant: "destructive"
+            });
+          }
         } else {
           // All posts failed
           const errorMessage = data.errors[0].error || 'Missing API credentials';
@@ -140,6 +152,12 @@ export const usePublishing = (currentUserId: string | null) => {
             e.platform === 'facebook' && e.error && e.error.includes('permission')
           )) {
             throw new Error(`Facebook permission error: Please reconnect your Facebook account with the necessary permissions.`);
+          }
+          // Check for LinkedIn permission errors
+          else if (data.errors.find((e: any) => 
+            e.platform === 'linkedin' && e.error && e.error.includes('permission')
+          )) {
+            throw new Error(`LinkedIn permission error: Please reconnect your LinkedIn account with the necessary permissions.`);
           } else {
             throw new Error(`Failed to publish: ${errorMessage}`);
           }

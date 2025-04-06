@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Authentication</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f3f4f6;
+      color: #111827;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      background-color: white;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .logo {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #0077b5;
+    }
+    .message {
+      margin-bottom: 1.5rem;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #0077b5;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">LinkedIn</div>
+    <div class="message">Completing authentication...</div>
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    // Extract code and state from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    const error = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
+    
+    if (error) {
+      // Handle authentication error
+      window.opener.postMessage({
+        type: 'linkedin-oauth-callback',
+        error: error,
+        errorDescription: errorDescription
+      }, '*');
+      
+      // Update the UI to show error
+      document.querySelector('.message').textContent = 'Authentication failed: ' + errorDescription;
+      document.querySelector('.spinner').style.display = 'none';
+      
+      // Close the window after a short delay
+      setTimeout(() => {
+        window.close();
+      }, 5000);
+    } else if (code && state) {
+      // Send code and state to parent window
+      window.opener.postMessage({
+        type: 'linkedin-oauth-callback',
+        code: code,
+        state: state
+      }, '*');
+      
+      // Close this window after a short delay
+      setTimeout(() => {
+        window.close();
+      }, 1000);
+    } else {
+      document.querySelector('.message').textContent = 'Invalid authentication response';
+      document.querySelector('.spinner').style.display = 'none';
+      
+      // Close the window after a short delay
+      setTimeout(() => {
+        window.close();
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

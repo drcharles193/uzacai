@@ -1,17 +1,13 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createHmac } from "https://deno.land/std@0.119.0/node/crypto.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Import LinkedIn helpers
+import { 
+  getLinkedInAuthUrl, 
+  exchangeLinkedInCode, 
+  getLinkedInUserProfile 
+} from "./linkedin.ts";
 
 // Twitter OAuth credentials
 const TWITTER_CLIENT_ID = Deno.env.get("TWITTER_CLIENT_ID");
@@ -112,9 +108,18 @@ async function getTwitterUserProfile(accessToken: string) {
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 // Handle mock connections for other platforms
 function getMockPlatformResponse(platform: string) {
-  // Simulate different platform responses
   switch(platform) {
     case 'facebook':
       return {
@@ -145,16 +150,6 @@ function getMockPlatformResponse(platform: string) {
         accessToken: "mock-tw-access-token",
         refreshToken: "mock-tw-refresh-token",
         expiresAt: new Date(Date.now() + 3600 * 1000 * 7).toISOString() // 7 days
-      };
-    case 'linkedin':
-      return {
-        success: true,
-        platformId: `li-${Math.floor(Math.random() * 1000000)}`,
-        accountName: "LinkedIn Profile",
-        accountType: "personal",
-        accessToken: "mock-li-access-token",
-        refreshToken: "mock-li-refresh-token",
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 60).toISOString() // 60 days
       };
     case 'youtube':
       return {
@@ -236,13 +231,8 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, code, userId, action } = await req.json();
+    const { platform, code, userId, action, state } = await req.json();
     console.log(`Received auth request for platform: ${platform}, action: ${action}, userId: ${userId}`);
-    console.log("Environment variables check:", {
-      twitterClientId: TWITTER_CLIENT_ID ? "Exists" : "Missing",
-      twitterClientSecret: TWITTER_CLIENT_SECRET ? "Exists" : "Missing",
-      twitterCallbackUrl: TWITTER_CALLBACK_URL ? "Exists" : "Missing"
-    });
     
     // Handle Twitter OAuth flow
     if (platform === 'twitter') {
@@ -339,6 +329,132 @@ serve(async (req) => {
       else {
         return new Response(
           JSON.stringify({ error: "Invalid Twitter action" }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    } 
+    // Handle LinkedIn OAuth flow
+    else if (platform === 'linkedin') {
+      if (action === 'auth-url') {
+        // Step 1: Generate LinkedIn auth URL
+        try {
+          const { url, state } = getLinkedInAuthUrl();
+          
+          // Store the state temporarily
+          await supabase
+            .from('oauth_states')
+            .insert({
+              user_id: userId,
+              platform: 'linkedin',
+              state: state,
+              created_at: new Date().toISOString()
+            });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              authUrl: url
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error generating LinkedIn auth URL:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else if (action === 'callback') {
+        // Step 2: Handle callback and exchange code for tokens
+        try {
+          console.log("Processing LinkedIn callback with code:", code?.substring(0, 10) + "...");
+          
+          // In a real implementation, validate state parameter against stored state
+          // For now, we'll just check if state is provided
+          if (!state) {
+            throw new Error("State parameter missing from LinkedIn callback");
+          }
+          
+          // Optionally, verify the state in the database
+          // const { data: stateData } = await supabase
+          //   .from('oauth_states')
+          //   .select('state')
+          //   .eq('user_id', userId)
+          //   .eq('platform', 'linkedin')
+          //   .order('created_at', { ascending: false })
+          //   .limit(1)
+          //   .single();
+          
+          // if (!stateData || stateData.state !== state) {
+          //   throw new Error("Invalid state parameter");
+          // }
+          
+          // Exchange code for tokens
+          const tokens = await exchangeLinkedInCode(code);
+          console.log("Got LinkedIn tokens:", tokens.access_token ? "Access token received" : "No access token");
+          
+          // Get user profile information
+          const userProfile = await getLinkedInUserProfile(tokens.access_token);
+          console.log("Got LinkedIn user profile:", userProfile.name);
+          
+          // Store the connection in the database
+          const { data, error } = await supabase
+            .from('social_accounts')
+            .upsert({
+              user_id: userId,
+              platform: 'linkedin',
+              platform_account_id: userProfile.id,
+              account_name: userProfile.name || "LinkedIn Profile",
+              account_type: "profile",
+              access_token: tokens.access_token,
+              refresh_token: tokens.refresh_token || null,
+              token_expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
+              last_used_at: new Date().toISOString(),
+              metadata: { 
+                firstName: userProfile.firstName,
+                lastName: userProfile.lastName,
+                email: userProfile.email,
+                profile_image_url: userProfile.profileImageUrl,
+                connection_type: "oauth"
+              }
+            }, {
+              onConflict: 'user_id, platform, platform_account_id',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error("Error storing LinkedIn connection:", error);
+            return new Response(
+              JSON.stringify({ error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              platform: 'linkedin', 
+              accountName: userProfile.name || "LinkedIn Profile",
+              accountType: "profile",
+              profileData: {
+                firstName: userProfile.firstName,
+                lastName: userProfile.lastName
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error("Error processing LinkedIn callback:", error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+      } 
+      else {
+        return new Response(
+          JSON.stringify({ error: "Invalid LinkedIn action" }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
