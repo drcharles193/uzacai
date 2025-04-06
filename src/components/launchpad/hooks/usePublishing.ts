@@ -87,8 +87,8 @@ export const usePublishing = (currentUserId: string | null) => {
       const processedMediaUrls = await processMediaForPublishing(mediaFiles, mediaPreviewUrls);
       console.log("Processed media URLs:", processedMediaUrls);
       
-      // Call our edge function to handle the publishing
-      const { data, error } = await supabase.functions.invoke('social-publish', {
+      // Call our edge function to handle the publishing with improved error handling
+      const response = await supabase.functions.invoke('social-publish', {
         body: {
           userId: currentUserId,
           content: postContent,
@@ -98,12 +98,20 @@ export const usePublishing = (currentUserId: string | null) => {
         }
       });
 
-      if (error) {
-        console.error("Error invoking function:", error);
-        throw new Error(`Failed to publish: ${error.message}`);
+      // Log the entire response for debugging
+      console.log("Edge function raw response:", response);
+      
+      if (response.error) {
+        console.error("Error from edge function:", response.error);
+        throw new Error(`Failed to publish: ${response.error.message || response.error}`);
       }
-
-      console.log("Publish response:", data);
+      
+      const data = response.data;
+      console.log("Publish response data:", data);
+      
+      if (!data) {
+        throw new Error("No response data received from publishing service");
+      }
       
       if (data.errors && data.errors.length > 0) {
         // We have some errors

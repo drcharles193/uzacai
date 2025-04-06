@@ -378,11 +378,12 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     }
     
     console.log(`Facebook user ID: ${platformUserId}, token available: ${!!accessToken}`);
+    console.log(`Access token length: ${accessToken.length}, first 10 chars: ${accessToken.substring(0, 10)}...`);
     
     // Create form data for the POST request
-    const formData = new URLSearchParams();
-    formData.append("message", content);
-    formData.append("access_token", accessToken);
+    const params = new URLSearchParams();
+    params.append("message", content);
+    params.append("access_token", accessToken);
     
     // Check for media attachments
     if (mediaUrls && mediaUrls.length > 0) {
@@ -393,7 +394,7 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
         // For simplicity, we'll just attach the first valid URL as a link
         const validUrl = mediaUrls.find(url => !url.startsWith('blob:'));
         if (validUrl) {
-          formData.append("link", validUrl);
+          params.append("link", validUrl);
         }
       }
     }
@@ -402,7 +403,7 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
     const url = `https://graph.facebook.com/v18.0/me/feed`;
     
     console.log("Facebook API request URL:", url);
-    console.log("Facebook API request body:", Array.from(formData.entries()));
+    console.log("Facebook API request body:", Object.fromEntries(params.entries()));
     
     // Make the API request
     const response = await fetch(url, {
@@ -410,7 +411,7 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
       headers: {
         "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: formData
+      body: params
     });
     
     const responseText = await response.text();
@@ -425,11 +426,11 @@ async function publishToFacebook(userId: string, content: string, mediaUrls: str
         if (errorData.error && 
             (errorData.error.code === 200 || 
              errorData.error.code === 190 || 
-             errorData.error.message.includes('permission'))) {
+             errorData.error.message?.includes('permission'))) {
           throw new Error(`Facebook permission error: ${errorData.error.message}. Please reconnect your Facebook account with the necessary permissions.`);
         }
         
-        throw new Error(`Facebook API error: ${response.status} - ${JSON.stringify(errorData.error)}`);
+        throw new Error(`Facebook API error: ${response.status} - ${JSON.stringify(errorData.error || errorData)}`);
       } catch (parseError) {
         throw new Error(`Facebook API error: ${response.status} - ${responseText}`);
       }
